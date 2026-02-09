@@ -1,151 +1,265 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 
+import { AuthContext } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+// import HomeIcon from '../assets/home.png'
+// import HomeActiveIcon from '../assets/home-color.png';
+
+// import MeetingsIcon from '../assets/meeting.png';
+// import MeetingsActiveIcon from '../assets/meeting-color.png';
+
+// import ProjectsIcon from '../assets/document.png';
+// import ProjectsActiveIcon from '../assetsdocument-color.png';
+
+// import MoreIcon from '../assetsmore.png';
+// import MoreActiveIcon from '../assets/bottomTabs/more-color.png';
+
+
+type StudentHomeNavigationProp =
+  NativeStackNavigationProp<RootStackParamList, 'StudentHome'>;
+ 
+
+
 const StudentHomeScreen: React.FC = () => {
+ 
+
+
+  const { user } = useContext(AuthContext);
+
+
+  const navigation = useNavigation<StudentHomeNavigationProp>();
+
+
+  if (!user) return null;
+  if (user.role !== 'student') return null;
+
+  const { isInTeam } = user;
+
   return (
+    <SafeAreaView style={styles.safeArea}>
     <View style={styles.container}>
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Home</Text>
-        <View style={styles.notification}>
-          <Text style={styles.notificationText}>9</Text>
-        </View>
-      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+ 
+  <Text style={[styles.headerTitle, { marginLeft: 8 }]}>
+    Home
+  </Text>
+</View>
 
       {/* Content */}
-      <ScrollView style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
+
+        {/* =========================
+            TEAM ACTIONS / DETAILS
+           ========================= */}
+
+        {!isInTeam ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Team Actions</Text>
+
+            <TouchableOpacity style={styles.actionButton}
+            onPress={() => navigation.navigate('CreateTeam')}>
+              <Text style={styles.actionText}>Create Team</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton}
+            onPress={() => navigation.navigate('JoinTeam')}>
+              <Text style={styles.actionText}>Join Team</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>My Team</Text>
+
+            <Text style={styles.label}>Team Name</Text>
+            <Text style={styles.value}>Project Alpha</Text>
+
+            <Text style={styles.label}>Team Lead</Text>
+            <Text style={styles.value}>Mehtab Shaik</Text>
+
+            <Text style={styles.label}>Members</Text>
+            <Text style={styles.value}>• Student A</Text>
+            <Text style={styles.value}>• Student B</Text>
+            <Text style={styles.value}>• Student C</Text>
+          </View>
+        )}
+
+        {/* =========================
+            PROJECT SECTION
+           ========================= */}
         <View style={styles.card}>
-          <Text style={styles.title}>
-            Open for applications - Emerson (NI)'s Job Profile - Intern
-          </Text>
-          <Text style={styles.meta}>
-            Dr. Vinay V. Panicker · 2 days ago
-          </Text>
+  <Text style={styles.cardTitle}>Projects</Text>
 
-          <Text style={styles.text}>
-            Applications are now being accepted for Emerson (NI)'s Job Profile: Intern.
-          </Text>
+  <TouchableOpacity
+    style={styles.actionButton}
+    onPress={() => navigation.navigate('ViewProjects')}
+  >
+    <Text style={styles.actionText}>View Projects</Text>
+  </TouchableOpacity>
 
-          <Text style={styles.section}>Applicable Courses</Text>
-          <Text>• M.Tech - Telecommunication</Text>
-          <Text>• M.Tech - Signal Processing</Text>
+  <TouchableOpacity
+    style={styles.actionButton}
+    
+  >
+    <Text style={styles.actionText}>View Allocated Project</Text>
+  </TouchableOpacity>
 
-          <Text style={styles.section}>Eligibility</Text>
-          <Text>• All students are eligible</Text>
-          <Text>• No backlogs</Text>
+  <Text style={styles.placeholderText}>
+    Project details will appear once assigned.
+  </Text>
+</View>
 
-          <Text style={styles.section}>Hiring Process</Text>
-          <Text>1. Resume shortlisting</Text>
-          <Text>2. Written test</Text>
-          <Text>3. Technical interview</Text>
-
-          <Text style={styles.deadline}>
-            Deadline: February 07, 01:00 PM
-          </Text>
-        </View>
       </ScrollView>
 
-      {/* Bottom Tab */}
-      <View style={styles.bottomTab}>
-        <Text style={styles.tabActive}>Home</Text>
-        <Text style={styles.tab}>Job Profiles</Text>
-        <Text style={styles.tab}>Interviews</Text>
-        <Text style={styles.tab}>Assessments</Text>
-        <Text style={styles.tab}>More</Text>
-      </View>
+     {/* Bottom Dashboard */}
+<View style={styles.bottomTab}>
+
+  {/* Home */}
+  <View style={styles.tabItem}>
+    <Image
+    source={require('../assets/home-color.png')}
+    style={styles.tabIcon}
+    resizeMode="contain"
+  />
+    <Text style={styles.tabActive}>Home</Text>
+  </View>
+
+  {/* Schedule Meetings */}
+  <TouchableOpacity
+    style={styles.tabItem}
+    onPress={() => navigation.navigate('ScheduledMeetings')}
+  >
+    <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
+    <Text style={styles.tab}>Schedule Meetings</Text>
+  </TouchableOpacity>
+
+  {/* Project Details */}
+  <View style={styles.tabItem}>
+    <Image source={require('../assets/document.png')} style={styles.tabIcon} />
+    <Text style={styles.tab}>Project Details</Text>
+  </View>
+
+  {/* More */}
+  <TouchableOpacity
+    style={styles.tabItem}
+    onPress={() => navigation.navigate('More')}
+  ><Image source={require('../assets/more.png')} style={styles.tabIcon} />
+    <Text style={styles.tab}>More</Text>
+  </TouchableOpacity>
+
+</View>
 
     </View>
+    </SafeAreaView>
   );
 };
 
 export default StudentHomeScreen;
 
 /* =======================
-   STYLES (MISSING PART)
+   STYLES (UNCHANGED)
    ======================= */
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
   },
 
-  /* Header */
   header: {
     height: 60,
     paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'center',
     elevation: 4,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 
-  notification: {
-    backgroundColor: '#DC2626',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  notificationText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  /* Content */
   content: {
-    padding: 15,
+    padding: 16,
   },
 
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     elevation: 3,
   },
 
-  title: {
+  cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
+    marginBottom: 12,
   },
 
-  meta: {
+  label: {
+    fontSize: 13,
     color: '#6B7280',
-    marginVertical: 6,
+    marginTop: 8,
   },
 
-  text: {
-    marginVertical: 8,
-    lineHeight: 20,
+  value: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginTop: 2,
+  },
+headerIcon: {
+  width: 62,
+  height: 42,
+},
+  actionButton: {
+    borderWidth: 1,
+    borderColor: '#2563EB',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 10,
   },
 
-  section: {
+  actionText: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+
+  actionButtonPrimary: {
+    backgroundColor: '#232528',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+
+  actionTextPrimary: {
+    color: '#FFFFFF',
     fontWeight: '700',
-    marginTop: 12,
-    marginBottom: 4,
   },
 
-  deadline: {
-    marginTop: 12,
-    fontWeight: '700',
+  placeholderText: {
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
 
-  /* Bottom Tab */
   bottomTab: {
     height: 60,
     borderTopWidth: 1,
     borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -161,4 +275,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+
+  projectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+safeArea: {
+  flex: 1,
+  backgroundColor: '#F9FAFB',
+},
+  viewMore: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2b2c2d',
+  },
+  tabItem: {
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+tabIcon: {
+  width: 22,
+  height: 22,
+  marginBottom: 4,
+  resizeMode: 'contain',
+},
+
+
 });

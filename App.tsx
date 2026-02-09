@@ -1,16 +1,16 @@
+// App.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import AppNavigator from './src/navigation/AppNavigator';
 
-const App: React.FC = () => {
+import { AuthProvider } from './src/context/AuthContext';
+import AppNavigator from '../InstaLoginApp/src/navigation/AppNavigator'
+
+export default function App() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <AuthProvider>
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
-    </SafeAreaView>
+    </AuthProvider>
   );
-};
-
-export default App;
+}

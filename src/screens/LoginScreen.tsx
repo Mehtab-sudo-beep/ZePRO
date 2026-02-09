@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,19 +10,40 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
+import { login } from '../auth/authService';
+import { AuthContext } from '../context/AuthContext'; 
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const { setUser } = useContext(AuthContext); 
+
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
   const handleLogin = () => {
-    if (email === 'student@nitc.ac.in' && password === '123456') {
-      navigation.replace('StudentHome');
-    } else {
-      Alert.alert('Login Failed', 'Invalid credentials');
-    }
-  };
+  const user = login(email, password);
+
+  if (!user) {
+    Alert.alert('Login Failed', 'Invalid credentials');
+    return;
+  }
+
+  setUser(user);
+
+  if (user.role === 'faculty') {
+    navigation.replace('FacultyHome');
+  } else if (user.role==='admin') {
+    navigation.replace('AdminHome');
+  }
+  else if (user.role==='facultycoordinator'){
+    navigation.replace('FacultyCoordinatorDashboard');
+  }
+  else{
+    navigation.replace('StudentHome');
+  }
+};
+
 
   return (
     <View style={styles.container}>
@@ -41,6 +62,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           style={styles.input}
+          autoCapitalize="none"
+          placeholderTextColor="#252628"
         />
 
         <TextInput
@@ -49,6 +72,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           style={styles.input}
+          placeholderTextColor="#252628"
         />
 
         <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
@@ -56,7 +80,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.footerLinks}>
-          <Text style={styles.link}>Forgot Password</Text>
+          <Text style={styles.link}>Forgot Password?</Text>
           <Text style={styles.link}>Sign Up</Text>
         </View>
       </View>
@@ -66,6 +90,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 export default LoginScreen;
+
+
+/* ===== STYLES (UNCHANGED) ===== */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -105,49 +133,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  socialBtn: {
-    padding: 14,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginVertical: 6,
-  },
-  googleBtn: {
-    backgroundColor: '#dc2626',
-  },
-  facebookBtn: {
-    backgroundColor: '#1d4ed8',
-  },
-  socialText: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 15,
-  },
-
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22,
-    marginRight: 12,
-  },
-  welcomeText: {
-    fontSize: 14,
-  },
-  notYou: {
-    fontSize: 12,
-    color: '#2563eb',
-  },
-
   input: {
+    color: '#000000',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 6,
