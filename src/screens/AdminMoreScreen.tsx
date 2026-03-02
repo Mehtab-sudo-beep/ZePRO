@@ -87,18 +87,24 @@ const AdminMoreScreen: React.FC = () => {
 
         </View>
       </View>
-      <View style={styles.bottomTab}>
-        
-
-        <TouchableOpacity onPress={() => navigation.navigate('AdminHome')}>
-          <Text style={styles.tab}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Logs')}>
-          <Text style={styles.tab}>Logs</Text>
-        </TouchableOpacity>
-        <Text style={styles.tabActive}>More</Text>
-      </View>
+       {/* Bottom Tab */}
+            <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              
+              <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminHome')}>
+                <Image source={require('../assets/home.png')} style={styles.tabIcon} />
+                <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
+              </TouchableOpacity>
+      
+              <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Logs')}>
+                <Image source={require('../assets/time.png')} style={styles.tabIcon} />
+                <Text style={[styles.tab, { color: colors.subText }]}>Logs</Text>
+              </TouchableOpacity>
+              <View style={styles.tabItem}>
+                <Image source={require('../assets/more-color.png')} style={styles.tabIcon} />
+                <Text style={[styles.tabActive, { color: colors.primary }]}>More</Text>
+              </View>
+      
+            </View>
     </SafeAreaView>
   );
 };
@@ -217,21 +223,28 @@ const styles = StyleSheet.create({
   bottomTab: {
     height: 60,
     borderTopWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
 
-  tab: {
-    color: '#9CA3AF',
-    fontSize: 12,
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
+  tabIcon: {
+    width: 22,
+    height: 22,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
+
+  tab: { fontSize: 12 },
+
   tabActive: {
-    color: '#2563EB',
     fontSize: 12,
     fontWeight: '700',
   },
+
 });
