@@ -31,6 +31,10 @@ const StudentHomeScreen: React.FC = () => {
 
   const { isInTeam } = user;
 
+  // Determine if the current user is the team lead
+  // Adjust this condition based on how your user object stores this info
+  const isTeamLead = isInTeam && user.isTeamLead === true;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
@@ -42,62 +46,104 @@ const StudentHomeScreen: React.FC = () => {
         {/* Content */}
         <ScrollView contentContainerStyle={styles.content}>
           {!isInTeam ? (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                Team Actions
-              </Text>
-
-              <TouchableOpacity
-                style={[styles.actionButton, { borderColor: colors.primary }]}
-                onPress={() => navigation.navigate('CreateTeam')}
-              >
-                <Text style={[styles.actionText, { color: colors.primary }]}>
-                  Create Team
+            <>
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  Team Actions
                 </Text>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, { borderColor: colors.primary }]}
-                onPress={() => navigation.navigate('JoinTeam')}
-              >
-                <Text style={[styles.actionText, { color: colors.primary }]}>
-                  Join Team
+                <TouchableOpacity
+                  style={[styles.actionButton, { borderColor: colors.primary }]}
+                  onPress={() => navigation.navigate('CreateTeam')}
+                >
+                  <Text style={[styles.actionText, { color: colors.primary }]}>
+                    Create Team
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, { borderColor: colors.primary }]}
+                  onPress={() => navigation.navigate('JoinTeam')}
+                >
+                  <Text style={[styles.actionText, { color: colors.primary }]}>
+                    Join Team
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Requests Sent — only for students not in a team */}
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  Requests Sent
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={[styles.label, { color: colors.subText }]}>
+                  View all join requests you have sent to teams.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.actionButton, { borderColor: colors.primary, marginTop: 12 }]}
+                  onPress={() => navigation.navigate('SentRequests')}
+                >
+                  <Text style={[styles.actionText, { color: colors.primary }]}>
+                    View Sent Requests
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
           ) : (
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                My Team
-              </Text>
+            <>
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  My Team
+                </Text>
 
-              <Text style={[styles.label, { color: colors.subText }]}>
-                Team Name
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                Project Alpha
-              </Text>
+                <Text style={[styles.label, { color: colors.subText }]}>
+                  Team Name
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Project Alpha
+                </Text>
 
-              <Text style={[styles.label, { color: colors.subText }]}>
-                Team Lead
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                Mehtab Shaik
-              </Text>
+                <Text style={[styles.label, { color: colors.subText }]}>
+                  Team Lead
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  Mehtab Shaik
+                </Text>
 
-              <Text style={[styles.label, { color: colors.subText }]}>
-                Members
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                • Student A
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                • Student B
-              </Text>
-              <Text style={[styles.value, { color: colors.text }]}>
-                • Student C
-              </Text>
-            </View>
+                <Text style={[styles.label, { color: colors.subText }]}>
+                  Members
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  • Student A
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  • Student B
+                </Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  • Student C
+                </Text>
+              </View>
+
+              {/* Received Requests — only for team lead */}
+              {isTeamLead && (
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>
+                    Join Requests
+                  </Text>
+                  <Text style={[styles.label, { color: colors.subText }]}>
+                    Review incoming requests from students who want to join your team.
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { borderColor: colors.primary, marginTop: 12 }]}
+                    onPress={() => navigation.navigate('ReceivedRequests')}
+                  >
+                    <Text style={[styles.actionText, { color: colors.primary }]}>
+                      View Received Requests
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
           )}
 
           {/* Projects Section */}
@@ -144,7 +190,6 @@ const StudentHomeScreen: React.FC = () => {
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          {/* Home */}
           <View style={styles.tabItem}>
             <Image
               source={require('../assets/home-color.png')}
@@ -155,7 +200,6 @@ const StudentHomeScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Meetings */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('ScheduledMeetings')}
@@ -169,7 +213,6 @@ const StudentHomeScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          {/* More */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('More')}

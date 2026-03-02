@@ -130,14 +130,14 @@ const SettingsScreen: React.FC = () => {
 export default SettingsScreen;
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-  container: { flex: 1, paddingHorizontal: 16 },
+  container: { flex: 1},
 
   header: {
     height: 60,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     elevation: 4,
   },
 

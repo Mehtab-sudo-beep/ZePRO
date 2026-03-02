@@ -19,6 +19,8 @@ import HelpCenterScreen from '../screens/HelpCenterScreen';
 import DeadlineScreen from '../screens/DeadlineScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SentRequestsScreen from '../screens/SentRequestsScreen';
+import ReceivedRequestsScreen from '../screens/ReceivedRequestsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -42,6 +44,8 @@ export type RootStackParamList = {
   HelpCenter: undefined;
   Deadline: undefined;
   Settings: undefined;
+  SentRequests: undefined;
+  ReceivedRequests: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -73,6 +77,8 @@ const AppNavigator = () => {
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="Deadline" component={DeadlineScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
+      <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
     </Stack.Navigator>
   );
 };
