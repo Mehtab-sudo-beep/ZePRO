@@ -6,119 +6,165 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
 
   const handleLogout = () => {
-    setUser(null);
-    navigation.replace('Login');
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            setUser(null);
+            navigation.replace('Login');
+          },
+        },
+      ],
+      { cancelable: true },
+    );
   };
   if (!user || user.role !== 'student') return null;
-  return (
-    
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
 
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/zepro.png')}
             style={styles.headerIcon}
             resizeMode="contain"
           />
-          <Text style={styles.headerTitle}>More</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
         </View>
-        {/* Profile Header */}
-                <View style={styles.profileHeader}>
-                  <Image
-                    source={require('../assets/avatar.png')}
-                    style={styles.profileImage}
-                  />
-        
-                  <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>
-                      {user.name}
-                    </Text>
-                    <Text style={styles.profileEmail}>
-                      {user.email}
-                    </Text>
-                  </View>
-                </View>
-        {/* Menu Items */}
-        <ScrollView style={styles.list}>
 
+        {/* Profile Header */}
+        <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
+          <Image
+            source={require('../assets/avatar.png')}
+            style={[
+              styles.profileImage,
+              { backgroundColor: colors.background }, // Fix dark circle issue
+            ]}
+          />
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: colors.text }]}>
+              {user.name}
+            </Text>
+            <Text style={[styles.profileEmail, { color: colors.subText }]}>
+              {user.email}
+            </Text>
+          </View>
+        </View>
+
+        {/* Menu Items */}
+        <ScrollView
+          style={[styles.list, { backgroundColor: colors.card }]}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        >
           <MenuItem
             title="Profile"
             onPress={() => navigation.navigate('Profile')}
+            colors={colors}
           />
 
           <MenuItem
             title="Help Center"
             onPress={() => navigation.navigate('HelpCenter')}
+            colors={colors}
           />
 
           <MenuItem
             title="Deadlines"
-            onPress={() => navigation.navigate('Deadlines')}
+            onPress={() => navigation.navigate('Deadline')}
+            colors={colors}
           />
 
           <MenuItem
             title="Settings"
             onPress={() => navigation.navigate('Settings')}
+            colors={colors}
           />
 
           <MenuItem
             title="Log Out"
             danger
             onPress={handleLogout}
+            colors={colors}
           />
-
         </ScrollView>
 
-        {/* Bottom Dashboard */}
-                <View style={styles.bottomTab}>
-                
-                  {/* Home */}
-                  <TouchableOpacity
-                      style={styles.tabItem1}
-                      onPress={() => navigation.navigate('StudentHome')}
-                    >
-                      <Image source={require('../assets/home.png')} style={styles.tabIcon} />
-                      <Text style={styles.tab}>Home</Text>
-                    </TouchableOpacity>
-                
-                  {/* Schedule Meetings */}
-                   <TouchableOpacity
-                    style={styles.tabItem1}
-                    onPress={() => navigation.navigate('ScheduledMeetings')}
-                  ><Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
-                    <Text style={styles.tab}>Scheduled Meetings</Text>
-                  </TouchableOpacity>
-                
-                  {/* Project Details */}
-                  <View style={styles.tabItem1}>
-                    <Image source={require('../assets/document.png')} style={styles.tabIcon} />
-                    <Text style={styles.tab}>Project Details</Text>
-                  </View>
-                
-                  {/* More */}
-                  <View style={styles.tabItem1}>
-                      <Image
-                      source={require('../assets/more-color.png')}
-                      style={styles.tabIcon}
-                      resizeMode="contain"
-                    />
-                      <Text style={styles.tabActive}>More</Text>
-                    </View>
-                
-                </View>
+        {/* Bottom Tab */}
+        <View
+          style={[
+            styles.bottomTab,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate('StudentHome')}
+          >
+            <Image
+              source={require('../assets/home.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate('ScheduledMeetings')}
+          >
+            <Image
+              source={require('../assets/meeting.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tab, { color: colors.subText }]}>
+              Meetings
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.tabItem}>
+            <Image
+              source={require('../assets/document.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tab, { color: colors.subText }]}>
+              Projects
+            </Text>
+          </View>
+
+          <View style={styles.tabItem}>
+            <Image
+              source={require('../assets/more-color.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>
+              More
+            </Text>
+          </View>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -126,48 +172,64 @@ const MoreScreen: React.FC = () => {
 
 export default MoreScreen;
 
-/* =======================
+/* =========================
    MENU ITEM COMPONENT
-   ======================= */
+========================= */
 
 const MenuItem = ({
   title,
   onPress,
   danger = false,
+  colors,
 }: {
   title: string;
   onPress: () => void;
   danger?: boolean;
+  colors: any;
 }) => (
-  <TouchableOpacity style={styles.item} onPress={onPress}>
+  <TouchableOpacity
+    style={[styles.item, { borderColor: colors.border }]}
+    onPress={onPress}
+  >
     <Text
-      style={[
-        styles.itemText,
-        danger && styles.dangerText,
-      ]}
+      style={[styles.itemText, { color: danger ? '#DC2626' : colors.text }]}
     >
       {title}
     </Text>
-    <Text style={styles.arrow}>&gt;</Text>
+    <Text style={[styles.arrow, { color: colors.subText }]}>&gt;</Text>
   </TouchableOpacity>
 );
 
-/* =======================
+/* =========================
    STYLES
-   ======================= */
+========================= */
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
   container: {
     flex: 1,
   },
 
+  header: {
+    height: 60,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 4,
+  },
+
+  headerIcon: {
+    width: 60,
+    height: 40,
+    marginRight: 8,
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+
   profileHeader: {
-    backgroundColor: '#111827',
-    paddingVertical: 28,
+    paddingVertical: 24,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -177,7 +239,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#D1D5DB',
   },
 
   profileInfo: {
@@ -187,34 +248,15 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#faf4f4',
   },
 
   profileEmail: {
     fontSize: 13,
-    color: '#9CA3AF',
     marginTop: 4,
-  },
-  header: {
-    height: 60,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
-  },
-  headerIcon: {
-    width: 60,
-    height: 40,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '500',
   },
 
   list: {
-    backgroundColor: '#FFFFFF',
+    flex: 1,
     marginTop: 12,
   },
 
@@ -225,53 +267,42 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
   },
 
   itemText: {
     fontSize: 15,
-    color: '#111827',
-  },
-
-  dangerText: {
-    color: '#DC2626',
-    fontWeight: '500',
   },
 
   arrow: {
     fontSize: 18,
-    color: '#9CA3AF',
   },
+
   bottomTab: {
     height: 60,
     borderTopWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
 
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  tabIcon: {
+    width: 22,
+    height: 22,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
+
   tab: {
-    color: '#9CA3AF',
     fontSize: 12,
   },
 
   tabActive: {
-    color: '#2563EB',
     fontSize: 12,
     fontWeight: '700',
   },
-  tabItem1: {
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-
-tabIcon: {
-  width: 22,
-  height: 22,
-  marginBottom: 4,
-  resizeMode: 'contain',
-},
-
 });

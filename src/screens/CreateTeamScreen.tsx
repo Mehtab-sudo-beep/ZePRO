@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    View,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -10,9 +10,8 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Image } from 'react-native';
-import { RootStackParamList } from '../navigation/AppNavigator'; 
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
 
@@ -28,53 +27,57 @@ const CreateTeamScreen = ({ navigation }: Props) => {
     // TODO: Integrate with your API to create team and enable join requests view
     Alert.alert(
       'Success',
-      `Team "${teamName}" created!${description ? `\nDescription: ${description}` : ''}\n\nJoin requests will appear in your team dashboard.`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
+      `Team "${teamName}" created!${
+        description ? `\nDescription: ${description}` : ''
+      }\n\nJoin requests will appear in your team dashboard.`,
+      [{ text: 'OK', onPress: () => navigation.goBack() }],
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Image
-          source={require('../assets/zepro.png')}
-          style={styles.headerIcon}
-          resizeMode="contain"
-        />
-        <Text style={[styles.title, { marginLeft: 8 }]}>
-          Create New Team
-        </Text>
+      <View style={styles.container}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image
+            source={require('../assets/zepro.png')}
+            style={styles.headerIcon}
+            resizeMode="contain"
+          />
+          <Text style={[styles.title, { marginLeft: 8 }]}>Create New Team</Text>
+        </View>
+        <ScrollView
+          style={styles.container1}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.label}>Team Name (required)</Text>
+          <TextInput
+            style={styles.input}
+            value={teamName}
+            onChangeText={setTeamName}
+            placeholder="Enter team name"
+            autoCapitalize="words"
+          />
+          <Text style={styles.label}>Description (optional)</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Enter team description"
+            multiline
+            numberOfLines={4}
+          />
+          <TouchableOpacity style={styles.button} onPress={handleCreateTeam}>
+            <Text style={styles.buttonText}>Create Team</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        /
       </View>
-      <ScrollView style={styles.container1} keyboardShouldPersistTaps="handled">
-      <Text style={styles.label}>Team Name (required)</Text>
-      <TextInput
-        style={styles.input}
-        value={teamName}
-        onChangeText={setTeamName}
-        placeholder="Enter team name"
-        autoCapitalize="words"
-      />
-      <Text style={styles.label}>Description (optional)</Text>
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Enter team description"
-        multiline
-        numberOfLines={4}
-      />
-      <TouchableOpacity style={styles.button} onPress={handleCreateTeam}>
-        <Text style={styles.buttonText}>Create Team</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.cancelButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.cancelButtonText}>Cancel</Text>
-      </TouchableOpacity>
-    </ScrollView>
-    /</View>
     </SafeAreaView>
   );
 };
@@ -84,14 +87,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  container1:{
+  container1: {
     padding: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: '500',
-    
-    
   },
   label: {
     fontSize: 16,
@@ -138,9 +139,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   headerIcon: {
-  width: 62,
-  height: 42,
-},
+    width: 62,
+    height: 42,
+  },
 });
 
 export default CreateTeamScreen;
