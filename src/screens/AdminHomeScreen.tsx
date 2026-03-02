@@ -475,6 +475,7 @@ const styles = StyleSheet.create({
   },
 
   coordinatorBadge: {
+    backgroundColor: '#bbaee3',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,

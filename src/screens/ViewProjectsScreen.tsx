@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { ThemeContext } from '../theme/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* ---------- TYPES ---------- */
 
@@ -135,6 +136,7 @@ const ProjectListScreen: React.FC = () => {
   );
 
   return (
+    <SafeAreaView style={{flex: 1, backgroundColor: colors.background}}>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* SEARCH BAR (Clean) */}
       <View
@@ -197,6 +199,7 @@ const ProjectListScreen: React.FC = () => {
         />
       )}
     </View>
+    /</SafeAreaView>
   );
 };
 
@@ -205,6 +208,7 @@ export default ProjectListScreen;
 /* ---------- STYLES ---------- */
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     padding: 16,
