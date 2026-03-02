@@ -20,6 +20,8 @@ type NavProp = NativeStackNavigationProp<
   'ScheduledMeetings'
 >;
 
+type TabType = 'UPCOMING' | 'COMPLETED';
+
 type Meeting = {
   title: string;
   faculty: string;
@@ -35,14 +37,11 @@ type Meeting = {
 };
 
 const ScheduledMeetingsScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'UPCOMING' | 'COMPLETED'>(
-    'UPCOMING',
-  );
+  const [activeTab, setActiveTab] = useState<TabType>('UPCOMING');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const navigation = useNavigation<NavProp>();
   const { colors } = useContext(ThemeContext);
-
-  /* ---------------- MEETINGS DATA (NOT REMOVED) ---------------- */
 
   const meetings: Meeting[] = [
     {
@@ -81,60 +80,44 @@ const ScheduledMeetingsScreen: React.FC = () => {
       date: '02 Feb 2026',
       time: '11:00 AM',
       members: ['Mehtab Shaik', 'Student D', 'Student E'],
-      response: 'Completed',
-      statusColor: '#2563EB',
-    },
-    {
-      title: 'Faculty Approval Meeting',
-      faculty: 'Dr. Vinay V. Panicker',
-      projectName: 'Campus Navigation App',
-      domain: 'Mobile Computing',
-      subDomain: 'Android Development',
-      location: 'Dept. Conference Room',
-      date: '28 Jan 2026',
-      time: '04:00 PM',
-      members: ['Mehtab Shaik', 'Student A', 'Student F'],
       response: 'Rejected',
       statusColor: '#DC2626',
     },
-    {
-      title: 'Mid-Semester Progress Review',
-      faculty: 'Dr. Rekha Nair',
-      projectName: 'Online Examination System',
-      domain: 'Web Technologies',
-      subDomain: 'Backend Systems',
-      location: 'Seminar Hall – 1',
-      date: '20 Feb 2026',
-      time: '09:30 AM',
-      members: ['Mehtab Shaik', 'Student G', 'Student H'],
-      response: 'Accepted',
-      statusColor: '#16A34A',
-    },
   ];
 
+  /* -------- FILTER LOGIC -------- */
+
   const filteredMeetings = meetings.filter(meeting => {
-    if (activeTab === 'UPCOMING') {
-      return meeting.response === 'Pending';
-    }
-    return meeting.response === 'Accepted' || meeting.response === 'Rejected';
+    const matchesTab =
+      activeTab === 'UPCOMING'
+        ? meeting.response === 'Pending'
+        : meeting.response === 'Accepted' || meeting.response === 'Rejected';
+
+    const matchesSearch =
+      meeting.faculty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      meeting.projectName.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesTab && matchesSearch;
   });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text
-            style={[styles.headerTitle, { marginLeft: 8, color: colors.text }]}
-          >
+        {/* Header (Lowered Properly) */}
+        <View style={styles.headerContainer}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
             Scheduled Meetings
           </Text>
         </View>
 
+        {/* Search */}
         <View
           style={[styles.searchContainer, { backgroundColor: colors.card }]}
         >
           <TextInput
             placeholder="Search by faculty or project"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
             style={[
               styles.searchInput,
               {
@@ -147,11 +130,14 @@ const ScheduledMeetingsScreen: React.FC = () => {
           />
         </View>
 
+        {/* Tabs */}
         <View style={[styles.tabRow, { backgroundColor: colors.card }]}>
           <TouchableOpacity
             style={[
               styles.tabItem,
-              activeTab === 'UPCOMING' && { borderBottomColor: colors.primary },
+              activeTab === 'UPCOMING' && {
+                borderBottomColor: colors.primary,
+              },
             ]}
             onPress={() => setActiveTab('UPCOMING')}
           >
@@ -191,6 +177,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Meeting Cards */}
         <ScrollView>
           {filteredMeetings.map((meeting, index) => (
             <TouchableOpacity
@@ -223,6 +210,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
           ))}
         </ScrollView>
 
+        {/* Bottom Tab */}
         <View
           style={[
             styles.bottomTab,
@@ -250,16 +238,6 @@ const ScheduledMeetingsScreen: React.FC = () => {
             </Text>
           </View>
 
-          <View style={styles.tabItem1}>
-            <Image
-              source={require('../assets/document.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Project Details
-            </Text>
-          </View>
-
           <TouchableOpacity
             style={styles.tabItem1}
             onPress={() => navigation.navigate('More')}
@@ -281,17 +259,22 @@ export default ScheduledMeetingsScreen;
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+
+  headerContainer: {
+    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '600',
   },
 
   searchContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
 
   searchInput: {
@@ -322,6 +305,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderRadius: 12,
     marginBottom: 10,
+    marginHorizontal: 16,
   },
 
   meetingTitle: {

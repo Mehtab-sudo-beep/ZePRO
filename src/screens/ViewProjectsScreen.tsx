@@ -85,7 +85,10 @@ const ProjectListScreen: React.FC = () => {
     <View
       style={[
         styles.card,
-        { backgroundColor: colors.card, borderColor: colors.border },
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
       ]}
     >
       <Text style={[styles.title, { color: colors.text }]}>{item.name}</Text>
@@ -109,7 +112,12 @@ const ProjectListScreen: React.FC = () => {
         {item.problem}
       </Text>
 
-      <Text style={[styles.slots, { color: item.slots > 0 ? 'green' : 'red' }]}>
+      <Text
+        style={[
+          styles.slots,
+          { color: item.slots > 0 ? colors.primary : 'red' },
+        ]}
+      >
         {item.slots > 0
           ? `Slots Available: ${item.slots}`
           : 'No Slots Available'}
@@ -117,7 +125,7 @@ const ProjectListScreen: React.FC = () => {
 
       {item.slots > 0 && (
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, { backgroundColor: colors.primary }]}
           onPress={() => sendRequest(item.name)}
         >
           <Text style={styles.buttonText}>Send Request</Text>
@@ -128,7 +136,7 @@ const ProjectListScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 🔍 SEARCH BAR */}
+      {/* SEARCH BAR (Clean) */}
       <View
         style={[
           styles.searchContainer,
@@ -147,10 +155,9 @@ const ProjectListScreen: React.FC = () => {
           onChangeText={setSearch}
           style={[styles.searchInput, { color: colors.text }]}
         />
-        <Text style={{ fontSize: 18 }}>🔍</Text>
       </View>
 
-      {/* 🎛 FILTER OPTIONS */}
+      {/* FILTER OPTIONS */}
       <View style={styles.filterRow}>
         {['DOMAIN', 'FACULTY'].map(type => (
           <TouchableOpacity
@@ -200,45 +207,44 @@ export default ProjectListScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 16,
   },
 
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
   },
 
   searchInput: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    fontSize: 14,
   },
 
   filterRow: {
     flexDirection: 'row',
-    marginVertical: 10,
+    marginBottom: 12,
   },
 
   filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
     marginRight: 10,
   },
 
   card: {
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
   },
 
   faculty: {
@@ -257,26 +263,25 @@ const styles = StyleSheet.create({
   },
 
   slots: {
-    marginTop: 6,
-    fontWeight: 'bold',
+    marginTop: 8,
+    fontWeight: '600',
   },
 
   button: {
-    marginTop: 10,
-    backgroundColor: '#ff9900',
-    paddingVertical: 10,
-    borderRadius: 6,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
   },
 
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
 
   noProjectText: {
     textAlign: 'center',
     marginTop: 40,
-    fontSize: 16,
+    fontSize: 15,
   },
 });

@@ -24,10 +24,7 @@ const MoreScreen: React.FC = () => {
       'Confirm Logout',
       'Are you sure you want to log out?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Log Out',
           style: 'destructive',
@@ -40,30 +37,30 @@ const MoreScreen: React.FC = () => {
       { cancelable: true },
     );
   };
+
   if (!user || user.role !== 'student') return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Header (Z removed) */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <Image
-            source={require('../assets/zepro.png')}
-            style={styles.headerIcon}
-            resizeMode="contain"
-          />
           <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
         </View>
 
-        {/* Profile Header */}
+        {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/avatar.png')}
             style={[
               styles.profileImage,
-              { backgroundColor: colors.background }, // Fix dark circle issue
+              {
+                borderColor: colors.card,
+                backgroundColor: colors.card,
+              },
             ]}
           />
+
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: colors.text }]}>
               {user.name}
@@ -74,7 +71,7 @@ const MoreScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Menu Items */}
+        {/* Menu */}
         <ScrollView
           style={[styles.list, { backgroundColor: colors.card }]}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -147,16 +144,6 @@ const MoreScreen: React.FC = () => {
 
           <View style={styles.tabItem}>
             <Image
-              source={require('../assets/document.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Projects
-            </Text>
-          </View>
-
-          <View style={styles.tabItem}>
-            <Image
               source={require('../assets/more-color.png')}
               style={styles.tabIcon}
             />
@@ -172,9 +159,7 @@ const MoreScreen: React.FC = () => {
 
 export default MoreScreen;
 
-/* =========================
-   MENU ITEM COMPONENT
-========================= */
+/* ================= MENU ITEM ================= */
 
 const MenuItem = ({
   title,
@@ -196,13 +181,12 @@ const MenuItem = ({
     >
       {title}
     </Text>
-    <Text style={[styles.arrow, { color: colors.subText }]}>&gt;</Text>
+
+    <Text style={[styles.arrow, { color: colors.subText }]}>›</Text>
   </TouchableOpacity>
 );
 
-/* =========================
-   STYLES
-========================= */
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -211,26 +195,18 @@ const styles = StyleSheet.create({
 
   header: {
     height: 60,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
-  },
-
-  headerIcon: {
-    width: 60,
-    height: 40,
-    marginRight: 8,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
   },
 
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
 
   profileHeader: {
     paddingVertical: 24,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -239,6 +215,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
+    borderWidth: 2,
   },
 
   profileInfo: {
@@ -257,16 +234,16 @@ const styles = StyleSheet.create({
 
   list: {
     flex: 1,
-    marginTop: 12,
+    marginTop: 10,
   },
 
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    borderBottomWidth: 0.5,
   },
 
   itemText: {
@@ -274,7 +251,7 @@ const styles = StyleSheet.create({
   },
 
   arrow: {
-    fontSize: 18,
+    fontSize: 22,
   },
 
   bottomTab: {

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ const StudentHomeScreen: React.FC = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const navigation = useNavigation<StudentHomeNavigationProp>();
+
+  const [showAllocatedMessage, setShowAllocatedMessage] = useState(false);
 
   if (!user || user.role !== 'student') return null;
 
@@ -115,15 +117,23 @@ const StudentHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.actionButton, { borderColor: colors.primary }]}
+              onPress={() => setShowAllocatedMessage(true)}
             >
               <Text style={[styles.actionText, { color: colors.primary }]}>
                 View Allocated Project
               </Text>
             </TouchableOpacity>
 
-            <Text style={[styles.placeholderText, { color: colors.subText }]}>
-              Project details will appear once assigned.
-            </Text>
+            {showAllocatedMessage && (
+              <Text
+                style={[
+                  styles.placeholderText,
+                  { color: colors.subText, marginTop: 10 },
+                ]}
+              >
+                Project details will appear once assigned.
+              </Text>
+            )}
           </View>
         </ScrollView>
 
@@ -156,20 +166,6 @@ const StudentHomeScreen: React.FC = () => {
             />
             <Text style={[styles.tab, { color: colors.subText }]}>
               Meetings
-            </Text>
-          </TouchableOpacity>
-
-          {/* Projects */}
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('ViewProjects')}
-          >
-            <Image
-              source={require('../assets/document.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Projects
             </Text>
           </TouchableOpacity>
 

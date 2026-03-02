@@ -51,9 +51,9 @@ export const mockUsers = [
     name: 'admin1',
   },
   {
-    email:'fcoo@nitc.ac.in',
-    password: "fc123",
+    email: 'fcoo@nitc.ac.in',
+    password: 'fc123',
     role: 'facultycoordinator',
-    name: 'Faculty Coordinator 1'
-  }
+    name: 'Faculty Coordinator 1',
+  },
 ] satisfies User[];
