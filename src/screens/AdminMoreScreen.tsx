@@ -11,10 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 const AdminMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
 
   const handleLogout = () => {
     setUser(null);
@@ -25,6 +27,10 @@ const AdminMoreScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
+              </View>
+      
       <View style={styles.container}>
 
         {/* Profile Header */}
@@ -130,6 +136,16 @@ const MenuItem = ({
    ======================= */
 
 const styles = StyleSheet.create({
+  header: {
+    height: 60,
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
