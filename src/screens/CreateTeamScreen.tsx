@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,15 @@ import {
   ScrollView,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image } from 'react-native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ThemeContext } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
 
 const CreateTeamScreen = ({ navigation }: Props) => {
+  const { colors } = useContext(ThemeContext);
+
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -24,124 +26,160 @@ const CreateTeamScreen = ({ navigation }: Props) => {
       Alert.alert('Error', 'Team name is required');
       return;
     }
-    // TODO: Integrate with your API to create team and enable join requests view
-    Alert.alert(
-      'Success',
-      `Team "${teamName}" created!${
-        description ? `\nDescription: ${description}` : ''
-      }\n\nJoin requests will appear in your team dashboard.`,
-      [{ text: 'OK', onPress: () => navigation.goBack() }],
-    );
+
+    Alert.alert('Success', `Team "${teamName}" created!`, [
+      { text: 'OK', onPress: () => navigation.goBack() },
+    ]);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image
-            source={require('../assets/zepro.png')}
-            style={styles.headerIcon}
-            resizeMode="contain"
-          />
-          <Text style={[styles.title, { marginLeft: 8 }]}>Create New Team</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1 }}>
+        {/* Header (Lowered + No Z logo) */}
+        <View style={styles.headerContainer}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Create New Team
+          </Text>
         </View>
+
         <ScrollView
-          style={styles.container1}
+          contentContainerStyle={styles.formContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Team Name (required)</Text>
+          {/* Team Name */}
+          <Text style={[styles.label, { color: colors.text }]}>
+            Team Name (required)
+          </Text>
+
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
             value={teamName}
             onChangeText={setTeamName}
             placeholder="Enter team name"
+            placeholderTextColor={colors.subText}
             autoCapitalize="words"
           />
-          <Text style={styles.label}>Description (optional)</Text>
+
+          {/* Description */}
+          <Text style={[styles.label, { color: colors.text }]}>
+            Description (optional)
+          </Text>
+
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input,
+              styles.textArea,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
             value={description}
             onChangeText={setDescription}
             placeholder="Enter team description"
+            placeholderTextColor={colors.subText}
             multiline
-            numberOfLines={4}
           />
-          <TouchableOpacity style={styles.button} onPress={handleCreateTeam}>
+
+          {/* Create Button */}
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            onPress={handleCreateTeam}
+          >
             <Text style={styles.buttonText}>Create Team</Text>
           </TouchableOpacity>
+
+          {/* Cancel Button */}
           <TouchableOpacity
-            style={styles.cancelButton}
+            style={[
+              styles.cancelButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={[styles.cancelButtonText, { color: colors.subText }]}>
+              Cancel
+            </Text>
           </TouchableOpacity>
         </ScrollView>
-        /
       </View>
     </SafeAreaView>
   );
 };
 
+export default CreateTeamScreen;
+
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  headerContainer: {
+    paddingTop: 30, // lowered properly
+    paddingHorizontal: 20,
+    paddingBottom: 10,
   },
-  container1: {
-    padding: 16,
-  },
+
   title: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '600',
   },
+
+  formContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     marginTop: 20,
-    marginBottom: 8,
+    marginBottom: 6,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     padding: 12,
-    fontSize: 16,
-    borderRadius: 8,
+    fontSize: 15,
+    borderRadius: 10,
   },
+
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
+
   button: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 30,
   },
+
   buttonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  cancelButtonText: {
-    color: '#6c757d',
     fontSize: 16,
+    fontWeight: '600',
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
+
+  cancelButton: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
   },
-  headerIcon: {
-    width: 62,
-    height: 42,
+
+  cancelButtonText: {
+    fontSize: 15,
   },
 });
-
-export default CreateTeamScreen;
