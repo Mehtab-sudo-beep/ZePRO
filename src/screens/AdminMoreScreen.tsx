@@ -1,97 +1,72 @@
 import React, { useContext } from 'react';
-import {
-  View,
-  
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
-
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 const AdminMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
+
+  if (!user || user.role !== 'admin') return null;
 
   const handleLogout = () => {
     setUser(null);
     navigation.replace('Login');
   };
 
-  if (!user || user.role !== 'admin') return null;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1 }}>
+        {/* Profile */}
+        <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/avatar.png')}
             style={styles.profileImage}
           />
-
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>
+          <View style={{ marginLeft: 15 }}>
+            <Text style={[styles.name, { color: colors.text }]}>
               {user.name}
             </Text>
-            <Text style={styles.profileEmail}>
-              {user.email}
-            </Text>
+            <Text style={{ color: colors.subText }}>{user.email}</Text>
           </View>
         </View>
 
         {/* Menu */}
-        <View style={styles.menu}>
-
+        <View style={[styles.menu, { backgroundColor: colors.card }]}>
           <MenuItem
-            title="Add Institute"
+            title="Institute & Department"
             onPress={() => navigation.navigate('AddInstitute')}
-          />
-
-          <MenuItem
-            title="Add Department"
-            onPress={() => navigation.navigate('AddDepartment')}
+            colors={colors}
           />
 
           <MenuItem
             title="Rule Management"
             onPress={() => navigation.navigate('RuleManagement')}
+            colors={colors}
           />
 
           <MenuItem
             title="Deadline Management"
             onPress={() => navigation.navigate('DeadlineManagement')}
+            colors={colors}
+          />
+
+          <MenuItem
+            title="Settings"
+            onPress={() => navigation.navigate('AdminSettings')}
+            colors={colors}
           />
 
           <MenuItem
             title="Log Out"
-            danger
             onPress={handleLogout}
+            danger
+            colors={colors}
           />
-
-
-         {/* =========================
-          Bottom Dashboard
-         ========================= */}
-      
-
         </View>
-      </View>
-      <View style={styles.bottomTab}>
-        
-
-        <TouchableOpacity onPress={() => navigation.navigate('AdminHome')}>
-          <Text style={styles.tab}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Logs')}>
-          <Text style={styles.tab}>Logs</Text>
-        </TouchableOpacity>
-        <Text style={styles.tabActive}>More</Text>
       </View>
     </SafeAreaView>
   );
@@ -99,123 +74,46 @@ const AdminMoreScreen: React.FC = () => {
 
 export default AdminMoreScreen;
 
-/* =======================
-   MENU ITEM COMPONENT
-   ======================= */
-
-const MenuItem = ({
-  title,
-  onPress,
-  danger = false,
-}: {
-  title: string;
-  onPress: () => void;
-  danger?: boolean;
-}) => (
-  <TouchableOpacity style={styles.item} onPress={onPress}>
+const MenuItem = ({ title, onPress, danger = false, colors }: any) => (
+  <TouchableOpacity
+    style={[styles.item, { borderColor: colors.border }]}
+    onPress={onPress}
+  >
     <Text
-      style={[
-        styles.itemText,
-        danger && styles.dangerText,
-      ]}
+      style={[styles.itemText, { color: danger ? '#DC2626' : colors.text }]}
     >
       {title}
     </Text>
-    <Text style={styles.arrow}>&gt;</Text>
+    <Text style={{ color: colors.subText }}>›</Text>
   </TouchableOpacity>
 );
 
-/* =======================
-   STYLES
-   ======================= */
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  container: {
-    flex: 1,
-  },
-
   profileHeader: {
-    backgroundColor: '#111827',
-    paddingVertical: 28,
-    paddingHorizontal: 16,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   profileImage: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#D1D5DB',
   },
-
-  profileInfo: {
-    marginLeft: 16,
-  },
-
-  profileName: {
-    fontSize: 16,
+  name: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
-
-  profileEmail: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-
   menu: {
-    backgroundColor: '#FFFFFF',
-    marginTop: 12,
+    marginTop: 10,
   },
-
   item: {
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#E5E7EB',
   },
-
   itemText: {
-    fontSize: 15,
-    color: '#111827',
-  },
-
-  dangerText: {
-    color: '#DC2626',
-    fontWeight: '500',
-  },
-
-  arrow: {
-    fontSize: 18,
-    color: '#9CA3AF',
-  },
-  bottomTab: {
-    height: 60,
-    borderTopWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-
-  tab: {
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-
-  tabActive: {
-    color: '#2563EB',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 16,
   },
 });

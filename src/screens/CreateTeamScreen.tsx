@@ -2,184 +2,174 @@ import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
+  StyleSheet,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
-  ScrollView,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemeContext } from '../theme/ThemeContext';
+import { login } from '../auth/authService';
+import { AuthContext } from '../context/AuthContext';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-const CreateTeamScreen = ({ navigation }: Props) => {
-  const { colors } = useContext(ThemeContext);
+const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const authContext = useContext(AuthContext);
 
-  const [teamName, setTeamName] = useState('');
-  const [description, setDescription] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [secure, setSecure] = useState(true);
 
-  const handleCreateTeam = () => {
-    if (!teamName.trim()) {
-      Alert.alert('Error', 'Team name is required');
+  const handleLogin = () => {
+    const user = login(email, password);
+
+    if (!user) {
+      Alert.alert('Login Failed', 'Invalid credentials');
       return;
     }
 
-    Alert.alert('Success', `Team "${teamName}" created!`, [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    authContext.setUser(user);
+
+    if (user.role === 'faculty') {
+      navigation.replace('FacultyHome');
+    } else if (user.role === 'admin') {
+      navigation.replace('AdminHome');
+    } else if (user.role === 'facultycoordinator') {
+      navigation.replace('FacultyCoordinatorDashboard');
+    } else {
+      navigation.replace('StudentHome');
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ flex: 1 }}>
-        {/* Header (Lowered + No Z logo) */}
-        <View style={styles.headerContainer}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Create New Team
-          </Text>
+    <View style={styles.container}>
+      <View style={styles.brandContainer}>
+        <Text style={styles.brandTitle}>ZePRO</Text>
+        <Text style={styles.brandSubtitle}>Project Allocation Portal</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.signInTitle}>Sign in</Text>
+        <Text style={styles.signInSubtitle}>Enter your details below</Text>
+
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          style={styles.input}
+          autoCapitalize="none"
+          placeholderTextColor="#252628"
+        />
+
+        {/* Password with Eye Toggle */}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder="Password"
+            secureTextEntry={secure}
+            value={password}
+            onChangeText={setPassword}
+            style={styles.passwordInput}
+            placeholderTextColor="#252628"
+          />
+
+          <TouchableOpacity onPress={() => setSecure(!secure)}>
+            <Text style={styles.eye}>{secure ? '👁️' : '🙈'}</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.formContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Team Name */}
-          <Text style={[styles.label, { color: colors.text }]}>
-            Team Name (required)
-          </Text>
+        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+          <Text style={styles.loginText}>Login</Text>
+        </TouchableOpacity>
 
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={teamName}
-            onChangeText={setTeamName}
-            placeholder="Enter team name"
-            placeholderTextColor={colors.subText}
-            autoCapitalize="words"
-          />
-
-          {/* Description */}
-          <Text style={[styles.label, { color: colors.text }]}>
-            Description (optional)
-          </Text>
-
-          <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Enter team description"
-            placeholderTextColor={colors.subText}
-            multiline
-          />
-
-          {/* Create Button */}
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.primary }]}
-            onPress={handleCreateTeam}
-          >
-            <Text style={styles.buttonText}>Create Team</Text>
-          </TouchableOpacity>
-
-          {/* Cancel Button */}
-          <TouchableOpacity
-            style={[
-              styles.cancelButton,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={[styles.cancelButtonText, { color: colors.subText }]}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <View style={styles.footerLinks}>
+          <Text style={styles.link}>Forgot Password?</Text>
+          <Text style={styles.link}>Sign Up</Text>
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
-export default CreateTeamScreen;
-
-/* ================= STYLES ================= */
+export default LoginScreen;
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    paddingTop: 30, // lowered properly
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f7fb',
+    justifyContent: 'center',
+    padding: 20,
   },
-
-  title: {
-    fontSize: 20,
+  brandContainer: {
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  brandTitle: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  brandSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 4,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    elevation: 6,
+  },
+  signInTitle: {
+    fontSize: 22,
     fontWeight: '600',
   },
-
-  formContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+  signInSubtitle: {
+    color: '#6b7280',
+    marginBottom: 16,
   },
-
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 6,
-  },
-
   input: {
+    color: '#000000',
     borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
     padding: 12,
-    fontSize: 15,
-    borderRadius: 10,
+    marginBottom: 15,
   },
-
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-
-  button: {
-    paddingVertical: 14,
-    borderRadius: 10,
+  passwordContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 30,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    marginBottom: 15,
   },
-
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 12,
+    color: '#000000',
+  },
+  eye: {
+    fontSize: 18,
+  },
+  loginBtn: {
+    backgroundColor: '#3b82f6',
+    padding: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  loginText: {
+    color: '#ffffff',
     fontWeight: '600',
   },
-
-  cancelButton: {
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
+  footerLinks: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 12,
-    borderWidth: 1,
   },
-
-  cancelButtonText: {
-    fontSize: 15,
+  link: {
+    color: '#2563eb',
+    fontSize: 12,
   },
 });

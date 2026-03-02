@@ -9,45 +9,41 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-
 import { login } from '../auth/authService';
-import { AuthContext } from '../context/AuthContext'; 
+import { AuthContext } from '../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const { setUser } = useContext(AuthContext); 
+  const { setUser } = useContext(AuthContext);
 
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [secure, setSecure] = useState(true);
 
   const handleLogin = () => {
-  const user = login(email, password);
+    const user = login(email, password);
 
-  if (!user) {
-    Alert.alert('Login Failed', 'Invalid credentials');
-    return;
-  }
+    if (!user) {
+      Alert.alert('Login Failed', 'Invalid credentials');
+      return;
+    }
 
-  setUser(user);
+    setUser(user);
 
-  if (user.role === 'faculty') {
-    navigation.replace('FacultyHome');
-  } else if (user.role==='admin') {
-    navigation.replace('AdminHome');
-  }
-  else if (user.role==='facultycoordinator'){
-    navigation.replace('FacultyCoordinatorDashboard');
-  }
-  else{
-    navigation.replace('StudentHome');
-  }
-};
-
+    if (user.role === 'faculty') {
+      navigation.replace('FacultyHome');
+    } else if (user.role === 'admin') {
+      navigation.replace('AdminHome');
+    } else if (user.role === 'facultycoordinator') {
+      navigation.replace('FacultyCoordinatorDashboard');
+    } else {
+      navigation.replace('StudentHome');
+    }
+  };
 
   return (
     <View style={styles.container}>
-
       <View style={styles.brandContainer}>
         <Text style={styles.brandTitle}>ZePRO</Text>
         <Text style={styles.brandSubtitle}>Project Allocation Portal</Text>
@@ -63,17 +59,24 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           onChangeText={setEmail}
           style={styles.input}
           autoCapitalize="none"
-          placeholderTextColor="#252628"
+          placeholderTextColor="#9ca3af"
         />
 
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          placeholderTextColor="#252628"
-        />
+        {/* Password with Show/Hide */}
+        <View style={styles.passwordContainer}>
+          <TextInput
+            placeholder="Password"
+            secureTextEntry={secure}
+            value={password}
+            onChangeText={setPassword}
+            style={styles.passwordInput}
+            placeholderTextColor="#9ca3af"
+          />
+
+          <TouchableOpacity onPress={() => setSecure(!secure)}>
+            <Text style={styles.eyeText}>{secure ? 'Show' : 'Hide'}</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
           <Text style={styles.loginText}>Login</Text>
@@ -84,15 +87,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.link}>Sign Up</Text>
         </View>
       </View>
-
     </View>
   );
 };
 
 export default LoginScreen;
-
-
-/* ===== STYLES (UNCHANGED) ===== */
 
 const styles = StyleSheet.create({
   container: {
@@ -106,11 +105,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 25,
   },
+
   brandTitle: {
     fontSize: 34,
     fontWeight: '800',
     color: '#1e293b',
   },
+
   brandSubtitle: {
     fontSize: 14,
     color: '#64748b',
@@ -128,6 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
   },
+
   signInSubtitle: {
     color: '#6b7280',
     marginBottom: 16,
@@ -136,10 +138,33 @@ const styles = StyleSheet.create({
   input: {
     color: '#000000',
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#e5e7eb',
     borderRadius: 6,
     padding: 12,
     marginBottom: 15,
+    backgroundColor: '#ffffff',
+  },
+
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    backgroundColor: '#ffffff',
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 12,
+    color: '#000000',
+  },
+
+  eyeText: {
+    color: '#3b82f6',
+    fontWeight: '500',
   },
 
   loginBtn: {
@@ -148,6 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
   },
+
   loginText: {
     color: '#ffffff',
     fontWeight: '600',
@@ -158,6 +184,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 12,
   },
+
   link: {
     color: '#2563eb',
     fontSize: 12,
