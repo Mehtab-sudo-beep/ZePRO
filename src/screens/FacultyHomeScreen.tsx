@@ -10,113 +10,93 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-type NavProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'FacultyHome'
->;
+type NavProp = NativeStackNavigationProp<RootStackParamList, 'FacultyHome'>;
 
 const FacultyHomeScreen: React.FC = () => {
   const { user } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
   const navigation = useNavigation<NavProp>();
 
   if (!user) return null;
-if (!user) return null;
   if (user.role !== 'faculty') return null;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
 
         {/* Header */}
-        <View style={styles.header}>
-          <Image
-            source={require('../assets/zepro.png')}
-            style={styles.headerIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.headerTitle}>Faculty Home</Text>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Faculty Home</Text>
         </View>
 
         {/* Content */}
         <ScrollView contentContainerStyle={styles.content}>
 
           {/* Pending Requests */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Pending Requests</Text>
-
-            <Text style={styles.item}>
-              • Project Alpha – Team of 3 students
-            </Text>
-            <Text style={styles.item}>
-              • Smart Attendance System – Team of 4 students
-            </Text>
-
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Pending Requests</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• Project Alpha – Team of 3 students</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• Smart Attendance System – Team of 4 students</Text>
             <TouchableOpacity
-              style={styles.primaryBtn}
+              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('FacultyRequests')}
             >
-              <Text style={styles.primaryBtnText}>
-                View All Requests
-              </Text>
+              <Text style={styles.primaryBtnText}>View All Requests</Text>
             </TouchableOpacity>
           </View>
 
           {/* Assigned Projects */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>My Projects</Text>
-
-            <Text style={styles.item}>
-              • Project Allocation System
-            </Text>
-            <Text style={styles.item}>
-              • Campus Navigation App
-            </Text>
-
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>My Projects</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• Project Allocation System</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• Campus Navigation App</Text>
             <TouchableOpacity
-              style={styles.outlineBtn}
+              style={[styles.outlineBtn, { borderColor: colors.primary }]}
               onPress={() => navigation.navigate('FacultyProjects')}
             >
-              <Text style={styles.outlineBtnText}>
-                View Project Details
-              </Text>
+              <Text style={[styles.outlineBtnText, { color: colors.primary }]}>View Project Details</Text>
             </TouchableOpacity>
           </View>
 
           {/* Meetings */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Upcoming Meetings</Text>
-
-            <Text style={styles.item}>
-              • 12 Feb – Project Discussion
-            </Text>
-            <Text style={styles.item}>
-              • 14 Feb – Requirement Review
-            </Text>
-
-            <TouchableOpacity
-              style={styles.outlineBtn}
-             
-            >
-              <Text style={styles.outlineBtnText}>
-                View Meetings
-              </Text>
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Upcoming Meetings</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• 12 Feb – Project Discussion</Text>
+            <Text style={[styles.item, { color: colors.subText }]}>• 14 Feb – Requirement Review</Text>
+            <TouchableOpacity style={[styles.outlineBtn, { borderColor: colors.primary }]}>
+              <Text style={[styles.outlineBtnText, { color: colors.primary }]}>View Meetings</Text>
             </TouchableOpacity>
           </View>
 
         </ScrollView>
 
-        {/* Bottom Dashboard */}
-        <View style={styles.bottomTab}>
-          <Text style={styles.tabActive}>Home</Text>
-           <TouchableOpacity onPress={() => navigation.navigate('FacultyRequests')}>
-              <Text style={styles.tab}>Request</Text>
-            </TouchableOpacity>
-          
-          <Text style={styles.tab}>Projects</Text>
-          <Text style={styles.tab}>More</Text>
+        {/* Bottom Tab */}
+        <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
+
+          <View style={styles.tabItem}>
+            <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>Home</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate('FacultyRequests')}
+          >
+            <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
+            <Text style={[styles.tab, { color: colors.subText }]}>Request</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.tabItem}
+          onPress={() => navigation.navigate('FacultyMore')}>
+            <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+            <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
+          </TouchableOpacity>
+
         </View>
 
       </View>
@@ -125,19 +105,13 @@ if (!user) return null;
 };
 
 export default FacultyHomeScreen;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
   header: {
     height: 60,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 4,
@@ -152,32 +126,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  content: {
-    padding: 16,
-  },
+  content: { padding: 16 },
 
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     elevation: 3,
   },
-
   cardTitle: {
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 10,
   },
-
   item: {
     fontSize: 14,
     marginBottom: 6,
-    color: '#374151',
   },
 
   primaryBtn: {
-    backgroundColor: '#2563EB',
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 12,
@@ -190,32 +157,36 @@ const styles = StyleSheet.create({
 
   outlineBtn: {
     borderWidth: 1,
-    borderColor: '#2563EB',
     paddingVertical: 10,
     borderRadius: 8,
     marginTop: 12,
     alignItems: 'center',
   },
   outlineBtnText: {
-    color: '#2563EB',
     fontWeight: '500',
   },
 
   bottomTab: {
     height: 60,
     borderTopWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIcon: {
+    width: 22,
+    height: 22,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
   tab: {
-    color: '#9CA3AF',
     fontSize: 12,
   },
   tabActive: {
-    color: '#2563EB',
     fontSize: 12,
     fontWeight: '700',
   },

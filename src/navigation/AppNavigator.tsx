@@ -21,6 +21,8 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SentRequestsScreen from '../screens/SentRequestsScreen';
 import ReceivedRequestsScreen from '../screens/ReceivedRequestsScreen';
+import FacultyMoreScreen from '../screens/FacultyMoreScreen';
+import FacultyProjectsScreen from '../screens/FacultyProjectsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -46,6 +48,7 @@ export type RootStackParamList = {
   Settings: undefined;
   SentRequests: undefined;
   ReceivedRequests: undefined;
+  FacultyMore: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -79,6 +82,8 @@ const AppNavigator = () => {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
       <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
+      <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
+      <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
     </Stack.Navigator>
   );
 };
