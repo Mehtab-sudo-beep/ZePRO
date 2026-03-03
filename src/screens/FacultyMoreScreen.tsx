@@ -68,7 +68,7 @@ const FacultyMoreScreen: React.FC = () => {
         >
           <MenuItem
             title="Profile"
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => navigation.navigate('FacultyProfile')}
             colors={colors}
           />
           <MenuItem

@@ -8,6 +8,7 @@ import {
   TextInput,
   Switch,
   Alert,
+  Image,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -114,7 +115,10 @@ const SettingsScreen: React.FC = () => {
         {/* Header */}
         <View style={[styles.header, isDark && styles.darkCard]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, isDark && styles.darkText]}>←</Text>
+            <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, isDark && styles.darkText]}>Settings</Text>
         </View>
@@ -427,7 +431,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '600', marginLeft: 10 },
   back: { fontSize: 22 },
-
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   sectionTitle: {
     marginTop: 24,
     marginBottom: 8,

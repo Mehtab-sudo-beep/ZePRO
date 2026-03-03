@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 
@@ -50,6 +51,7 @@ const isDatePast = (dateStr: string): boolean => {
 const DeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -57,7 +59,10 @@ const DeadlinesScreen: React.FC = () => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, { color: colors.text }]}>←</Text>
+            <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Deadlines</Text>
@@ -168,7 +173,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   headerSub: {
     fontSize: 12,
     marginTop: 1,

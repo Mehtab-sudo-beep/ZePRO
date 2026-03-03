@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 
@@ -14,14 +15,17 @@ import { ThemeContext } from '../theme/ThemeContext';
 const HelpCenterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-
+const isDark = colors.background === '#111827';
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, { color: colors.text }]}>←</Text>
+            <Image
+                        source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+                        style={styles.backIcon}
+                      />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Help Center
@@ -32,18 +36,20 @@ const HelpCenterScreen: React.FC = () => {
           style={[styles.list, { backgroundColor: colors.background }]}
           contentContainerStyle={{ paddingBottom: 32 }}
         >
-          <Section title="Admin Contact" colors={colors} icon="🏢">
-            <Info label="Name" value="Mr. Rajesh Kumar" colors={colors} icon="👤" />
-            <Info label="Email" value="admin@college.edu" colors={colors} icon="✉️" />
-            <Info label="Office" value="Admin Block - Room 204" colors={colors} icon="📍" />
-            <Info label="Phone" value="+91 9876543210" colors={colors} icon="📞" isLast />
+          <Section title="Admin Contact" colors={colors} >
+            <Info label="Name" value="Mr. Rajesh Kumar" colors={colors} />
+            <Info label="Email" value="admin@college.edu" colors={colors} />
+            <Info label="Office" value="Admin Block - Room 204" colors={colors}  />
+            <Info label="Phone" value="+91 9876543210" colors={colors}  isLast />
           </Section>
 
-          <Section title="Faculty Coordinator" colors={colors} icon="🎓">
-            <Info label="Name" value="Dr. Anjali Sharma" colors={colors} icon="👤" />
-            <Info label="Email" value="anjali@college.edu" colors={colors} icon="✉️" />
-            <Info label="Office" value="CSE Dept - Room 312" colors={colors} icon="📍" />
-            <Info label="Phone" value="+91 9123456780" colors={colors} icon="📞" isLast />
+          <Section title="Faculty Coordinator" colors={colors} 
+          >
+            <Info label="Name" value="Dr. Anjali Sharma" colors={colors}  />
+            <Info label="Email" value="anjali@college.edu" colors={colors} />
+            <Info label="Office" value="CSE Dept - Room 312" colors={colors} 
+             />
+            <Info label="Phone" value="+91 9123456780" colors={colors}  isLast />
           </Section>
         </ScrollView>
       </View>
@@ -122,7 +128,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
-
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   backButton: {
     width: 36,
     height: 36,
