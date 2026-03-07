@@ -17,7 +17,7 @@ const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
-
+const isDark = colors.background === '#111827';
   if (!user) return null;
 
   return (
@@ -26,7 +26,10 @@ const ProfileScreen: React.FC = () => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, { color: colors.text }]}>←</Text>
+            <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Profile
@@ -110,7 +113,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 4,
   },
-
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',

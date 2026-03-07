@@ -24,6 +24,10 @@ import ReceivedRequestsScreen from '../screens/ReceivedRequestsScreen';
 import FacultyMoreScreen from '../screens/FacultyMoreScreen';
 import FacultyProjectsScreen from '../screens/FacultyProjectsScreen';
 import FacultyProfileScreen from '../screens/FacultyProfileScreen';
+import AddInstituteScreen from '../screens/AddInstituteScreen';
+import AddDepartmentScreen from '../screens/AddDepartmentScreen';
+import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
+import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -51,6 +55,10 @@ export type RootStackParamList = {
   ReceivedRequests: undefined;
   FacultyMore: undefined;
   FacultyProfile: undefined;
+  AddInstitute: undefined;
+  AddDepartment :undefined;
+  RuleManagement : undefined;
+  DeadlineManagement: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -87,6 +95,10 @@ const AppNavigator = () => {
       <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
       <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
       <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
+      <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
+      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
+      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
+      <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
     </Stack.Navigator>
   );
 };

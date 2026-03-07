@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Image,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,7 +54,7 @@ const AddInstituteScreen: React.FC = () => {
     setTimeout(() => {
       setLoading(false);
       Alert.alert(
-        '✅ Institute Created',
+        'Institute Created',
         `"${form.name}" has been successfully added.`,
         [
           {
@@ -77,7 +78,10 @@ const AddInstituteScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'←'}</Text>
+          <Image
+            source={require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Institute</Text>
         <View style={{ width: 40 }} />
@@ -243,10 +247,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    // justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -254,16 +258,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
-  },
+  },  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   backArrow: {
     fontSize: 22,
     color: '#FFFFFF',
   },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+  headerTitle: { fontSize: 18, fontWeight: '600', marginLeft: 10 },
   scrollContent: {
     padding: 16,
   },
