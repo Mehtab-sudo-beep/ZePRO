@@ -12,13 +12,16 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final TeamRepository teamRepository;
 
-    public StudentService(StudentRepository studentRepository,
-                          TeamRepository teamRepository) {
+    private final ProjectRepository projectRepository;
 
-        this.studentRepository = studentRepository;
-        this.teamRepository = teamRepository;
-    }
+public StudentService(StudentRepository studentRepository,
+                      TeamRepository teamRepository,
+                      ProjectRepository projectRepository) {
 
+    this.studentRepository = studentRepository;
+    this.teamRepository = teamRepository;
+    this.projectRepository = projectRepository;
+}
     public TeamResponse createTeam(CreateTeamRequest request) {
 
         Student student = studentRepository.findById(request.getStudentId())
@@ -82,4 +85,51 @@ public class StudentService {
 
         return "Joined team successfully";
     }
+    public String requestProject(ProjectRequestDTO request) {
+
+    Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow();
+
+    // only team lead can send request
+    if(!student.isTeamLead()){
+        throw new RuntimeException("Only team lead can request project");
+    }
+
+    Project project = projectRepository.findById(request.getProjectId())
+            .orElseThrow();
+
+    if(!project.getStatus().equals("OPEN")){
+        throw new RuntimeException("Project already requested or assigned");
+    }
+
+    project.setStatus("REQUESTED");
+    projectRepository.save(project);
+
+    return "Project request sent to faculty";
+}
+public AssignedProjectResponse getAssignedProject(Long studentId){
+
+    Student student = studentRepository.findById(studentId).orElseThrow();
+
+    Team team = student.getTeam();
+
+    if(team == null){
+        throw new RuntimeException("Student not in a team");
+    }
+
+    Project project = projectRepository.findByTeam(team);
+
+    if(project == null){
+        throw new RuntimeException("No project assigned yet");
+    }
+
+    AssignedProjectResponse response = new AssignedProjectResponse();
+
+    response.setProjectId(project.getProjectId());
+    response.setTitle(project.getTitle());
+    response.setDescription(project.getDescription());
+    response.setFacultyName(project.getFaculty().getUser().getName());
+
+    return response;
+}
 }

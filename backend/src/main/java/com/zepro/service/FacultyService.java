@@ -1,7 +1,7 @@
 package com.zepro.service;
 
-import com.zepro.dto.CreateProjectRequest;
-import com.zepro.dto.ProjectResponse;
+import com.zepro.dto.faculty.CreateProjectRequest;
+import com.zepro.dto.faculty.ProjectResponse;
 import com.zepro.model.Faculty;
 import com.zepro.model.Project;
 import com.zepro.model.Team;
@@ -64,24 +64,53 @@ public class FacultyService {
 
     public void assignProject(Long projectId, Long teamId) {
 
-        Project project = projectRepository.findById(projectId).orElseThrow();
-        Team team = teamRepository.findById(teamId).orElseThrow();
+    Project project = projectRepository.findById(projectId).orElseThrow();
 
-        project.setTeam(team);
-        project.setStatus("ASSIGNED");
-
-        projectRepository.save(project);
+    if(!project.getStatus().equals("REQUESTED")){
+        throw new RuntimeException("Project not requested yet");
     }
 
+    Team team = teamRepository.findById(teamId).orElseThrow();
+
+    project.setTeam(team);
+    project.setStatus("ASSIGNED");
+
+    projectRepository.save(project);
+}
     public List<ProjectResponse> getPendingRequests() {
 
-        return projectRepository.findByStatus("REQUESTED")
-                .stream()
-                .map(p -> new ProjectResponse(
-                        p.getProjectId(),
-                        p.getTitle(),
-                        p.getDescription(),
-                        p.getStatus()))
-                .collect(Collectors.toList());
-    }
+    return projectRepository.findByStatus("REQUESTED")
+            .stream()
+            .map(project -> {
+
+                ProjectResponse response = new ProjectResponse();
+                response.setProjectId(project.getProjectId());
+                response.setTitle(project.getTitle());
+                response.setDescription(project.getDescription());
+                response.setStatus(project.getStatus());
+
+                Team team = project.getTeam();
+
+                if(team != null){
+
+                    response.setTeamId(team.getTeamId());
+                    response.setTeamName(team.getTeamName());
+
+                    if(team.getTeamLead() != null){
+                        response.setTeamLead(team.getTeamLead().getUser().getName());
+                    }
+
+                    List<String> members =
+                            team.getMembers()
+                                    .stream()
+                                    .map(student -> student.getUser().getName())
+                                    .toList();
+
+                    response.setTeamMembers(members);
+                }
+
+                return response;
+            })
+            .collect(Collectors.toList());
+}
 }
