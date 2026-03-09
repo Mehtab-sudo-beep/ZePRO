@@ -28,6 +28,7 @@ import AddInstituteScreen from '../screens/AddInstituteScreen';
 import AddDepartmentScreen from '../screens/AddDepartmentScreen';
 import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
 import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
+import RegisterScreen from '../screens/Registercreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -59,7 +60,7 @@ export type RootStackParamList = {
   AddDepartment :undefined;
   RuleManagement : undefined;
   DeadlineManagement: undefined;
-};
+  Register: undefined;};
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -99,6 +100,7 @@ const AppNavigator = () => {
       <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
       <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
       <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 };
