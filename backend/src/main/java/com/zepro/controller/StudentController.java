@@ -24,4 +24,16 @@ public class StudentController {
     public String joinTeam(@RequestBody JoinTeamRequest request) {
         return studentService.joinTeam(request);
     }
+
+    // TEAM LEAD SENDS PROJECT REQUEST
+    @PostMapping("/request-project")
+    public String requestProject(@RequestBody ProjectRequestDTO request) {
+        return studentService.requestProject(request);
+    }
+
+    // STUDENT CHECKS ASSIGNED PROJECT
+    @GetMapping("/assigned-project/{studentId}")
+    public AssignedProjectResponse getAssignedProject(@PathVariable Long studentId) {
+        return studentService.getAssignedProject(studentId);
+    }
 }

@@ -1,7 +1,7 @@
 package com.zepro.controller;
 
-import com.zepro.dto.CreateProjectRequest;
-import com.zepro.dto.ProjectResponse;
+import com.zepro.dto.faculty.CreateProjectRequest;
+import com.zepro.dto.faculty.ProjectResponse;
 import com.zepro.service.FacultyService;
 
 import org.springframework.web.bind.annotation.*;

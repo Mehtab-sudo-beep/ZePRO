@@ -1,4 +1,4 @@
-package com.zepro.dto;
+package com.zepro.dto.faculty;
 
 public class CreateProjectRequest {
 
