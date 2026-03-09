@@ -225,7 +225,7 @@ const DeadlineField = ({
     <View style={fieldStyles.wrapper}>
       <Text style={fieldStyles.label}>{label}</Text>
       <View style={[fieldStyles.inputRow, error ? fieldStyles.inputRowError : null]}>
-        <Text style={fieldStyles.calendarIcon}>📅</Text>
+        
         <TextInput
           style={fieldStyles.input}
           placeholder={placeholder}

@@ -105,13 +105,7 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('FacultyRequests')}
-          >
-            <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
-            <Text style={[styles.tab, { color: colors.subText }]}>Request</Text>
-          </TouchableOpacity>
+          
 
           <View style={styles.tabItem}>
             <Image source={require('../assets/more-color.png')} style={styles.tabIcon} />
