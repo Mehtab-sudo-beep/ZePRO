@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
-    // justifyContent: 'space-between',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
@@ -263,7 +263,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#FFFFFF',
   },
-  headerTitle: { fontSize: 18, fontWeight: '600', marginLeft: 10 },
+  headerTitle: {
+    
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#090909',
+  },
   scrollContent: {
     padding: 16,
   },

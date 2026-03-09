@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   StyleSheet,
+  Image,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -48,7 +49,10 @@ const AdminChangeRulesScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'←'}</Text>
+          <Image
+                                source={require('../assets/angle.png')}
+                                style={styles.backIcon}
+                              />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Rule Management</Text>
         <View style={{ width: 40 }} />
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    backgroundColor: '#111827',
+    
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -134,7 +138,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0f0d0d',
   },
   content: {
     flex: 1,
@@ -172,6 +176,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     marginBottom: 8,
   },
+  
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   ruleDescription: {
     fontSize: 12,
     color: '#6B7280',
