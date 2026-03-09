@@ -81,9 +81,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.footerLinks}>
-          <Text style={styles.link}>Forgot Password?</Text>
+         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+             <Text style={styles.link}>Forgot Password?</Text>
+         </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.link}>Don't have an account? Register</Text>
+            <Text style={styles.link}> Register</Text>
           </TouchableOpacity>
         </View>
       </View>
