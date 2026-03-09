@@ -28,6 +28,7 @@ import AddInstituteScreen from '../screens/AddInstituteScreen';
 import AddDepartmentScreen from '../screens/AddDepartmentScreen';
 import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
 import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
+import FacultyCoordinatorMoreScreen from '../screens/FacultyCoordinatorMoreScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -54,6 +55,7 @@ export type RootStackParamList = {
   SentRequests: undefined;
   ReceivedRequests: undefined;
   FacultyMore: undefined;
+  FacultyCoordinatorMore:undefined;
   FacultyProfile: undefined;
   AddInstitute: undefined;
   AddDepartment :undefined;
@@ -93,6 +95,7 @@ const AppNavigator = () => {
       <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
       <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
       <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
+      <Stack.Screen name='FacultyCoordinatorMore' component={FacultyCoordinatorMoreScreen}/>
       <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
       <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
       <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />

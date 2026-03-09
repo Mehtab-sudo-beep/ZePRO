@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Image,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -105,7 +106,10 @@ const ChangeDeadlinesScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'←'}</Text>
+          <Image
+                                          source={require('../assets/angle.png')}
+                                          style={styles.backIcon}
+                                        />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Deadline Management</Text>
         <View style={{ width: 40 }} />
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    backgroundColor: '#111827',
+    
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -273,6 +277,7 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
   },
+   backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   backArrow: {
     fontSize: 22,
     color: '#FFFFFF',
@@ -280,7 +285,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0c0b0b',
   },
   scrollContent: {
     padding: 16,
