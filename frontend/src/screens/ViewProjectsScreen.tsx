@@ -199,7 +199,7 @@ const ProjectListScreen: React.FC = () => {
         />
       )}
     </View>
-    /</SafeAreaView>
+    </SafeAreaView>
   );
 };
 

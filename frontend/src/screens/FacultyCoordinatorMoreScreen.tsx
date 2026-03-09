@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 
-const AdminMoreScreen: React.FC = () => {
+const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
@@ -38,7 +38,7 @@ const AdminMoreScreen: React.FC = () => {
     );
   };
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user) return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -46,32 +46,18 @@ const AdminMoreScreen: React.FC = () => {
 
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            More
-          </Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
         </View>
 
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/avatar.png')}
-            style={[
-              styles.profileImage,
-              {
-                borderColor: colors.card,
-                backgroundColor: colors.card,
-              },
-            ]}
+            style={[styles.profileImage, { borderColor: colors.card, backgroundColor: colors.card }]}
           />
-
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.text }]}>
-              {user.name}
-            </Text>
-
-            <Text style={[styles.profileEmail, { color: colors.subText }]}>
-              {user.email}
-            </Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>{user.name}</Text>
+            <Text style={[styles.profileEmail, { color: colors.subText }]}>{user.email}</Text>
           </View>
         </View>
 
@@ -81,35 +67,25 @@ const AdminMoreScreen: React.FC = () => {
           contentContainerStyle={{ paddingBottom: 20 }}
         >
           <MenuItem
-            title="Add Institute"
-            onPress={() => navigation.navigate('AddInstitute')}
+            title="Profile"
+            onPress={() => navigation.navigate('FacultyProfile')}
             colors={colors}
           />
-
           <MenuItem
-            title="Add Department"
-            onPress={() => navigation.navigate('AddDepartment')}
+            title="Help Center"
+            onPress={() => navigation.navigate('HelpCenter')}
             colors={colors}
           />
-
           <MenuItem
-            title="Rule Management"
-            onPress={() => navigation.navigate('RuleManagement')}
+            title="Deadlines"
+            onPress={() => navigation.navigate('Deadline')}
             colors={colors}
           />
-
-          <MenuItem
-            title="Deadline Management"
-            onPress={() => navigation.navigate('DeadlineManagement')}
-            colors={colors}
-          />
-
           <MenuItem
             title="Settings"
             onPress={() => navigation.navigate('Settings')}
             colors={colors}
           />
-
           <MenuItem
             title="Log Out"
             danger
@@ -119,58 +95,30 @@ const AdminMoreScreen: React.FC = () => {
         </ScrollView>
 
         {/* Bottom Tab */}
-        <View
-          style={[
-            styles.bottomTab,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('InstituteList')}
-          >
-            <Image
-              source={require('../assets/home.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Home
-            </Text>
-          </TouchableOpacity>
+        <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate('Logs')}
+            onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
           >
-            <Image
-              source={require('../assets/time.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Logs
-            </Text>
+            <Image source={require('../assets/home.png')} style={styles.tabIcon} />
+            <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
+
+          
 
           <View style={styles.tabItem}>
-            <Image
-              source={require('../assets/more-color.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tabActive, { color: colors.primary }]}>
-              More
-            </Text>
+            <Image source={require('../assets/more-color.png')} style={styles.tabIcon} />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>More</Text>
           </View>
-        </View>
 
+        </View>
       </View>
     </SafeAreaView>
   );
 };
 
-export default AdminMoreScreen;
+export default FacultyCoordinatorMoreScreen;
 
 /* ================= MENU ITEM ================= */
 
@@ -189,15 +137,9 @@ const MenuItem = ({
     style={[styles.item, { borderColor: colors.border }]}
     onPress={onPress}
   >
-    <Text
-      style={[
-        styles.itemText,
-        { color: danger ? colors.error || colors.primary : colors.text },
-      ]}
-    >
+    <Text style={[styles.itemText, { color: danger ? '#DC2626' : colors.text }]}>
       {title}
     </Text>
-
     <Text style={[styles.arrow, { color: colors.subText }]}>›</Text>
   </TouchableOpacity>
 );
@@ -205,16 +147,13 @@ const MenuItem = ({
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
   header: {
     height: 60,
     paddingHorizontal: 18,
     justifyContent: 'center',
   },
-
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
@@ -226,32 +165,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   profileImage: {
     width: 64,
     height: 64,
     borderRadius: 32,
     borderWidth: 2,
   },
+  profileInfo: { marginLeft: 16 },
+  profileName: { fontSize: 16, fontWeight: '600' },
+  profileEmail: { fontSize: 13, marginTop: 4 },
 
-  profileInfo: {
-    marginLeft: 16,
-  },
-
-  profileName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  profileEmail: {
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  list: {
-    flex: 1,
-    marginTop: 10,
-  },
+  list: { flex: 1, marginTop: 10 },
 
   item: {
     flexDirection: 'row',
@@ -261,14 +185,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderBottomWidth: 0.5,
   },
-
-  itemText: {
-    fontSize: 15,
-  },
-
-  arrow: {
-    fontSize: 22,
-  },
+  itemText: { fontSize: 15 },
+  arrow: { fontSize: 22 },
 
   bottomTab: {
     height: 60,
@@ -277,25 +195,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
-
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  tabIcon: {
-    width: 22,
-    height: 22,
-    marginBottom: 4,
-    resizeMode: 'contain',
-  },
-
-  tab: {
-    fontSize: 12,
-  },
-
-  tabActive: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
+  tabItem: { alignItems: 'center', justifyContent: 'center' },
+  tabIcon: { width: 22, height: 22, marginBottom: 4, resizeMode: 'contain' },
+  tab: { fontSize: 12 },
+  tabActive: { fontSize: 12, fontWeight: '700' },
 });
