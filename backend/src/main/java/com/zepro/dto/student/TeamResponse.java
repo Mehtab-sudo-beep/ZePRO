@@ -1,22 +1,13 @@
-package com.zepro.model;
+package com.zepro.dto.student;
 
-import jakarta.persistence.*;
 import java.util.List;
 
-@Entity
-public class Team {
+public class TeamResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long teamId;
-
     private String teamName;
-
-    @OneToOne
-    private Student teamLead;
-
-    @OneToMany(mappedBy = "team")
-    private List<Student> members;
+    private String teamLead;
+    private List<String> members;
 
     public Long getTeamId() {
         return teamId;
@@ -26,11 +17,11 @@ public class Team {
         return teamName;
     }
 
-    public Student getTeamLead() {
+    public String getTeamLead() {
         return teamLead;
     }
 
-    public List<Student> getMembers() {
+    public List<String> getMembers() {
         return members;
     }
 
@@ -42,11 +33,11 @@ public class Team {
         this.teamName = teamName;
     }
 
-    public void setTeamLead(Student teamLead) {
+    public void setTeamLead(String teamLead) {
         this.teamLead = teamLead;
     }
 
-    public void setMembers(List<Student> members) {
+    public void setMembers(List<String> members) {
         this.members = members;
     }
 }
