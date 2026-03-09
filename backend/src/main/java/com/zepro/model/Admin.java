@@ -12,4 +12,24 @@ public class Admin {
     @OneToOne
     @JoinColumn(name = "user_id")
     private Users user;
+
+    // ---------- getters ----------
+
+    public Long getAdminId() {
+        return adminId;
+    }
+
+    public Users getUser() {
+        return user;
+    }
+
+    // ---------- setters ----------
+
+    public void setAdminId(Long adminId) {
+        this.adminId = adminId;
+    }
+
+    public void setUser(Users user) {
+        this.user = user;
+    }
 }
