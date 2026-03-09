@@ -3,6 +3,7 @@ package com.zepro.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "users")
 public class Users {
 
     @Id
@@ -19,40 +20,44 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    // ---------- GETTERS ----------
+
     public Long getUserId() {
         return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getEmail() {
         return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
     public UserRole getRole() {
         return role;
+    }
+
+    // ---------- SETTERS ----------
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public void setRole(UserRole role) {
