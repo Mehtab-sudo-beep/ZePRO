@@ -17,10 +17,11 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'student' | 'faculty' | ''>('');
 
   const handleRegister = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+    if (!name || !email || !password || !confirmPassword || !role) {
+      Alert.alert('Error', 'Please fill all fields and select role');
       return;
     }
 
@@ -29,8 +30,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    // Normally send data to backend here
-    Alert.alert('Success', 'Registration successful');
+    Alert.alert('Success', `Registered as ${role}`);
 
     navigation.navigate('Login');
   };
@@ -80,6 +80,45 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.input}
           placeholderTextColor="#9ca3af"
         />
+
+        {/* Role Selection */}
+        <Text style={styles.roleLabel}>Select Role</Text>
+
+        <View style={styles.roleContainer}>
+          <TouchableOpacity
+            style={[
+              styles.roleButton,
+              role === 'student' && styles.selectedRole,
+            ]}
+            onPress={() => setRole('student')}
+          >
+            <Text
+              style={[
+                styles.roleText,
+                role === 'student' && styles.selectedRoleText,
+              ]}
+            >
+              Student
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.roleButton,
+              role === 'faculty' && styles.selectedRole,
+            ]}
+            onPress={() => setRole('faculty')}
+          >
+            <Text
+              style={[
+                styles.roleText,
+                role === 'faculty' && styles.selectedRoleText,
+              ]}
+            >
+              Faculty
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.registerBtn} onPress={handleRegister}>
           <Text style={styles.registerText}>Register</Text>
@@ -147,6 +186,41 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 15,
     backgroundColor: '#ffffff',
+  },
+
+  roleLabel: {
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+
+  roleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+
+  roleButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+
+  selectedRole: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+
+  roleText: {
+    color: '#374151',
+  },
+
+  selectedRoleText: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
 
   registerBtn: {
