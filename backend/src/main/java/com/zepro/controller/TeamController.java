@@ -1,31 +1,24 @@
 package com.zepro.controller;
 
 import com.zepro.model.Team;
-import com.zepro.service.TeamService;
+import com.zepro.repository.TeamRepository;
 
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/teams")
 public class TeamController {
 
-    private final TeamService teamService;
+    private final TeamRepository teamRepository;
 
-    public TeamController(TeamService teamService) {
-        this.teamService = teamService;
+    public TeamController(TeamRepository teamRepository) {
+        this.teamRepository = teamRepository;
     }
 
-    @PostMapping("/create")
-    public Team createTeam(@RequestBody Team team) {
-        return teamService.createTeam(team);
+    @GetMapping
+    public List<Team> getAllTeams() {
+        return teamRepository.findAll();
     }
-
-    @PostMapping("/add-member")
-    public String addMember(
-            @RequestParam Long teamId,
-            @RequestParam Long studentId) {
-
-        teamService.addMember(teamId, studentId);
-        return "Member added";
-    }
-}   
+}
