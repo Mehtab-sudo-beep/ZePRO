@@ -1,6 +1,7 @@
 package com.zepro.controller;
 
-import com.zepro.model.Project;
+import com.zepro.dto.CreateProjectRequest;
+import com.zepro.dto.ProjectResponse;
 import com.zepro.service.FacultyService;
 
 import org.springframework.web.bind.annotation.*;
@@ -18,13 +19,18 @@ public class FacultyController {
     }
 
     @PostMapping("/project")
-    public Project createProject(@RequestBody Project project) {
-        return facultyService.createProject(project);
+    public ProjectResponse createProject(@RequestBody CreateProjectRequest request) {
+        return facultyService.createProject(request);
     }
 
-    @GetMapping("/projects")
-    public List<Project> getProjects() {
-        return facultyService.getProjects();
+    @GetMapping("/{facultyId}/projects")
+    public List<ProjectResponse> getProjects(@PathVariable Long facultyId) {
+        return facultyService.getProjects(facultyId);
+    }
+
+    @GetMapping("/pending-requests")
+    public List<ProjectResponse> getPendingRequests() {
+        return facultyService.getPendingRequests();
     }
 
     @PostMapping("/assign-project")
@@ -35,4 +41,4 @@ public class FacultyController {
         facultyService.assignProject(projectId, teamId);
         return "Project assigned";
     }
-}   
+}
