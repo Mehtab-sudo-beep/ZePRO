@@ -28,6 +28,11 @@ import AddInstituteScreen from '../screens/AddInstituteScreen';
 import AddDepartmentScreen from '../screens/AddDepartmentScreen';
 import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
 import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
+import FacultyCoordinatorMoreScreen from '../screens/FacultyCoordinatorMoreScreen';
+import FacultyViewMeetingsScreen from '../screens/FacultyViewMeetingsScreen';
+import InstituteListScreen from '../screens/InstituteListScreen';
+import DepartmentListScreen from '../screens/DepartmentListScreen';
+
 
 export type RootStackParamList = {
   Login: undefined;
@@ -43,7 +48,13 @@ export type RootStackParamList = {
   JoinTeam: undefined;
   CreateTeam: undefined;
   More: undefined;
-  AdminHome: undefined;
+  AdminHome:{
+  departmentId?: string;
+  departmentName?: string;
+  instituteId?: string;
+  instituteName?: string;
+} | undefined;
+    
   Logs: undefined;
   AdminMore: undefined;
   FacultyCoordinatorDashboard: undefined;
@@ -54,11 +65,15 @@ export type RootStackParamList = {
   SentRequests: undefined;
   ReceivedRequests: undefined;
   FacultyMore: undefined;
+  FacultyCoordinatorMore:undefined;
   FacultyProfile: undefined;
   AddInstitute: undefined;
   AddDepartment :undefined;
   RuleManagement : undefined;
   DeadlineManagement: undefined;
+  FacultyMeetings:undefined;
+  InstituteList:undefined;
+  DepartmentList:{ instituteId: string; instituteName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -93,12 +108,16 @@ const AppNavigator = () => {
       <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
       <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
       <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
+      <Stack.Screen name='FacultyCoordinatorMore' component={FacultyCoordinatorMoreScreen}/>
       <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
       <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
       <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
       <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
       <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
       <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
+      <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen}          />
+      <Stack.Screen name="InstituteList" component={InstituteListScreen}/>
+      <Stack.Screen name="DepartmentList" component={DepartmentListScreen}/>
     </Stack.Navigator>
   );
 };

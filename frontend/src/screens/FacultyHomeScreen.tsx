@@ -68,7 +68,9 @@ const FacultyHomeScreen: React.FC = () => {
             <Text style={[styles.cardTitle, { color: colors.text }]}>Upcoming Meetings</Text>
             <Text style={[styles.item, { color: colors.subText }]}>• 12 Feb – Project Discussion</Text>
             <Text style={[styles.item, { color: colors.subText }]}>• 14 Feb – Requirement Review</Text>
-            <TouchableOpacity style={[styles.outlineBtn, { borderColor: colors.primary }]}>
+            <TouchableOpacity style={[styles.outlineBtn, { borderColor: colors.primary }]}
+            onPress={() => navigation.navigate('FacultyMeetings')}
+            >
               <Text style={[styles.outlineBtnText, { color: colors.primary }]}>View Meetings</Text>
             </TouchableOpacity>
           </View>
