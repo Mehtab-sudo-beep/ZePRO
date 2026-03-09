@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Alert,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,10 +19,24 @@ const AdminMoreScreen: React.FC = () => {
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
 
-  const handleLogout = () => {
-    setUser(null);
-    navigation.replace('Login');
-  };
+ const handleLogout = () => {
+     Alert.alert(
+       'Confirm Logout',
+       'Are you sure you want to log out?',
+       [
+         { text: 'Cancel', style: 'cancel' },
+         {
+           text: 'Log Out',
+           style: 'destructive',
+           onPress: () => {
+             setUser(null);
+             navigation.replace('Login');
+           },
+         },
+       ],
+       { cancelable: true },
+     );
+   }; 
 
   if (!user || user.role !== 'admin') return null;
 
@@ -90,7 +105,7 @@ const AdminMoreScreen: React.FC = () => {
        {/* Bottom Tab */}
             <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
               
-              <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminHome')}>
+              <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('InstituteList')}>
                 <Image source={require('../assets/home.png')} style={styles.tabIcon} />
                 <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
               </TouchableOpacity>

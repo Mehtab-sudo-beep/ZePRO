@@ -34,7 +34,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     if (user.role === 'faculty') {
       navigation.replace('FacultyHome');
     } else if (user.role === 'admin') {
-      navigation.replace('AdminHome');
+      navigation.replace('InstituteList');
     } else if (user.role === 'facultycoordinator') {
       navigation.replace('FacultyCoordinatorDashboard');
     } else {
