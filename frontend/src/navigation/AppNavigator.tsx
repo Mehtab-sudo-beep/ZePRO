@@ -32,12 +32,8 @@ import FacultyCoordinatorMoreScreen from '../screens/FacultyCoordinatorMoreScree
 import FacultyViewMeetingsScreen from '../screens/FacultyViewMeetingsScreen';
 import InstituteListScreen from '../screens/InstituteListScreen';
 import DepartmentListScreen from '../screens/DepartmentListScreen';
-<<<<<<< HEAD
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-=======
-
->>>>>>> 640e2d2b536e9616007bb46387469d57d4b50cc0
 
 export type RootStackParamList = {
   Login: undefined;
@@ -79,11 +75,8 @@ export type RootStackParamList = {
   FacultyMeetings:undefined;
   InstituteList:undefined;
   DepartmentList:{ instituteId: string; instituteName: string };
-<<<<<<< HEAD
   Register : undefined;
   ForgotPassword : undefined;
-=======
->>>>>>> 640e2d2b536e9616007bb46387469d57d4b50cc0
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -128,11 +121,8 @@ const AppNavigator = () => {
       <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen}          />
       <Stack.Screen name="InstituteList" component={InstituteListScreen}/>
       <Stack.Screen name="DepartmentList" component={DepartmentListScreen}/>
-<<<<<<< HEAD
       <Stack.Screen name="Register" component={RegisterScreen}/>
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen}/>
-=======
->>>>>>> 640e2d2b536e9616007bb46387469d57d4b50cc0
     </Stack.Navigator>
   );
 };
