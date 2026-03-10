@@ -136,70 +136,70 @@ const ProjectListScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: colors.background}}>
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* SEARCH BAR (Clean) */}
-      <View
-        style={[
-          styles.searchContainer,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <TextInput
-          placeholder={
-            filter === 'DOMAIN' ? 'Search by domain' : 'Search by faculty'
-          }
-          placeholderTextColor={colors.subText}
-          value={search}
-          onChangeText={setSearch}
-          style={[styles.searchInput, { color: colors.text }]}
-        />
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* SEARCH BAR (Clean) */}
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <TextInput
+            placeholder={
+              filter === 'DOMAIN' ? 'Search by domain' : 'Search by faculty'
+            }
+            placeholderTextColor={colors.subText}
+            value={search}
+            onChangeText={setSearch}
+            style={[styles.searchInput, { color: colors.text }]}
+          />
+        </View>
 
-      {/* FILTER OPTIONS */}
-      <View style={styles.filterRow}>
-        {['DOMAIN', 'FACULTY'].map(type => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              styles.filterChip,
-              {
-                borderColor: colors.border,
-                backgroundColor:
-                  filter === type ? colors.primary : 'transparent',
-              },
-            ]}
-            onPress={() => setFilter(type as SearchFilter)}
-          >
-            <Text
-              style={{
-                color: filter === type ? '#fff' : colors.text,
-                fontWeight: '600',
-              }}
+        {/* FILTER OPTIONS */}
+        <View style={styles.filterRow}>
+          {['DOMAIN', 'FACULTY'].map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.filterChip,
+                {
+                  borderColor: colors.border,
+                  backgroundColor:
+                    filter === type ? colors.primary : 'transparent',
+                },
+              ]}
+              onPress={() => setFilter(type as SearchFilter)}
             >
-              {type}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text
+                style={{
+                  color: filter === type ? '#fff' : colors.text,
+                  fontWeight: '600',
+                }}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {filteredProjects.length === 0 ? (
-        <Text style={[styles.noProjectText, { color: colors.subText }]}>
-          No projects found
-        </Text>
-      ) : (
-        <FlatList
-          data={filteredProjects}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </View>
-    /</SafeAreaView>
+        {filteredProjects.length === 0 ? (
+          <Text style={[styles.noProjectText, { color: colors.subText }]}>
+            No projects found
+          </Text>
+        ) : (
+          <FlatList
+            data={filteredProjects}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -208,7 +208,6 @@ export default ProjectListScreen;
 /* ---------- STYLES ---------- */
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     padding: 16,
