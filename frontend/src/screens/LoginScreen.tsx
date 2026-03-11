@@ -34,7 +34,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     if (user.role === 'faculty') {
       navigation.replace('FacultyHome');
     } else if (user.role === 'admin') {
-      navigation.replace('AdminHome');
+      navigation.replace('InstituteList');
     } else if (user.role === 'facultycoordinator') {
       navigation.replace('FacultyCoordinatorDashboard');
     } else {
@@ -81,8 +81,12 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.footerLinks}>
-          <Text style={styles.link}>Forgot Password?</Text>
-          <Text style={styles.link}>Sign Up</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+             <Text style={styles.link}>Forgot Password?</Text>
+         </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.link}> Sign Up?</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
