@@ -38,7 +38,7 @@ const MoreScreen: React.FC = () => {
     );
   };
 
-  if (!user || user.role !== 'student') return null;
+  if (!user || user.role !== 'STUDENT') return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
