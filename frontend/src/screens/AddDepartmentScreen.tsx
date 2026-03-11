@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   StyleSheet,
+  Image,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -75,7 +76,10 @@ const AddDepartmentScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'←'}</Text>
+          <Image
+                      source={require('../assets/angle.png')}
+                      style={styles.backIcon}
+                    />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Department</Text>
         <View style={{ width: 40 }} />
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    backgroundColor: '#111827',
+    
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -248,7 +252,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#100f0f',
   },
   scrollContent: {
     padding: 16,
@@ -263,6 +267,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
