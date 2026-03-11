@@ -1,4 +1,4 @@
-    import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,29 +9,37 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { forgotPassword } from '../api/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
 
-    Alert.alert(
-      'Reset Link Sent',
-      'If the email exists, a password reset link has been sent.'
-    );
+    try {
+      await forgotPassword({
+        email: email,
+      });
 
-    navigation.navigate('Login');
+      Alert.alert(
+        'Reset Link Sent',
+        'If the email exists, a password reset link has been sent.',
+      );
+
+      navigation.navigate('Login');
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again later.');
+    }
   };
 
   return (
     <View style={styles.container}>
-
       <View style={styles.card}>
         <Text style={styles.title}>Forgot Password</Text>
 
@@ -55,9 +63,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.backLink}>Back to Login</Text>
         </TouchableOpacity>
-
       </View>
-
     </View>
   );
 };
@@ -65,7 +71,6 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
 export default ForgotPasswordScreen;
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     backgroundColor: '#f5f7fb',
@@ -123,5 +128,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#2563eb',
   },
-
 });
