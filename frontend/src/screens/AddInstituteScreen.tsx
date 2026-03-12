@@ -36,8 +36,10 @@ const AddInstituteScreen: React.FC = () => {
     if (!form.code.trim()) newErrors.code = 'Institute code is required';
     if (!form.address.trim()) newErrors.address = 'Address is required';
     if (!form.city.trim()) newErrors.city = 'City is required';
-    if (form.email && !/\S+@\S+\.\S+/.test(form.email))
-      newErrors.email = 'Enter a valid email address';
+    if (form.email && !/@gmail\.com$/i.test(form.email.trim())) {
+      newErrors.email = 'Only Gmail addresses are accepted';
+      Alert.alert('Invalid Email', 'Please enter a valid Gmail address (e.g. example@gmail.com)');
+    }
     return newErrors;
   };
 
@@ -156,7 +158,7 @@ const AddInstituteScreen: React.FC = () => {
 
           <Field
             label="Email Address"
-            placeholder="admin@institute.edu"
+            placeholder="admin@gmail.com"
             value={form.email}
             onChangeText={v => handleChange('email', v)}
             error={errors.email}

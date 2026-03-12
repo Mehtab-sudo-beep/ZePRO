@@ -37,11 +37,11 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
   const { departmentName = '', instituteName = '' } = route.params ?? {};
 
   const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Dr. Sarah Johnson', email: 'sarah.j@university.edu', role: 'faculty', isFacultyCoordinator: true },
-    { id: '2', name: 'Prof. Michael Chen', email: 'michael.c@university.edu', role: 'faculty' },
-    { id: '3', name: 'Dr. Emily Rodriguez', email: 'emily.r@university.edu', role: 'faculty' },
-    { id: '4', name: 'John Doe', email: 'john.d@student.edu', role: 'student' },
-    { id: '5', name: 'Jane Smith', email: 'jane.s@student.edu', role: 'student' },
+    { id: '1', name: 'Dr. Sarah Johnson', email: 'sarah.j@gmail.com', role: 'faculty', isFacultyCoordinator: true },
+    { id: '2', name: 'Prof. Michael Chen', email: 'michael.c@gmail.com', role: 'faculty' },
+    { id: '3', name: 'Dr. Emily Rodriguez', email: 'emily.r@gmail.com', role: 'faculty' },
+    { id: '4', name: 'John Doe', email: 'john.d@gmail.com', role: 'student' },
+    { id: '5', name: 'Jane Smith', email: 'jane.s@gmail.com', role: 'student' },
   ]);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,23 +51,32 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
     email: '',
     role: 'student' as 'faculty' | 'student',
   });
+  const [emailError, setEmailError] = useState('');
 
   const handleAddUser = () => {
-    if (newUser.name && newUser.email) {
-      const user: User = {
-        id: Date.now().toString(),
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        isFacultyCoordinator: false,
-      };
-      setUsers([...users, user]);
-      setNewUser({ name: '', email: '', role: 'student' });
-      setShowAddModal(false);
-      Alert.alert('Success', 'User added successfully!');
-    } else {
+    if (!newUser.name || !newUser.email) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
     }
+
+    if (!/@gmail\.com$/i.test(newUser.email.trim())) {
+      setEmailError('Only Gmail addresses are accepted');
+      Alert.alert('Invalid Email', 'Please enter a valid Gmail address (e.g. example@gmail.com)');
+      return;
+    }
+
+    const user: User = {
+      id: Date.now().toString(),
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      isFacultyCoordinator: false,
+    };
+    setUsers([...users, user]);
+    setNewUser({ name: '', email: '', role: 'student' });
+    setEmailError('');
+    setShowAddModal(false);
+    Alert.alert('Success', 'User added successfully!');
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
@@ -226,7 +235,11 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Add New User</Text>
-                <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <TouchableOpacity onPress={() => {
+                  setShowAddModal(false);
+                  setEmailError('');
+                  setNewUser({ name: '', email: '', role: 'student' });
+                }}>
                   <Text style={styles.closeButton}>✕</Text>
                 </TouchableOpacity>
               </View>
@@ -238,15 +251,28 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
                 onChangeText={text => setNewUser({ ...newUser, name: text })}
                 placeholderTextColor="#9CA3AF"
               />
+
+              {/* Email field with inline error */}
               <TextInput
-                style={styles.searchInput}
-                placeholder="Email Address"
+                style={[styles.searchInput, emailError ? styles.inputError : null]}
+                placeholder="Email Address (e.g. example@gmail.com)"
                 value={newUser.email}
-                onChangeText={text => setNewUser({ ...newUser, email: text })}
+                onChangeText={text => {
+                  setNewUser({ ...newUser, email: text });
+                  if (emailError) setEmailError('');
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholderTextColor="#9CA3AF"
+                onBlur={() => {
+                  if (newUser.email && !/@gmail\.com$/i.test(newUser.email.trim())) {
+                    setEmailError('Only Gmail addresses are accepted');
+                  }
+                }}
               />
+              {emailError ? (
+                <Text style={styles.errorText}>{emailError}</Text>
+              ) : null}
 
               <Text style={styles.sectionTitle}>Select Role</Text>
               <View style={styles.roleSelector}>
@@ -268,12 +294,16 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={styles.cancelButton}
                   onPress={() => {
                     setShowAddModal(false);
+                    setEmailError('');
                     setNewUser({ name: '', email: '', role: 'student' });
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.submitButton} onPress={handleAddUser}>
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={() => handleAddUser()}
+                >
                   <Text style={styles.submitButtonText}>Add User</Text>
                 </TouchableOpacity>
               </View>
@@ -367,8 +397,10 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 24, fontWeight: 'bold', color: '#1F2937' },
   closeButton: { fontSize: 24, color: '#6B7280' },
-  searchInput: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16, fontSize: 14, borderWidth: 1, borderColor: '#E5E7EB' },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 },
+  searchInput: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 4, fontSize: 14, borderWidth: 1, borderColor: '#E5E7EB' },
+  inputError: { borderColor: '#DC2626', backgroundColor: '#FEF2F2' },
+  errorText: { fontSize: 12, color: '#DC2626', marginBottom: 12, marginLeft: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1F2937', marginBottom: 8, marginTop: 8 },
   roleSelector: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   facultyOption: { flex: 1, padding: 12, borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 8, alignItems: 'center' },
   facultyOptionSelected: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },

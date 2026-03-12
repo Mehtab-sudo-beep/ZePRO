@@ -42,7 +42,7 @@ public StudentService(StudentRepository studentRepository,
         student.setInTeam(true);
         student.setTeamLead(true);
 
-        studentRepository.save(student);
+        studentRepository.save(student);// To update the changes in the database 
 
         TeamResponse response = new TeamResponse();
         response.setTeamId(savedTeam.getTeamId());

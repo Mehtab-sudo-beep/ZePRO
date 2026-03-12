@@ -61,7 +61,7 @@ export default function AuditLogsScreen() {
 
       {/* Bottom Tab */}
       <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminHome')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('InstituteList')}>
           <Image source={require('../assets/home.png')} style={styles.tabIcon} />
           <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
         </TouchableOpacity>

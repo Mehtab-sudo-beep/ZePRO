@@ -222,7 +222,7 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
         />
         <Text style={[styles.tabText, active === 'home' && { color: colors.primary, fontWeight: '700' }]}>Home</Text>
       </TouchableOpacity>
-
+      
       
 
       <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminMore')}>
