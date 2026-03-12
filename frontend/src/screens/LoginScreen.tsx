@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { login } from '../auth/authService';
+import { login } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
@@ -21,24 +21,38 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [secure] = useState(true);
 
-  const handleLogin = () => {
-    const user = login(email, password);
+  const handleLogin = async () => {
+    console.log('Login button clicked');
 
-    if (!user) {
-      Alert.alert('Login Failed', 'Invalid credentials');
-      return;
-    }
+    try {
+      const res = await login({
+        email: email.trim(),
+        password: password,
+      });
 
-    setUser(user);
+      console.log('Response from backend:', res.data);
 
-    if (user.role === 'faculty') {
-      navigation.replace('FacultyHome');
-    } else if (user.role === 'admin') {
-      navigation.replace('InstituteList');
-    } else if (user.role === 'facultycoordinator') {
-      navigation.replace('FacultyCoordinatorDashboard');
-    } else {
-      navigation.replace('StudentHome');
+      const user = res.data;
+
+      if (!user) {
+        Alert.alert('Login Failed', 'Invalid credentials');
+        return;
+      }
+
+      setUser(user);
+
+      if (user.role === 'FACULTY') {
+        navigation.replace('FacultyHome');
+      } else if (user.role === 'ADMIN') {
+        navigation.replace('InstituteList');
+      } else if (user.role === 'FACULTY_COORDINATOR') {
+        navigation.replace('FacultyCoordinatorDashboard');
+      } else {
+        navigation.replace('StudentHome');
+      }
+    } catch (error) {
+      console.log('Login error:', error);
+      Alert.alert('Login Failed', 'Invalid credentials or server error');
     }
   };
 
@@ -62,7 +76,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           placeholderTextColor="#9ca3af"
         />
 
-        {/* Password with Show/Hide */}
         <View style={styles.passwordContainer}>
           <TextInput
             placeholder="Password"
@@ -72,8 +85,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.passwordInput}
             placeholderTextColor="#9ca3af"
           />
-
-          
         </View>
 
         <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
@@ -81,9 +92,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.footerLinks}>
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-             <Text style={styles.link}>Forgot Password?</Text>
-         </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.link}>Forgot Password?</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={styles.link}> Sign Up?</Text>
           </TouchableOpacity>

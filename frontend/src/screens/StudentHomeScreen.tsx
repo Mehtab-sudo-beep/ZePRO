@@ -27,7 +27,7 @@ const StudentHomeScreen: React.FC = () => {
 
   const [showAllocatedMessage, setShowAllocatedMessage] = useState(false);
 
-  if (!user || user.role !== 'student') return null;
+  if (!user || user.role !== 'STUDENT') return null;
 
   const { isInTeam } = user;
 
@@ -80,7 +80,10 @@ const StudentHomeScreen: React.FC = () => {
                   View all join requests you have sent to teams.
                 </Text>
                 <TouchableOpacity
-                  style={[styles.actionButton, { borderColor: colors.primary, marginTop: 12 }]}
+                  style={[
+                    styles.actionButton,
+                    { borderColor: colors.primary, marginTop: 12 },
+                  ]}
                   onPress={() => navigation.navigate('SentRequests')}
                 >
                   <Text style={[styles.actionText, { color: colors.primary }]}>
@@ -131,13 +134,19 @@ const StudentHomeScreen: React.FC = () => {
                     Join Requests
                   </Text>
                   <Text style={[styles.label, { color: colors.subText }]}>
-                    Review incoming requests from students who want to join your team.
+                    Review incoming requests from students who want to join your
+                    team.
                   </Text>
                   <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: colors.primary, marginTop: 12 }]}
+                    style={[
+                      styles.actionButton,
+                      { borderColor: colors.primary, marginTop: 12 },
+                    ]}
                     onPress={() => navigation.navigate('ReceivedRequests')}
                   >
-                    <Text style={[styles.actionText, { color: colors.primary }]}>
+                    <Text
+                      style={[styles.actionText, { color: colors.primary }]}
+                    >
                       View Received Requests
                     </Text>
                   </TouchableOpacity>

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { signup } from '../api/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -17,24 +18,48 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'faculty' | ''>('');
+  const [role, setRole] = useState<'STUDENT' | 'FACULTY' | ''>('');
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword || !role) {
       Alert.alert('Error', 'Please fill all fields and select role');
       return;
     }
 
+    if (!email.endsWith('@gmail.com')) {
+      Alert.alert('Error', 'Only Gmail addresses are allowed');
+      return;
+    }
+
+    // ✅ Password length validation
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return;
+    }
+
+    // ✅ Password match validation
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
-    Alert.alert('Success', `Registered as ${role}`);
+    try {
+      await signup({
+        name: name,
+        email: email,
+        password: password,
+        role: role,
+      });
 
-    navigation.navigate('Login');
+      Alert.alert('Success', `Registered as ${role}`);
+      navigation.navigate('Login');
+    } catch (error) {
+      Alert.alert(
+        'Registration Failed',
+        'Unable to create account. Please try again.',
+      );
+    }
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.brandContainer}>
@@ -81,21 +106,20 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           placeholderTextColor="#9ca3af"
         />
 
-        {/* Role Selection */}
         <Text style={styles.roleLabel}>Select Role</Text>
 
         <View style={styles.roleContainer}>
           <TouchableOpacity
             style={[
               styles.roleButton,
-              role === 'student' && styles.selectedRole,
+              role === 'STUDENT' && styles.selectedRole,
             ]}
-            onPress={() => setRole('student')}
+            onPress={() => setRole('STUDENT')}
           >
             <Text
               style={[
                 styles.roleText,
-                role === 'student' && styles.selectedRoleText,
+                role === 'STUDENT' && styles.selectedRoleText,
               ]}
             >
               Student
@@ -105,14 +129,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             style={[
               styles.roleButton,
-              role === 'faculty' && styles.selectedRole,
+              role === 'FACULTY' && styles.selectedRole,
             ]}
-            onPress={() => setRole('faculty')}
+            onPress={() => setRole('FACULTY')}
           >
             <Text
               style={[
                 styles.roleText,
-                role === 'faculty' && styles.selectedRoleText,
+                role === 'FACULTY' && styles.selectedRoleText,
               ]}
             >
               Faculty
@@ -125,9 +149,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginLink}>
-            Already have an account? Login
-          </Text>
+          <Text style={styles.loginLink}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>
     </View>

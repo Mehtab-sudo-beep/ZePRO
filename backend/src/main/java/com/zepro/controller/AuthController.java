@@ -2,12 +2,14 @@ package com.zepro.controller;
 
 import com.zepro.dto.LoginRequest;
 import com.zepro.dto.SignupRequest;
+import com.zepro.dto.ForgotPasswordRequest;
 import com.zepro.service.AuthService;
 
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@CrossOrigin("*")
 public class AuthController {
 
     private final AuthService authService;
@@ -27,9 +29,8 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String email) {
-        authService.forgotPassword(email);
-        return "Reset link sent";
+    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPassword(request);
     }
 
     @PostMapping("/reset-password")
