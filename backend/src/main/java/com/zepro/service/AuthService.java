@@ -1,17 +1,21 @@
 package com.zepro.service;
 
-import com.zepro.dto.*;
-import com.zepro.model.Users;
-import com.zepro.model.Student;
-import com.zepro.model.Faculty;
-import com.zepro.model.Admin;
-import com.zepro.repository.UserRepository;
-import com.zepro.security.JwtUtil;
-import com.zepro.repository.StudentRepository;
-import com.zepro.repository.FacultyRepository;
-import com.zepro.repository.AdminRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.zepro.dto.ForgotPasswordRequest;
+import com.zepro.dto.LoginRequest;
+import com.zepro.dto.LoginResponse;
+import com.zepro.dto.SignupRequest;
+import com.zepro.model.Admin;
+import com.zepro.model.Faculty;
+import com.zepro.model.Student;
+import com.zepro.model.Users;
+import com.zepro.repository.AdminRepository;
+import com.zepro.repository.FacultyRepository;
+import com.zepro.repository.StudentRepository;
+import com.zepro.repository.UserRepository;
+import com.zepro.security.JwtUtil;
 
 @Service
 public class AuthService {
@@ -83,11 +87,14 @@ public class AuthService {
     
    public LoginResponse login(LoginRequest request){
 
+    String email = request.getEmail().trim();
+
+    System.out.println("LOGIN EMAIL: " + email);
+
     Users user = userRepository
-            .findByEmail(request.getEmail())
+            .findByEmail(email)
             .orElseThrow(() -> new RuntimeException("User not found"));
 
-    // DEBUG LINES
     System.out.println("Input password: " + request.getPassword());
     System.out.println("DB password: " + user.getPassword());
     System.out.println("Match result: " + passwordEncoder.matches(request.getPassword(), user.getPassword()));
@@ -101,11 +108,19 @@ public class AuthService {
     return new LoginResponse(token, user.getRole().name());
 }
 
-    public void forgotPassword(String email){
-        // implement email reset token logic
+    // UPDATED METHOD
+    public String forgotPassword(ForgotPasswordRequest request){
+
+        Users user = userRepository
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Later you will send reset email here
+
+        return "Password reset link sent";
     }
 
     public void resetPassword(String token,String newPassword){
-        // implement reset logic
+        // implement reset logic later
     }
 }
