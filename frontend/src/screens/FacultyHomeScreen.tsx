@@ -23,7 +23,7 @@ const FacultyHomeScreen: React.FC = () => {
   const navigation = useNavigation<NavProp>();
 
   if (!user) return null;
-  if (user.role !== 'faculty') return null;
+  if (user.role !== 'FACULTY') return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
