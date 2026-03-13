@@ -14,6 +14,9 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { getProjectRequestsStatus, getAssignedProject, getTeamInfo } from '../api/studentApi';
+import { Alert, Modal, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
 
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -26,14 +29,59 @@ const StudentHomeScreen: React.FC = () => {
   const navigation = useNavigation<StudentHomeNavigationProp>();
 
   const [showAllocatedMessage, setShowAllocatedMessage] = useState(false);
+  const [showAllocatedModal, setShowAllocatedModal] = useState(false);
+  const [allocatedProject, setAllocatedProject] = useState<any>(null);
+  const [loadingAllocated, setLoadingAllocated] = useState(false);
+
+  const [showProjectStatusModal, setShowProjectStatusModal] = useState(false);
+  const [projectStatus, setProjectStatus] = useState<any>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
+
+  const [teamInfo, setTeamInfo] = useState<any>(null);
+  const [loadingTeam, setLoadingTeam] = useState(false);
 
   if (!user || user.role !== 'STUDENT') return null;
 
   const { isInTeam } = user;
-
-  // Determine if the current user is the team lead
-  // Adjust this condition based on how your user object stores this info
   const isTeamLead = isInTeam && user.isTeamLead === true;
+
+  const handleViewAllocatedProject = async () => {
+    setLoadingAllocated(true);
+    setShowAllocatedModal(true);
+    try {
+      const res = await getAssignedProject(user.studentId);
+      setAllocatedProject(res.data);
+    } catch (err: any) {
+      setAllocatedProject(null);
+      Alert.alert('No Project', err?.response?.data?.message || 'No project assigned yet');
+    } finally {
+      setLoadingAllocated(false);
+    }
+  };
+
+  const handleViewProjectStatus = async () => {
+    setLoadingStatus(true);
+    setShowProjectStatusModal(true);
+    try {
+      const res = await getProjectRequestsStatus(user.studentId);
+      setProjectStatus(res.data);
+    } catch (err: any) {
+      setProjectStatus(null);
+      Alert.alert('Error', err?.response?.data?.message || 'Could not fetch status');
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isInTeam) {
+      setLoadingTeam(true);
+      getTeamInfo(user.studentId)
+        .then(res => setTeamInfo(res.data))
+        .catch(() => setTeamInfo(null))
+        .finally(() => setLoadingTeam(false));
+    }
+  }, [isInTeam, user.studentId]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -98,33 +146,36 @@ const StudentHomeScreen: React.FC = () => {
                 <Text style={[styles.cardTitle, { color: colors.text }]}>
                   My Team
                 </Text>
+                {loadingTeam ? (
+                  <Text style={{ color: colors.subText }}>Loading...</Text>
+                ) : teamInfo ? (
+                  <>
+                    <Text style={[styles.label, { color: colors.subText }]}>
+                      Team Name
+                    </Text>
+                    <Text style={[styles.value, { color: colors.text }]}>
+                      {teamInfo.teamName}
+                    </Text>
 
-                <Text style={[styles.label, { color: colors.subText }]}>
-                  Team Name
-                </Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  Project Alpha
-                </Text>
+                    <Text style={[styles.label, { color: colors.subText }]}>
+                      Team Lead
+                    </Text>
+                    <Text style={[styles.value, { color: colors.text }]}>
+                      {teamInfo.teamLead}
+                    </Text>
 
-                <Text style={[styles.label, { color: colors.subText }]}>
-                  Team Lead
-                </Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  Mehtab Shaik
-                </Text>
-
-                <Text style={[styles.label, { color: colors.subText }]}>
-                  Members
-                </Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  • Student A
-                </Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  • Student B
-                </Text>
-                <Text style={[styles.value, { color: colors.text }]}>
-                  • Student C
-                </Text>
+                    <Text style={[styles.label, { color: colors.subText }]}>
+                      Members
+                    </Text>
+                    {teamInfo.members?.map((m: string, idx: number) => (
+                      <Text key={idx} style={[styles.value, { color: colors.text }]}>
+                        • {m}
+                      </Text>
+                    ))}
+                  </>
+                ) : (
+                  <Text style={{ color: colors.subText }}>No team info found.</Text>
+                )}
               </View>
 
               {/* Received Requests — only for team lead */}
@@ -172,25 +223,90 @@ const StudentHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.actionButton, { borderColor: colors.primary }]}
-              onPress={() => setShowAllocatedMessage(true)}
+              onPress={handleViewAllocatedProject}
             >
               <Text style={[styles.actionText, { color: colors.primary }]}>
                 View Allocated Project
               </Text>
             </TouchableOpacity>
 
-            {showAllocatedMessage && (
-              <Text
-                style={[
-                  styles.placeholderText,
-                  { color: colors.subText, marginTop: 10 },
-                ]}
+            {isTeamLead && (
+              <TouchableOpacity
+                style={[styles.actionButton, { borderColor: colors.primary }]}
+                onPress={handleViewProjectStatus}
               >
-                Project details will appear once assigned.
-              </Text>
+                <Text style={[styles.actionText, { color: colors.primary }]}>
+                  View Project Requests Status
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
         </ScrollView>
+
+        {/* Allocated Project Modal */}
+        <Modal visible={showAllocatedModal} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, width: '85%' }}>
+              <TouchableOpacity onPress={() => setShowAllocatedModal(false)} style={{ alignSelf: 'flex-end' }}>
+                <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+              {loadingAllocated ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : allocatedProject ? (
+                <>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>Allocated Project</Text>
+                  <Text style={{ color: colors.text, fontWeight: 'bold' }}>{allocatedProject.title}</Text>
+                  <Text style={{ color: colors.subText }}>{allocatedProject.description}</Text>
+                  <Text style={{ color: colors.text, marginTop: 8 }}>Faculty: {allocatedProject.facultyName}</Text>
+                </>
+              ) : (
+                <Text style={{ color: colors.subText }}>No project assigned yet.</Text>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Project Requests Status Modal */}
+        <Modal visible={showProjectStatusModal} transparent animationType="slide">
+          <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, width: '90%', maxHeight: '80%' }}>
+              <TouchableOpacity onPress={() => setShowProjectStatusModal(false)} style={{ alignSelf: 'flex-end' }}>
+                <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+              {loadingStatus ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : projectStatus ? (
+                <ScrollView>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>Project Requests Status</Text>
+                  <Text style={{ color: colors.primary, marginTop: 8, fontWeight: 'bold' }}>Upcoming</Text>
+                  {projectStatus.upcoming.length === 0 && (
+                    <Text style={{ color: colors.subText }}>No upcoming requests.</Text>
+                  )}
+                  {projectStatus.upcoming.map((p: any) => (
+                    <View key={p.projectId} style={{ marginVertical: 6 }}>
+                      <Text style={{ color: colors.text }}>{p.title}</Text>
+                      <Text style={{ color: colors.subText }}>Faculty: {p.facultyName || 'N/A'}</Text>
+                      <Text style={{ color: colors.subText }}>Status: {p.status}</Text>
+                    </View>
+                  ))}
+                  <Text style={{ color: colors.primary, marginTop: 12, fontWeight: 'bold' }}>Completed</Text>
+                  {projectStatus.completed.length === 0 && (
+                    <Text style={{ color: colors.subText }}>No completed requests.</Text>
+                  )}
+                  {projectStatus.completed.map((p: any) => (
+                    <View key={p.projectId} style={{ marginVertical: 6 }}>
+                      <Text style={{ color: colors.text }}>{p.title}</Text>
+                      <Text style={{ color: colors.subText }}>Faculty: {p.facultyName || 'N/A'}</Text>
+                      <Text style={{ color: colors.subText }}>Status: {p.status}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={{ color: colors.subText }}>No data found.</Text>
+              )}
+            </View>
+          </View>
+        </Modal>
 
         {/* Bottom Tab */}
         <View
@@ -329,3 +445,5 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
 });
+
+

@@ -36,4 +36,16 @@ public class StudentController {
     public AssignedProjectResponse getAssignedProject(@PathVariable Long studentId) {
         return studentService.getAssignedProject(studentId);
     }
+
+    // View all project requests sent by the team lead (status: UPCOMING & COMPLETED)
+    @GetMapping("/project-requests/{studentId}")
+    public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable Long studentId) {
+        return studentService.getProjectRequestsStatus(studentId);
+    }
+
+    // Get team info for a student
+    @GetMapping("/team-info/{studentId}")
+    public TeamInfoResponse getTeamInfo(@PathVariable Long studentId) {
+        return studentService.getTeamInfo(studentId);
+    }
 }
