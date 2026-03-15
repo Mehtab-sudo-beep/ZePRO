@@ -11,6 +11,7 @@ import com.zepro.model.Admin;
 import com.zepro.model.Faculty;
 import com.zepro.model.Student;
 import com.zepro.model.Users;
+import com.zepro.model.UserRole;
 import com.zepro.repository.AdminRepository;
 import com.zepro.repository.FacultyRepository;
 import com.zepro.repository.StudentRepository;
@@ -41,6 +42,10 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
+
+    // ------------------------------------------------
+    // SIGNUP
+    // ------------------------------------------------
 
     public String signup(SignupRequest request){
 
@@ -84,41 +89,62 @@ public class AuthService {
 
         return "User created successfully";
     }
-    
-   public LoginResponse login(LoginRequest request){
 
-    String email = request.getEmail().trim();
+    // ------------------------------------------------
+    // LOGIN
+    // ------------------------------------------------
 
-    System.out.println("LOGIN EMAIL: " + email);
+    public LoginResponse login(LoginRequest request){
 
-    Users user = userRepository
-            .findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+        String email = request.getEmail().trim();
 
-    System.out.println("Input password: " + request.getPassword());
-    System.out.println("DB password: " + user.getPassword());
-    System.out.println("Match result: " + passwordEncoder.matches(request.getPassword(), user.getPassword()));
+        Users user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
-        throw new RuntimeException("Invalid password");
+        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
+            throw new RuntimeException("Invalid password");
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        Long studentId = null;
+
+        // Only students need studentId
+        if(user.getRole() == UserRole.STUDENT){
+
+            Student student = studentRepository
+                    .findByUser(user)
+                    .orElseThrow(() -> new RuntimeException("Student profile not found"));
+
+            studentId = student.getStudentId();
+        }
+
+        return new LoginResponse(
+                token,
+                user.getRole().name(),
+                studentId
+        );
     }
 
-    String token = jwtUtil.generateToken(user.getEmail());
+    // ------------------------------------------------
+    // FORGOT PASSWORD
+    // ------------------------------------------------
 
-    return new LoginResponse(token, user.getRole().name());
-}
-
-    // UPDATED METHOD
     public String forgotPassword(ForgotPasswordRequest request){
 
         Users user = userRepository
                 .findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Later you will send reset email here
+        // Later you can implement email sending here
 
         return "Password reset link sent";
     }
+
+    // ------------------------------------------------
+    // RESET PASSWORD
+    // ------------------------------------------------
 
     public void resetPassword(String token,String newPassword){
         // implement reset logic later

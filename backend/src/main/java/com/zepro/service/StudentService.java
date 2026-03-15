@@ -1,16 +1,15 @@
 package com.zepro.service;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.zepro.dto.student.*;
-import com.zepro.model.*;
-import com.zepro.repository.*;
+import com.zepro.model.Student;
+import com.zepro.model.Team;
+import com.zepro.repository.StudentRepository;
+import com.zepro.repository.TeamRepository;
 
 import org.springframework.stereotype.Service;
-import java.util.stream.Collectors;
-import com.zepro.dto.student.ProjectRequestStatusResponse;
-import com.zepro.dto.student.ProjectStatusDTO;
-import com.zepro.dto.student.TeamInfoResponse;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class StudentService {
@@ -18,70 +17,65 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final TeamRepository teamRepository;
 
-    private final ProjectRepository projectRepository;
+    public StudentService(StudentRepository studentRepository,
+                          TeamRepository teamRepository) {
+        this.studentRepository = studentRepository;
+        this.teamRepository = teamRepository;
+    }
 
-public StudentService(StudentRepository studentRepository,
-                      TeamRepository teamRepository,
-                      ProjectRepository projectRepository) {
+    // ------------------------------------------------
+    // CREATE TEAM
+    // ------------------------------------------------
 
-    this.studentRepository = studentRepository;
-    this.teamRepository = teamRepository;
-    this.projectRepository = projectRepository;
-}
     public TeamResponse createTeam(CreateTeamRequest request) {
 
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        // Student cannot create a team if already in one
-        if(student.isInTeam()) {
-            throw new RuntimeException("Student already belongs to a team");
+        if (student.isInTeam()) {
+            throw new RuntimeException("Student already in a team");
         }
 
         Team team = new Team();
         team.setTeamName(request.getTeamName());
         team.setTeamLead(student);
 
-        Team savedTeam = teamRepository.save(team);
+        teamRepository.save(team);
 
-        student.setTeam(savedTeam);
+        student.setTeam(team);
         student.setInTeam(true);
         student.setTeamLead(true);
 
         studentRepository.save(student);
 
         TeamResponse response = new TeamResponse();
-        response.setTeamId(savedTeam.getTeamId());
-        response.setTeamName(savedTeam.getTeamName());
-        response.setTeamLead(student.getUser().getName());
+        response.setTeamId(team.getTeamId());
+        response.setTeamName(team.getTeamName());
+        response.setTeamLead(student.getName());
+
+        List<String> members = new ArrayList<>();
+        members.add(student.getName());
+
+        response.setMembers(members);
 
         return response;
     }
+
+    // ------------------------------------------------
+    // JOIN TEAM
+    // ------------------------------------------------
 
     public String joinTeam(JoinTeamRequest request) {
 
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
+        if (student.isInTeam()) {
+            throw new RuntimeException("Student already in a team");
+        }
+
         Team team = teamRepository.findById(request.getTeamId())
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-
-        // Rule 1: If already in team → cannot join another
-        if(student.isInTeam()) {
-            throw new RuntimeException("Student already belongs to a team");
-        }
-
-        // Rule 2: Team lead cannot join other teams
-        if(student.isTeamLead()) {
-            throw new RuntimeException("Team leader cannot join another team");
-        }
-
-        // Rule 3: Prevent joining the same team
-        if(student.getTeam() != null && 
-           student.getTeam().getTeamId().equals(team.getTeamId())) {
-
-            throw new RuntimeException("Student already belongs to this team");
-        }
 
         student.setTeam(team);
         student.setInTeam(true);
@@ -89,108 +83,106 @@ public StudentService(StudentRepository studentRepository,
 
         studentRepository.save(student);
 
-        return "Joined team successfully";
+        return "Successfully joined the team";
     }
+
+    // ------------------------------------------------
+    // REQUEST PROJECT
+    // ------------------------------------------------
+
     public String requestProject(ProjectRequestDTO request) {
-        Student student = studentRepository.findById(request.getStudentId()).orElseThrow();
-        if(!student.isTeamLead()){
+
+        Student student = studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        if (!student.isTeamLead()) {
             throw new RuntimeException("Only team lead can request project");
         }
+
         Team team = student.getTeam();
-        if (team == null) throw new RuntimeException("Student not in a team");
 
-        // Prevent sending new requests if any project is already accepted for this team
-        List<Project> teamProjects = projectRepository.findAllByTeam(team);
-        boolean hasAccepted = teamProjects.stream().anyMatch(p -> "ACCEPTED".equals(p.getStatus()));
-        if (hasAccepted) {
-            throw new RuntimeException("Project already accepted for your team. Cannot request more.");
-        }
+        // Here you will later create ProjectRequest entity
+        // and store it in DB
 
-        Project project = projectRepository.findById(request.getProjectId()).orElseThrow();
-        if(!project.getStatus().equals("OPEN")){
-            throw new RuntimeException("Project already requested or assigned");
-        }
-
-        project.setStatus("REQUESTED");
-        project.setTeam(team);
-        projectRepository.save(project);
-
-        return "Project request sent to faculty";
+        return "Project request sent successfully for team: " + team.getTeamName();
     }
-    public AssignedProjectResponse getAssignedProject(Long studentId){
 
-        Student student = studentRepository.findById(studentId).orElseThrow();
+    // ------------------------------------------------
+    // GET ASSIGNED PROJECT
+    // ------------------------------------------------
+
+    public AssignedProjectResponse getAssignedProject(Long studentId) {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
 
         Team team = student.getTeam();
 
-        if(team == null){
-            throw new RuntimeException("Student not in a team");
-        }
-
-        Project project = projectRepository.findByTeam(team);
-
-        if(project == null){
-            throw new RuntimeException("No project assigned yet");
+        if (team == null) {
+            throw new RuntimeException("Student is not in a team");
         }
 
         AssignedProjectResponse response = new AssignedProjectResponse();
+        response.setTeamName(team.getTeamName());
 
-        response.setProjectId(project.getProjectId());
-        response.setTitle(project.getTitle());
-        response.setDescription(project.getDescription());
-        response.setFacultyName(project.getFaculty().getUser().getName());
+        // Later you can fetch actual project entity
+        response.setProjectTitle("Project not assigned yet");
 
         return response;
     }
+
+    // ------------------------------------------------
+    // PROJECT REQUEST STATUS
+    // ------------------------------------------------
+
     public ProjectRequestStatusResponse getProjectRequestsStatus(Long studentId) {
-    Student student = studentRepository.findById(studentId).orElseThrow();
-    if (!student.isTeamLead()) throw new RuntimeException("Only team lead can view project requests");
 
-    Team team = student.getTeam();
-    if (team == null) throw new RuntimeException("Student not in a team");
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-    // Fetch all projects requested by this team
-    List<Project> projects = projectRepository.findAllByTeam(team);
-
-    List<ProjectStatusDTO> upcoming = new ArrayList<>();
-    List<ProjectStatusDTO> completed = new ArrayList<>();
-
-    for (Project project : projects) {
-        ProjectStatusDTO dto = new ProjectStatusDTO();
-        dto.setProjectId(project.getProjectId());
-        dto.setTitle(project.getTitle());
-        dto.setStatus(project.getStatus());
-        dto.setFacultyName(project.getFaculty() != null ? project.getFaculty().getUser().getName() : null);
-
-        // "ACCEPTED" is considered completed and should be at the top
-        if ("ACCEPTED".equals(project.getStatus())) {
-            completed.add(0, dto); // add at top
-        } else if ("REJECTED".equals(project.getStatus())) {
-            completed.add(dto);
-        } else {
-            upcoming.add(dto);
+        if (!student.isTeamLead()) {
+            throw new RuntimeException("Only team lead can view requests");
         }
+
+        ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
+
+        // Later this will fetch real project requests
+
+        response.setUpcomingRequests(new ArrayList<>());
+        response.setCompletedRequests(new ArrayList<>());
+
+        return response;
     }
 
-    ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
-    response.setUpcoming(upcoming);
-    response.setCompleted(completed);
-    return response;
-}
-    public TeamInfoResponse getTeamInfo(Long studentId) {
-    Student student = studentRepository.findById(studentId).orElseThrow();
-    Team team = student.getTeam();
-    if (team == null) throw new RuntimeException("Student is not in a team");
+    // ------------------------------------------------
+    // TEAM INFO
+    // ------------------------------------------------
 
-    TeamInfoResponse resp = new TeamInfoResponse();
-    resp.setTeamId(team.getTeamId());
-    resp.setTeamName(team.getTeamName());
-    resp.setTeamLead(team.getTeamLead().getUser().getName());
-    // Collect all member names
-    List<String> members = team.getMembers().stream()
-        .map(s -> s.getUser().getName())
-        .collect(Collectors.toList());
-    resp.setMembers(members);
-    return resp;
-}
+    public TeamInfoResponse getTeamInfo(Long studentId) {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        Team team = student.getTeam();
+
+        if (team == null) {
+            throw new RuntimeException("Student is not in a team");
+        }
+
+        TeamInfoResponse response = new TeamInfoResponse();
+
+        response.setTeamId(team.getTeamId());
+        response.setTeamName(team.getTeamName());
+        response.setTeamLead(team.getTeamLead().getName());
+
+        List<String> members = new ArrayList<>();
+
+        for (Student s : team.getMembers()) {
+            members.add(s.getName());
+        }
+
+        response.setMembers(members);
+
+        return response;
+    }
 }
