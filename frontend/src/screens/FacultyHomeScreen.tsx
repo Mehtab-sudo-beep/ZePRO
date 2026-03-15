@@ -27,24 +27,73 @@ const FacultyHomeScreen: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
 
+  /* ================= SCREEN LOAD DEBUG ================= */
+
   useEffect(() => {
-    if (user) loadData();
+    console.log('===== FacultyHomeScreen Loaded =====');
+
+    console.log('USER OBJECT:', user);
+    console.log('USER NAME:', user?.name);
+    console.log('USER EMAIL:', user?.email);
+    console.log('USER ROLE:', user?.role);
+    console.log('USER TOKEN:', user?.token);
+    console.log('USER FACULTY ID:', user?.facultyId);
+
+    if (user?.token && user?.facultyId) {
+      console.log('User valid → calling loadData()');
+      loadData();
+    } else {
+      console.log('User not ready yet → skipping API call');
+    }
   }, [user]);
+
+  /* ================= API CALL ================= */
 
   const loadData = async () => {
     try {
+      console.log('===== loadData() START =====');
+      console.log('TOKEN:', user?.token);
+      console.log('FACULTY ID:', user?.facultyId);
+
+      console.log('Calling getPendingRequests API...');
+
       const req = await getPendingRequests(user.token);
+
+      console.log('Pending Requests API Response:', req);
+
+      console.log('Calling getFacultyProjects API...');
+
       const proj = await getFacultyProjects(user.facultyId, user.token);
+
+      console.log('Projects API Response:', proj);
 
       setRequests(req || []);
       setProjects(proj || []);
-    } catch (err) {
-      console.log(err);
+
+      console.log('State updated successfully');
+    } catch (err: any) {
+      console.log('===== API ERROR =====');
+
+      if (err.response) {
+        console.log('STATUS:', err.response.status);
+        console.log('ERROR DATA:', err.response.data);
+      } else {
+        console.log('UNKNOWN ERROR:', err);
+      }
     }
   };
 
-  if (!user) return null;
-  if (user.role !== 'FACULTY') return null;
+  /* ================= USER VALIDATION ================= */
+
+  if (!user) {
+    console.log('User is NULL → returning null screen');
+    return null;
+  }
+
+  if (user.role !== 'FACULTY') {
+    console.log('User role is not FACULTY:', user.role);
+    return null;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -59,7 +108,6 @@ const FacultyHomeScreen: React.FC = () => {
         {/* Content */}
         <ScrollView contentContainerStyle={styles.content}>
           {/* Pending Requests */}
-
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
               Pending Requests
@@ -82,14 +130,16 @@ const FacultyHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => navigation.navigate('FacultyRequests')}
+              onPress={() => {
+                console.log('Navigating → FacultyRequests');
+                navigation.navigate('FacultyRequests');
+              }}
             >
               <Text style={styles.primaryBtnText}>View All Requests</Text>
             </TouchableOpacity>
           </View>
 
           {/* My Projects */}
-
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
               My Projects
@@ -112,7 +162,10 @@ const FacultyHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.outlineBtn, { borderColor: colors.primary }]}
-              onPress={() => navigation.navigate('FacultyProjects')}
+              onPress={() => {
+                console.log('Navigating → FacultyProjects');
+                navigation.navigate('FacultyProjects');
+              }}
             >
               <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
                 View Project Details
@@ -121,7 +174,6 @@ const FacultyHomeScreen: React.FC = () => {
           </View>
 
           {/* Meetings */}
-
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
               Meetings
@@ -133,7 +185,10 @@ const FacultyHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.outlineBtn, { borderColor: colors.primary }]}
-              onPress={() => navigation.navigate('FacultyMeetings')}
+              onPress={() => {
+                console.log('Navigating → FacultyMeetings');
+                navigation.navigate('FacultyMeetings');
+              }}
             >
               <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
                 View Meetings
@@ -143,15 +198,12 @@ const FacultyHomeScreen: React.FC = () => {
         </ScrollView>
 
         {/* Bottom Tab */}
-
         <View
           style={[
             styles.bottomTab,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          {/* Home */}
-
           <View style={styles.tabItem}>
             <Image
               source={require('../assets/home-color.png')}
@@ -162,11 +214,12 @@ const FacultyHomeScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Create */}
-
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate('CreateProject')}
+            onPress={() => {
+              console.log('Navigating → CreateProject');
+              navigation.navigate('CreateProject');
+            }}
           >
             <Image
               source={require('../assets/create.png')}
@@ -175,11 +228,12 @@ const FacultyHomeScreen: React.FC = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
           </TouchableOpacity>
 
-          {/* More */}
-
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate('FacultyMore')}
+            onPress={() => {
+              console.log('Navigating → FacultyMore');
+              navigation.navigate('FacultyMore');
+            }}
           >
             <Image
               source={require('../assets/more.png')}
@@ -194,6 +248,8 @@ const FacultyHomeScreen: React.FC = () => {
 };
 
 export default FacultyHomeScreen;
+
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

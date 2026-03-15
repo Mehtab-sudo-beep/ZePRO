@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,24 +22,45 @@ const FacultyProjectsScreen = () => {
   const navigation: any = useNavigation();
 
   const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.facultyId && user?.token) {
+    if (user && user.token && user.facultyId) {
       loadProjects();
     }
   }, [user]);
 
   const loadProjects = async () => {
     try {
-      const data = await getFacultyProjects(user.facultyId, user.token);
-      console.log('PROJECTS:', data);
+      setLoading(true);
+
+      console.log('USER:', user);
       console.log('FACULTY ID:', user?.facultyId);
       console.log('TOKEN:', user?.token);
-      setProjects(data || []);
-    } catch (err) {
-      console.log(err);
+
+      const data = await getFacultyProjects(user.facultyId, user.token);
+
+      console.log('PROJECT RESPONSE:', data);
+
+      if (Array.isArray(data)) {
+        setProjects(data);
+      } else if (data?.projects) {
+        setProjects(data.projects);
+      } else {
+        setProjects([]);
+      }
+    } catch (error: any) {
+      console.log('PROJECT API ERROR:', error?.response?.status);
+      console.log('PROJECT API ERROR DATA:', error?.response?.data);
+      setProjects([]);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -50,37 +72,38 @@ const FacultyProjectsScreen = () => {
           </Text>
         </View>
 
-        {/* Projects */}
-
+        {/* Content */}
         <ScrollView contentContainerStyle={styles.content}>
-          {projects.length === 0 && (
+          {loading && <ActivityIndicator size="large" color={colors.primary} />}
+
+          {!loading && projects.length === 0 && (
             <Text style={[styles.empty, { color: colors.subText }]}>
               No projects created yet
             </Text>
           )}
 
-          {projects.map(p => (
-            <View
-              key={p.projectId}
-              style={[styles.card, { backgroundColor: colors.card }]}
-            >
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                {p.title}
-              </Text>
+          {!loading &&
+            projects.map((p: any) => (
+              <View
+                key={p.projectId}
+                style={[styles.card, { backgroundColor: colors.card }]}
+              >
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  {p.title}
+                </Text>
 
-              <Text style={[styles.item, { color: colors.subText }]}>
-                {p.description}
-              </Text>
+                <Text style={[styles.item, { color: colors.subText }]}>
+                  {p.description}
+                </Text>
 
-              <Text style={[styles.status, { color: colors.primary }]}>
-                Status: {p.status}
-              </Text>
-            </View>
-          ))}
+                <Text style={[styles.status, { color: colors.primary }]}>
+                  Status: {p.status}
+                </Text>
+              </View>
+            ))}
         </ScrollView>
 
         {/* Bottom Navigation */}
-
         <View
           style={[
             styles.bottomTab,

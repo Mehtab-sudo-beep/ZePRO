@@ -67,3 +67,45 @@ export const getSubDomains = async (domainId: number) => {
   const res = await axios.get(`${API}/api/subdomains/${domainId}`);
   return res.data;
 };
+export const scheduleMeeting = async (
+  requestId: number,
+  meetingLink: string,
+  meetingTime: string,
+  token: string,
+) => {
+  const res = await axios.post(
+    `${API}/faculty/meetings`,
+    { requestId, meetingLink, meetingTime },
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+
+  return res.data;
+};
+
+export const cancelMeeting = async (meetingId: number, token: string) => {
+  const res = await axios.put(
+    `${API}/faculty/meetings/${meetingId}/cancel`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+
+  return res.data;
+};
+
+export const completeMeeting = async (meetingId: number, token: string) => {
+  const res = await axios.put(
+    `${API}/faculty/meetings/${meetingId}/complete`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+
+  return res.data;
+};
+
+export const getMeetingByRequest = async (requestId: number, token: string) => {
+  const res = await axios.get(`${API}/faculty/meetings/request/${requestId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return res.data;
+};
