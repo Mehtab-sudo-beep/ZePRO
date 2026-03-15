@@ -11,7 +11,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { login } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
@@ -21,40 +21,48 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [secure] = useState(true);
 
-  const handleLogin = async () => {
-    console.log('Login button clicked');
+const handleLogin = async () => {
+  try {
 
-    try {
-      const res = await login({
-        email: email.trim(),
-        password: password,
-      });
-
-      console.log('Response from backend:', res.data);
-
-      const user = res.data;
-
-      if (!user) {
-        Alert.alert('Login Failed', 'Invalid credentials');
-        return;
-      }
-
-      setUser(user);
-
-      if (user.role === 'FACULTY') {
-        navigation.replace('FacultyHome');
-      } else if (user.role === 'ADMIN') {
-        navigation.replace('InstituteList');
-      } else if (user.role === 'FACULTY_COORDINATOR') {
-        navigation.replace('FacultyCoordinatorDashboard');
-      } else {
-        navigation.replace('StudentHome');
-      }
-    } catch (error) {
-      console.log('Login error:', error);
-      Alert.alert('Login Failed', 'Invalid credentials or server error');
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password");
+      return;
     }
-  };
+
+    const res = await login({
+      email,
+      password
+    });
+
+    const { token, role, studentId } = res.data;
+
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('role', role);
+
+    if (studentId) {
+      await AsyncStorage.setItem('studentId', studentId.toString());
+    }
+
+    if (role === 'STUDENT') {
+      navigation.replace('StudentHome');
+    } 
+    else if (role === 'FACULTY') {
+      navigation.replace('FacultyHome');
+    }
+
+  } catch (error: any) {
+
+    console.log("LOGIN ERROR:", error);
+
+    if (error.response) {
+      Alert.alert("Login Failed", error.response.data.message || "Invalid credentials");
+    } else if (error.request) {
+      Alert.alert("Network Error", "Cannot connect to server");
+    } else {
+      Alert.alert("Error", "Something went wrong");
+    }
+  }
+};
 
   return (
     <View style={styles.container}>

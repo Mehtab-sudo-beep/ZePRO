@@ -17,7 +17,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { getProjectRequestsStatus, getAssignedProject, getTeamInfo } from '../api/studentApi';
 import { Alert, Modal, ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
-
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'StudentHome'
@@ -36,7 +36,7 @@ const StudentHomeScreen: React.FC = () => {
   const [showProjectStatusModal, setShowProjectStatusModal] = useState(false);
   const [projectStatus, setProjectStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-
+const [team, setTeam] = useState<any>(null);
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
@@ -74,14 +74,19 @@ const StudentHomeScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isInTeam) {
-      setLoadingTeam(true);
-      getTeamInfo(user.studentId)
-        .then(res => setTeamInfo(res.data))
-        .catch(() => setTeamInfo(null))
-        .finally(() => setLoadingTeam(false));
-    }
-  }, [isInTeam, user.studentId]);
+
+  const loadTeam = async () => {
+
+    const studentId = await AsyncStorage.getItem('studentId');
+
+    const res = await getTeamInfo(Number(studentId));
+
+    setTeam(res.data);
+  };
+
+  loadTeam();
+
+}, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>

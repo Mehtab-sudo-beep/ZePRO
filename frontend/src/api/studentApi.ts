@@ -1,10 +1,20 @@
-import axios from 'axios';
+import API from './api';
+
+export const createTeam = (data: {
+  teamName: string;
+  studentId: number;
+}) => API.post('/student/create-team', data);
+
+export const joinTeam = (data: {
+  teamId: number;
+  studentId: number;
+}) => API.post('/student/join-team', data);
 
 export const getProjectRequestsStatus = (studentId: number) =>
-  axios.get(`/student/project-requests/${studentId}`);
+  API.get(`/student/project-requests/${studentId}`);
 
 export const getAssignedProject = (studentId: number) =>
-  axios.get(`/student/assigned-project/${studentId}`);
+  API.get(`/student/assigned-project/${studentId}`);
 
 export const getTeamInfo = (studentId: number) =>
-  axios.get(`/student/team-info/${studentId}`);
+  API.get(`/student/team-info/${studentId}`);

@@ -12,7 +12,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createTeam } from '../api/studentApi';
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
 
 const CreateTeamScreen = ({ navigation }: Props) => {
@@ -21,16 +22,17 @@ const CreateTeamScreen = ({ navigation }: Props) => {
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleCreateTeam = () => {
-    if (!teamName.trim()) {
-      Alert.alert('Error', 'Team name is required');
-      return;
-    }
+  const handleCreateTeam = async () => {
 
-    Alert.alert('Success', `Team "${teamName}" created!`, [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
-  };
+  const studentId = await AsyncStorage.getItem('studentId');
+
+  await createTeam({
+    teamName,
+    studentId: Number(studentId)
+  });
+
+  Alert.alert("Team created successfully");
+};
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
