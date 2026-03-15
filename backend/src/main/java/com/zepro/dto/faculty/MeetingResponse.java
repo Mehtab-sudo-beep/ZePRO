@@ -1,36 +1,29 @@
-package com.zepro.model;
+package com.zepro.dto.faculty;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-public class Meeting {
+public class MeetingResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long meetingId;
-
-    @OneToOne
-    @JoinColumn(name = "request_id")
-    private ProjectRequest request;
-
+    private Long requestId;
     private LocalDateTime meetingTime;
-
     private String meetingLink;
-
-    @Enumerated(EnumType.STRING)
-    private MeetingStatus status;
+    private String status;
 
     public Long getMeetingId() {
         return meetingId;
     }
 
-    public ProjectRequest getRequest() {
-        return request;
+    public void setMeetingId(Long meetingId) {
+        this.meetingId = meetingId;
     }
 
-    public void setRequest(ProjectRequest request) {
-        this.request = request;
+    public Long getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(Long requestId) {
+        this.requestId = requestId;
     }
 
     public LocalDateTime getMeetingTime() {
@@ -49,11 +42,11 @@ public class Meeting {
         this.meetingLink = meetingLink;
     }
 
-    public MeetingStatus getStatus() {
+    public String getStatus() {
         return status;
     }
 
-    public void setStatus(MeetingStatus status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 }

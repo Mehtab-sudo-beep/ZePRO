@@ -7,7 +7,7 @@ import ScheduledMeetingsScreen from '../screens/ScheduledMeetingsScreen';
 import MeetingDetailsScreen from '../screens/MeetingDeatialsScreen';
 import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
-import FacultyRequestsScreen from '../screens/FacultyRequestHandling';
+import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
@@ -29,11 +29,12 @@ import AddDepartmentScreen from '../screens/AddDepartmentScreen';
 import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
 import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
 import FacultyCoordinatorMoreScreen from '../screens/FacultyCoordinatorMoreScreen';
-import FacultyViewMeetingsScreen from '../screens/FacultyViewMeetingsScreen';
+import FacultyViewMeetingsScreen from '../screens/FacultyMeetingsScreen';
 import InstituteListScreen from '../screens/InstituteListScreen';
 import DepartmentListScreen from '../screens/DepartmentListScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import CreateProjectScreen from '../screens/CreateProjectScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -49,13 +50,15 @@ export type RootStackParamList = {
   JoinTeam: undefined;
   CreateTeam: undefined;
   More: undefined;
-  AdminHome:{
-  departmentId?: string;
-  departmentName?: string;
-  instituteId?: string;
-  instituteName?: string;
-} | undefined;
-    
+  AdminHome:
+    | {
+        departmentId?: string;
+        departmentName?: string;
+        instituteId?: string;
+        instituteName?: string;
+      }
+    | undefined;
+
   Logs: undefined;
   AdminMore: undefined;
   FacultyCoordinatorDashboard: undefined;
@@ -66,17 +69,18 @@ export type RootStackParamList = {
   SentRequests: undefined;
   ReceivedRequests: undefined;
   FacultyMore: undefined;
-  FacultyCoordinatorMore:undefined;
+  FacultyCoordinatorMore: undefined;
   FacultyProfile: undefined;
   AddInstitute: undefined;
-  AddDepartment :undefined;
-  RuleManagement : undefined;
+  AddDepartment: undefined;
+  RuleManagement: undefined;
   DeadlineManagement: undefined;
-  FacultyMeetings:undefined;
-  InstituteList:undefined;
-  DepartmentList:{ instituteId: string; instituteName: string };
-  Register : undefined;
-  ForgotPassword : undefined;
+  FacultyMeetings: undefined;
+  InstituteList: undefined;
+  DepartmentList: { instituteId: string; instituteName: string };
+  Register: undefined;
+  ForgotPassword: undefined;
+  CreateProject: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -109,20 +113,33 @@ const AppNavigator = () => {
       <Stack.Screen name="Deadline" component={DeadlineScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
-      <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
+      <Stack.Screen
+        name="ReceivedRequests"
+        component={ReceivedRequestsScreen}
+      />
       <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
-      <Stack.Screen name='FacultyCoordinatorMore' component={FacultyCoordinatorMoreScreen}/>
+      <Stack.Screen
+        name="FacultyCoordinatorMore"
+        component={FacultyCoordinatorMoreScreen}
+      />
       <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
       <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
       <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
-      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
-      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
-      <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
-      <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen}          />
-      <Stack.Screen name="InstituteList" component={InstituteListScreen}/>
-      <Stack.Screen name="DepartmentList" component={DepartmentListScreen}/>
-      <Stack.Screen name="Register" component={RegisterScreen}/>
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen}/>
+      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen} />
+      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen} />
+      <Stack.Screen
+        name="DeadlineManagement"
+        component={ChangeDeadlinesScreen}
+      />
+      <Stack.Screen
+        name="FacultyMeetings"
+        component={FacultyViewMeetingsScreen}
+      />
+      <Stack.Screen name="InstituteList" component={InstituteListScreen} />
+      <Stack.Screen name="DepartmentList" component={DepartmentListScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
     </Stack.Navigator>
   );
 };
