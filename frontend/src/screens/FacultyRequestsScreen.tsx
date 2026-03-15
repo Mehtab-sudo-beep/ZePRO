@@ -13,31 +13,31 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 
-import { getFacultyProjects } from '../api/facultyApi';
+import { getPendingRequests, assignProject } from '../api/facultyApi';
 
-const FacultyProjectsScreen = () => {
+const FacultyRequestsScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const navigation: any = useNavigation();
 
-  const [projects, setProjects] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    if (user?.facultyId && user?.token) {
-      loadProjects();
-    }
-  }, [user]);
+    loadRequests();
+  }, []);
 
-  const loadProjects = async () => {
+  const loadRequests = async () => {
     try {
-      const data = await getFacultyProjects(user.facultyId, user.token);
-      console.log('PROJECTS:', data);
-      console.log('FACULTY ID:', user?.facultyId);
-      console.log('TOKEN:', user?.token);
-      setProjects(data || []);
+      const data = await getPendingRequests(user.token);
+      setRequests(data || []);
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const handleAssign = async (projectId: number, teamId: number) => {
+    await assignProject(projectId, teamId, user.token);
+    loadRequests();
   };
 
   return (
@@ -46,35 +46,38 @@ const FacultyProjectsScreen = () => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            My Projects
+            Pending Requests
           </Text>
         </View>
 
-        {/* Projects */}
+        {/* Requests List */}
 
         <ScrollView contentContainerStyle={styles.content}>
-          {projects.length === 0 && (
+          {requests.length === 0 && (
             <Text style={[styles.empty, { color: colors.subText }]}>
-              No projects created yet
+              No pending requests
             </Text>
           )}
 
-          {projects.map(p => (
+          {requests.map(r => (
             <View
-              key={p.projectId}
+              key={r.projectId}
               style={[styles.card, { backgroundColor: colors.card }]}
             >
               <Text style={[styles.cardTitle, { color: colors.text }]}>
-                {p.title}
+                {r.title}
               </Text>
 
               <Text style={[styles.item, { color: colors.subText }]}>
-                {p.description}
+                Team {r.teamId}
               </Text>
 
-              <Text style={[styles.status, { color: colors.primary }]}>
-                Status: {p.status}
-              </Text>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+                onPress={() => handleAssign(r.projectId, r.teamId)}
+              >
+                <Text style={styles.primaryBtnText}>Assign Project</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </ScrollView>
@@ -87,6 +90,7 @@ const FacultyProjectsScreen = () => {
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
+          {/* Home */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyHome')}
@@ -98,6 +102,7 @@ const FacultyProjectsScreen = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
+          {/* Create */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('CreateProject')}
@@ -109,6 +114,7 @@ const FacultyProjectsScreen = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
           </TouchableOpacity>
 
+          {/* More */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyMore')}
@@ -125,7 +131,7 @@ const FacultyProjectsScreen = () => {
   );
 };
 
-export default FacultyProjectsScreen;
+export default FacultyRequestsScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -162,13 +168,18 @@ const styles = StyleSheet.create({
 
   item: {
     fontSize: 14,
-    marginBottom: 6,
+    marginBottom: 10,
   },
 
-  status: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 6,
+  primaryBtn: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+
+  primaryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 
   empty: {
