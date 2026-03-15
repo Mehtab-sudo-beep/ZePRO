@@ -89,23 +89,31 @@ public class AuthService {
 
     String email = request.getEmail().trim();
 
-    System.out.println("LOGIN EMAIL: " + email);
-
     Users user = userRepository
             .findByEmail(email)
             .orElseThrow(() -> new RuntimeException("User not found"));
-
-    System.out.println("Input password: " + request.getPassword());
-    System.out.println("DB password: " + user.getPassword());
-    System.out.println("Match result: " + passwordEncoder.matches(request.getPassword(), user.getPassword()));
 
     if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
         throw new RuntimeException("Invalid password");
     }
 
-    String token = jwtUtil.generateToken(user.getEmail());
+    String token = jwtUtil.generateToken(
+            user.getEmail(),
+            user.getRole().name()
+    );
 
-    return new LoginResponse(token, user.getRole().name());
+    Long facultyId = null;
+
+    if(user.getRole().name().equals("FACULTY")){
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        facultyId = faculty.getFacultyId();
+    }
+
+    return new LoginResponse(token, user.getRole().name(), facultyId);
 }
 
     // UPDATED METHOD
