@@ -20,13 +20,17 @@ public class FacultyService {
     private final DomainRepository domainRepository;
     private final SubDomainRepository subDomainRepository;
     private final ProjectRequestRepository projectRequestRepository;
+    private final ProjectDomainRepository projectDomainRepository;
+private final ProjectSubDomainRepository projectSubDomainRepository;
 
     public FacultyService(ProjectRepository projectRepository,
                       FacultyRepository facultyRepository,
                       TeamRepository teamRepository,
                       DomainRepository domainRepository,
                       SubDomainRepository subDomainRepository,
-                      ProjectRequestRepository projectRequestRepository) {
+                      ProjectRequestRepository projectRequestRepository,
+                      ProjectDomainRepository projectDomainRepository,
+                      ProjectSubDomainRepository projectSubDomainRepository) {
 
     this.projectRepository = projectRepository;
     this.facultyRepository = facultyRepository;
@@ -34,10 +38,11 @@ public class FacultyService {
     this.domainRepository = domainRepository;
     this.subDomainRepository = subDomainRepository;
     this.projectRequestRepository = projectRequestRepository;
+    this.projectDomainRepository = projectDomainRepository;
+    this.projectSubDomainRepository = projectSubDomainRepository;
 }
 
-    public ProjectResponse createProject(CreateProjectRequest request, 
-        Faculty faculty) {
+    public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
     Project project = new Project();
 
@@ -47,6 +52,26 @@ public class FacultyService {
     project.setStatus("OPEN");
 
     Project saved = projectRepository.save(project);
+
+    // get domain
+    Domain domain = domainRepository.findById(request.getDomainId())
+            .orElseThrow(() -> new RuntimeException("Domain not found"));
+
+    // get subdomain
+    SubDomain subDomain = subDomainRepository.findById(request.getSubDomainId())
+            .orElseThrow(() -> new RuntimeException("Subdomain not found"));
+
+    // insert into project_domain table
+    ProjectDomain projectDomain = new ProjectDomain();
+    projectDomain.setProject(saved);
+    projectDomain.setDomain(domain);
+    projectDomainRepository.save(projectDomain);
+
+    // insert into project_sub_domain table
+    ProjectSubDomain projectSubDomain = new ProjectSubDomain();
+    projectSubDomain.setProject(saved);
+    projectSubDomain.setSubDomain(subDomain);
+    projectSubDomainRepository.save(projectSubDomain);
 
     return new ProjectResponse(
             saved.getProjectId(),
@@ -86,47 +111,36 @@ public class FacultyService {
             .findByTeamTeamId(teamId)
             .orElseThrow();
 
-    request.setStatus("APPROVED");
+    request.setStatus(RequestStatus.APPROVED);
 
     projectRequestRepository.save(request);
 }
 
-    public List<ProjectResponse> getPendingRequests() {
+   public List<ProjectResponse> getPendingRequests() {
 
-        return projectRepository.findByStatus("REQUESTED")
-                .stream()
-                .map(project -> {
+    return projectRequestRepository.findAll()
+            .stream()
+            .filter(r -> r.getStatus() == RequestStatus.PENDING)
+            .map(request -> {
 
-                    ProjectResponse response = new ProjectResponse();
-                    response.setProjectId(project.getProjectId());
-                    response.setTitle(project.getTitle());
-                    response.setDescription(project.getDescription());
-                    response.setStatus(project.getStatus());
+                ProjectResponse response = new ProjectResponse();
 
-                    Team team = project.getTeam();
+                response.setRequestId(request.getRequestId());
 
-                    if (team != null) {
+                Team team = request.getTeam();
 
-                        response.setTeamId(team.getTeamId());
-                        response.setTeamName(team.getTeamName());
+                if (team != null) {
+                    response.setTeamId(team.getTeamId());
+                    response.setTeamName(team.getTeamName());
+                }
 
-                        if (team.getTeamLead() != null) {
-                            response.setTeamLead(team.getTeamLead().getUser().getName());
-                        }
+                response.setStatus(request.getStatus().name());
 
-                        List<String> members =
-                                team.getMembers()
-                                        .stream()
-                                        .map(student -> student.getUser().getName())
-                                        .toList();
+                return response;
 
-                        response.setTeamMembers(members);
-                    }
-
-                    return response;
-                })
-                .collect(Collectors.toList());
-    }
+            })
+            .collect(Collectors.toList());
+}
 
     public SubDomain createSubDomain(String name, Long domainId) {
 
@@ -139,4 +153,14 @@ public class FacultyService {
 
         return subDomainRepository.save(sub);
     }
+
+    public ProjectRequest cancelRequest(Long requestId) {
+
+    ProjectRequest request =
+            projectRequestRepository.findById(requestId).orElseThrow();
+
+    request.setStatus(RequestStatus.CANCELLED);
+
+    return projectRequestRepository.save(request);
+}
 }

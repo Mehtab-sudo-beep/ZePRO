@@ -3,7 +3,7 @@ package com.zepro.controller;
 import com.zepro.dto.faculty.CreateMeetingRequest;
 import com.zepro.dto.faculty.MeetingResponse;
 import com.zepro.service.MeetingService;
-
+import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,4 +35,8 @@ public class FacultyMeetingController {
     public MeetingResponse getMeeting(@PathVariable Long requestId) {
         return meetingService.getMeetingByRequest(requestId);
     }
+    @GetMapping
+public List<MeetingResponse> getAllMeetings() {
+    return meetingService.getAllMeetings();
+}
 }

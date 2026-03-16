@@ -1,175 +1,193 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 import {
-  scheduleMeeting,
+  getAllMeetings,
   cancelMeeting,
   completeMeeting,
-  getMeetingByRequest,
 } from '../api/facultyApi';
 
 const FacultyMeetingsScreen = () => {
   const { user } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
 
-  const [requestId, setRequestId] = useState('');
-  const [meetingId, setMeetingId] = useState('');
-  const [meetingLink, setMeetingLink] = useState('');
-  const [meetingTime, setMeetingTime] = useState('');
-  const [meeting, setMeeting] = useState<any>(null);
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
 
-  const handleSchedule = async () => {
+  useEffect(() => {
+    loadMeetings();
+  }, []);
+
+  const loadMeetings = async () => {
     try {
-      const data = await scheduleMeeting(
-        Number(requestId),
-        meetingLink,
-        meetingTime,
-        user.token,
-      );
-
-      setMeeting(data);
+      const data = await getAllMeetings(user.token);
+      setMeetings(data || []);
     } catch (err) {
-      console.log('Schedule error', err);
+      console.log('Load meetings error:', err);
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancel = async (meetingId: number) => {
     try {
-      const data = await cancelMeeting(Number(meetingId), user.token);
-
-      setMeeting(data);
+      await cancelMeeting(meetingId, user.token);
+      setSelectedMeeting(null);
+      loadMeetings();
     } catch (err) {
-      console.log('Cancel error', err);
+      console.log(err);
     }
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (meetingId: number) => {
     try {
-      const data = await completeMeeting(Number(meetingId), user.token);
-
-      setMeeting(data);
+      await completeMeeting(meetingId, user.token);
+      setSelectedMeeting(null);
+      loadMeetings();
     } catch (err) {
-      console.log('Complete error', err);
+      console.log(err);
     }
   };
 
-  const handleGet = async () => {
-    try {
-      const data = await getMeetingByRequest(Number(requestId), user.token);
-
-      setMeeting(data);
-    } catch (err) {
-      console.log('Fetch error', err);
-    }
+  const getStatusColor = (status: string) => {
+    if (status === 'PENDING') return '#F59E0B';
+    if (status === 'DONE') return '#10B981';
+    if (status === 'CANCELLED') return '#EF4444';
+    return '#6B7280';
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Faculty Meetings</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>Meetings</Text>
 
-      <TextInput
-        placeholder="Request ID"
-        style={styles.input}
-        value={requestId}
-        onChangeText={setRequestId}
-      />
+        {meetings.length === 0 && (
+          <Text style={{ color: colors.subText }}>No meetings scheduled</Text>
+        )}
 
-      <TextInput
-        placeholder="Meeting Link"
-        style={styles.input}
-        value={meetingLink}
-        onChangeText={setMeetingLink}
-      />
+        {meetings.map(m => {
+          const isSelected = selectedMeeting?.meetingId === m.meetingId;
 
-      <TextInput
-        placeholder="Meeting Time (2026-03-16T15:00)"
-        style={styles.input}
-        value={meetingTime}
-        onChangeText={setMeetingTime}
-      />
+          return (
+            <TouchableOpacity
+              key={m.meetingId}
+              style={[styles.card, { backgroundColor: colors.card }]}
+              onPress={() => setSelectedMeeting(m)}
+            >
+              <Text style={[styles.team, { color: colors.text }]}>
+                {m.teamName}
+              </Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleSchedule}>
-        <Text style={styles.btnText}>Schedule Meeting</Text>
-      </TouchableOpacity>
+              <Text style={[styles.item, { color: colors.subText }]}>
+                Meeting ID: {m.meetingId}
+              </Text>
 
-      <TextInput
-        placeholder="Meeting ID"
-        style={styles.input}
-        value={meetingId}
-        onChangeText={setMeetingId}
-      />
+              <Text style={[styles.item, { color: colors.subText }]}>
+                Time: {new Date(m.meetingTime).toLocaleString()}
+              </Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleCancel}>
-        <Text style={styles.btnText}>Cancel Meeting</Text>
-      </TouchableOpacity>
+              <Text style={[styles.item, { color: colors.subText }]}>
+                Link: {m.meetingLink}
+              </Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleComplete}>
-        <Text style={styles.btnText}>Complete Meeting</Text>
-      </TouchableOpacity>
+              <Text
+                style={[styles.status, { color: getStatusColor(m.status) }]}
+              >
+                Status: {m.status}
+              </Text>
 
-      <TouchableOpacity style={styles.button} onPress={handleGet}>
-        <Text style={styles.btnText}>Get Meeting</Text>
-      </TouchableOpacity>
+              {isSelected && (
+                <View style={styles.actions}>
+                  {m.status !== 'DONE' && (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryBtn,
+                        { backgroundColor: '#10B981' },
+                      ]}
+                      onPress={() => handleComplete(m.meetingId)}
+                    >
+                      <Text style={styles.primaryBtnText}>Mark Done</Text>
+                    </TouchableOpacity>
+                  )}
 
-      {meeting && (
-        <View style={styles.result}>
-          <Text>Meeting ID: {meeting.meetingId}</Text>
-          <Text>Request ID: {meeting.requestId}</Text>
-          <Text>Link: {meeting.meetingLink}</Text>
-          <Text>Time: {meeting.meetingTime}</Text>
-          <Text>Status: {meeting.status}</Text>
-        </View>
-      )}
-    </ScrollView>
+                  {m.status !== 'CANCELLED' && (
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryBtn,
+                        { backgroundColor: '#EF4444' },
+                      ]}
+                      onPress={() => handleCancel(m.meetingId)}
+                    >
+                      <Text style={styles.primaryBtnText}>Cancel Meeting</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 export default FacultyMeetingsScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
+  content: {
+    padding: 16,
   },
 
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
   },
 
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginBottom: 12,
-    borderRadius: 6,
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 3,
   },
 
-  button: {
-    backgroundColor: '#2563EB',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 10,
-    alignItems: 'center',
+  team: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
   },
 
-  btnText: {
-    color: '#fff',
+  item: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+
+  status: {
+    marginTop: 6,
     fontWeight: '600',
   },
 
-  result: {
-    marginTop: 20,
-    padding: 15,
-    backgroundColor: '#eee',
-    borderRadius: 6,
+  actions: {
+    marginTop: 12,
+  },
+
+  primaryBtn: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+
+  primaryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
