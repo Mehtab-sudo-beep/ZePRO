@@ -59,8 +59,15 @@ public class FacultyController {
     }
 
     @GetMapping("/pending-requests")
-    public List<ProjectResponse> getPendingRequests() {
-        return facultyService.getPendingRequests();
+    public List<ProjectResponse> getPendingRequests(Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow();
+
+        return facultyService.getPendingRequests(faculty.getFacultyId());
     }
 
     @PostMapping("/assign-project")

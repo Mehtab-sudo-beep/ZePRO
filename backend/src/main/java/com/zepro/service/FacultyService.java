@@ -116,33 +116,34 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
     projectRequestRepository.save(request);
 }
 
-   public List<ProjectResponse> getPendingRequests() {
+ public List<ProjectResponse> getPendingRequests(Long facultyId) {
 
-    return projectRequestRepository.findAll()
-            .stream()
-            .filter(r -> r.getStatus() == RequestStatus.PENDING)
-            .map(request -> {
+    List<ProjectRequest> requests =
+            projectRequestRepository.findByFacultyFacultyIdAndStatus(
+        facultyId,
+        RequestStatus.PENDING
+);
 
-                ProjectResponse response = new ProjectResponse();
+    return requests.stream().map(request -> {
 
-                response.setRequestId(request.getRequestId());
+        ProjectResponse response = new ProjectResponse();
 
-                Team team = request.getTeam();
+        response.setRequestId(request.getRequestId());
 
-                if (team != null) {
-                    response.setTeamId(team.getTeamId());
-                    response.setTeamName(team.getTeamName());
-                }
+        Team team = request.getTeam();
 
-                response.setStatus(request.getStatus().name());
+        if (team != null) {
+            response.setTeamId(team.getTeamId());
+            response.setTeamName(team.getTeamName());
+        }
 
-                return response;
+        response.setStatus(request.getStatus().name());
 
-            })
-            .collect(Collectors.toList());
+        return response;
+
+    }).toList();
 }
-
-    public SubDomain createSubDomain(String name, Long domainId) {
+  public SubDomain createSubDomain(String name, Long domainId) {
 
         Domain domain = domainRepository.findById(domainId)
                 .orElseThrow(() -> new RuntimeException("Domain not found"));
