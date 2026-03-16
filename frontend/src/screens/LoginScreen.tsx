@@ -34,8 +34,7 @@ const handleLogin = async () => {
       password
     });
 
-    const { token, role, studentId } = res.data;
-
+const { token, role, studentId, isInTeam, isTeamLead } = res.data;
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('role', role);
 
@@ -44,10 +43,21 @@ const handleLogin = async () => {
     }
 
     if (role === 'STUDENT') {
+      setUser({
+  token,
+  role,
+  studentId,
+  isInTeam,
+  isTeamLead
+});
+      console.log("STUDENT LOGGED IN:", res.data);
       navigation.replace('StudentHome');
     } 
     else if (role === 'FACULTY') {
-      navigation.replace('FacultyHome');
+      navigation.navigate('FacultyHome');
+    }
+    else if (role === 'FACULTY_COORDINATOR') {
+      navigation.navigate('FacultyCoordinatorDashboard');
     }
 
   } catch (error: any) {

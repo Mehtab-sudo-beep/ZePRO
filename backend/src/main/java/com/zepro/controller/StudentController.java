@@ -2,7 +2,8 @@ package com.zepro.controller;
 
 import com.zepro.dto.student.*;
 import com.zepro.service.StudentService;
-
+import com.zepro.model.TeamJoinRequest;
+import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -48,4 +49,31 @@ public class StudentController {
     public TeamInfoResponse getTeamInfo(@PathVariable Long studentId) {
         return studentService.getTeamInfo(studentId);
     }
+    @PostMapping("/send-join-request")
+    public String sendJoinRequest(@RequestBody JoinTeamRequest request){
+        return studentService.sendJoinRequest(
+                request.getStudentId(),
+                request.getTeamId()
+        );
+    }
+    @GetMapping("/team-join-requests/{studentId}")
+public List<JoinRequestResponse> getTeamJoinRequests(@PathVariable Long studentId){
+    return studentService.getTeamJoinRequests(studentId);
+}
+    @PostMapping("/approve-request/{requestId}")
+    public String approveRequest(@PathVariable Long requestId){
+        return studentService.approveJoinRequest(requestId);
+    }
+    @PostMapping("/reject-request/{requestId}")
+    public String rejectRequest(@PathVariable Long requestId){
+        return studentService.rejectJoinRequest(requestId);
+    }
+    @GetMapping("/teams/{studentId}")
+public List<TeamListResponse> getAllTeams(@PathVariable Long studentId) {
+    return studentService.getAllTeams(studentId);
+}
+    @GetMapping("/sent-requests/{studentId}")
+public List<SentRequestResponse> getSentRequests(@PathVariable Long studentId) {
+    return studentService.getSentRequests(studentId);
+}
 }

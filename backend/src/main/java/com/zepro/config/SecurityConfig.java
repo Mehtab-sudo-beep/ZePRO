@@ -45,8 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/coordinator/**").hasRole("FACULTY_COORDINATOR")
 
                 // student APIs
-                .requestMatchers("/teams/**").hasRole("STUDENT")
-                .requestMatchers("/requests/**").hasRole("STUDENT")
+                .requestMatchers("/student/**").hasRole("STUDENT")
 
                 // project viewing allowed for all logged users
                 .requestMatchers("/projects/**").hasAnyRole("STUDENT","FACULTY","ADMIN")

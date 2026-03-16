@@ -12,26 +12,44 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AuthContext } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createTeam } from '../api/studentApi';
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
 
 const CreateTeamScreen = ({ navigation }: Props) => {
   const { colors } = useContext(ThemeContext);
-
+ const { user, setUser } = useContext(AuthContext);
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleCreateTeam = async () => {
+ const handleCreateTeam = async () => {
 
-  const studentId = await AsyncStorage.getItem('studentId');
+  try {
 
-  await createTeam({
-    teamName,
-    studentId: Number(studentId)
-  });
+    const studentId = await AsyncStorage.getItem('studentId');
 
-  Alert.alert("Team created successfully");
+    await createTeam({
+      teamName,
+      studentId: Number(studentId)
+    });
+
+    setUser({
+      ...user,
+      isInTeam: true,
+      isTeamLead: true
+    });
+
+    Alert.alert("Team created successfully");
+
+    navigation.replace("StudentHome");
+
+  } catch (err) {
+
+    console.log("CREATE TEAM ERROR:", err);
+    Alert.alert("Error creating team");
+
+  }
 };
 
   return (
