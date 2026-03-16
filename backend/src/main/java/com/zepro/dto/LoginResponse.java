@@ -5,11 +5,16 @@ public class LoginResponse {
     private String token;
     private String role;
     private Long studentId;
+    private boolean isInTeam;
+    private boolean isTeamLead;
 
-    public LoginResponse(String token, String role, Long studentId) {
+    public LoginResponse(String token, String role, Long studentId,
+                         boolean isInTeam, boolean isTeamLead) {
         this.token = token;
         this.role = role;
         this.studentId = studentId;
+        this.isInTeam = isInTeam;
+        this.isTeamLead = isTeamLead;
     }
 
     public String getToken() {
@@ -22,5 +27,13 @@ public class LoginResponse {
 
     public Long getStudentId() {
         return studentId;
+    }
+
+    public boolean isInTeam() {
+        return isInTeam;
+    }
+
+    public boolean isTeamLead() {
+        return isTeamLead;
     }
 }

@@ -85,6 +85,14 @@ public class AuthService {
 
                 adminRepository.save(admin);
                 break;
+
+            case FACULTY_COORDINATOR:
+                // Implement if needed
+                Faculty facultyCoord = new Faculty();
+                facultyCoord.setUser(savedUser);
+                facultyCoord.setIsCoordinator(true);
+                facultyRepository.save(facultyCoord);
+                break;
         }
 
         return "User created successfully";
@@ -96,36 +104,51 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request){
 
-        String email = request.getEmail().trim();
+    String email = request.getEmail().trim();
 
-        Users user = userRepository
-                .findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    Users user = userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
-            throw new RuntimeException("Invalid password");
-        }
-
-        String token = jwtUtil.generateToken(user.getEmail());
-
-        Long studentId = null;
-
-        // Only students need studentId
-        if(user.getRole() == UserRole.STUDENT){
-
-            Student student = studentRepository
-                    .findByUser(user)
-                    .orElseThrow(() -> new RuntimeException("Student profile not found"));
-
-            studentId = student.getStudentId();
-        }
-
-        return new LoginResponse(
-                token,
-                user.getRole().name(),
-                studentId
-        );
+    if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
+        throw new RuntimeException("Invalid password");
     }
+
+    String token = jwtUtil.generateToken(user.getEmail());
+
+    Long studentId = null;
+    boolean isInTeam = false;
+    boolean isTeamLead = false;
+
+    if(user.getRole() == UserRole.STUDENT){
+
+        Student student = studentRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Student profile not found"));
+
+        studentId = student.getStudentId();
+        isInTeam = student.isInTeam();
+        isTeamLead = student.isTeamLead();
+    }
+
+    if(user.getRole() == UserRole.FACULTY_COORDINATOR){
+
+        Faculty faculty = facultyRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+
+        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
+            user.setRole(UserRole.FACULTY_COORDINATOR);
+        }
+    }
+    return new LoginResponse(
+            token,
+            user.getRole().name(),
+            studentId,
+            isInTeam,
+            isTeamLead
+    );
+}
 
     // ------------------------------------------------
     // FORGOT PASSWORD

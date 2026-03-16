@@ -18,16 +18,18 @@ import { getProjectRequestsStatus, getAssignedProject, getTeamInfo } from '../ap
 import { Alert, Modal, ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'StudentHome'
 >;
 
 const StudentHomeScreen: React.FC = () => {
-  const { user } = useContext(AuthContext);
+  
   const { colors } = useContext(ThemeContext);
   const navigation = useNavigation<StudentHomeNavigationProp>();
-
+const { user, setUser } = useContext(AuthContext);
   const [showAllocatedMessage, setShowAllocatedMessage] = useState(false);
   const [showAllocatedModal, setShowAllocatedModal] = useState(false);
   const [allocatedProject, setAllocatedProject] = useState<any>(null);
@@ -36,11 +38,17 @@ const StudentHomeScreen: React.FC = () => {
   const [showProjectStatusModal, setShowProjectStatusModal] = useState(false);
   const [projectStatus, setProjectStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-const [team, setTeam] = useState<any>(null);
+
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
-  if (!user || user.role !== 'STUDENT') return null;
+  if (!user || user.role !== 'STUDENT') {
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <Text>Loading...</Text>
+    </SafeAreaView>
+  );
+}
 
   const { isInTeam } = user;
   const isTeamLead = isInTeam && user.isTeamLead === true;
@@ -50,7 +58,7 @@ const [team, setTeam] = useState<any>(null);
     setShowAllocatedModal(true);
     try {
       const res = await getAssignedProject(user.studentId);
-      setAllocatedProject(res.data);
+      setAllocatedProject(res);
     } catch (err: any) {
       setAllocatedProject(null);
       Alert.alert('No Project', err?.response?.data?.message || 'No project assigned yet');
@@ -64,7 +72,7 @@ const [team, setTeam] = useState<any>(null);
     setShowProjectStatusModal(true);
     try {
       const res = await getProjectRequestsStatus(user.studentId);
-      setProjectStatus(res.data);
+     setProjectStatus(res);
     } catch (err: any) {
       setProjectStatus(null);
       Alert.alert('Error', err?.response?.data?.message || 'Could not fetch status');
@@ -73,20 +81,44 @@ const [team, setTeam] = useState<any>(null);
     }
   };
 
-  useEffect(() => {
+  useFocusEffect(
+  useCallback(() => {
 
-  const loadTeam = async () => {
+    const loadTeam = async () => {
 
-    const studentId = await AsyncStorage.getItem('studentId');
+      try {
 
-    const res = await getTeamInfo(Number(studentId));
+        setLoadingTeam(true);
 
-    setTeam(res.data);
-  };
+        const studentId = await AsyncStorage.getItem("studentId");
+        if (!studentId) return;
 
-  loadTeam();
+        const res = await getTeamInfo(Number(studentId));
 
-}, []);
+        setTeamInfo(res.data);
+
+        setUser(prev => ({
+          ...prev!,
+          isInTeam: true,
+          isTeamLead: res.data.teamLeadId === prev?.studentId
+        }));
+
+      } catch (err) {
+
+        console.log("TEAM LOAD ERROR:", err);
+
+      } finally {
+
+        setLoadingTeam(false);
+
+      }
+
+    };
+
+    loadTeam();
+
+  }, [setUser])
+);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
