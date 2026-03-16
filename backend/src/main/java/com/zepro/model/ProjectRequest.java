@@ -9,7 +9,8 @@ public class ProjectRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long requestId;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private RequestStatus status;
 
     @ManyToOne
     private Faculty faculty;
@@ -17,19 +18,35 @@ public class ProjectRequest {
     @ManyToOne
     private Team team;
 
-    public Long getRequestId() { return requestId; }
+    public Long getRequestId() {
+        return requestId;
+    }
 
-    public void setRequestId(Long requestId) { this.requestId = requestId; }
+    public void setRequestId(Long requestId) {
+        this.requestId = requestId;
+    }
 
-    public String getStatus() { return status; }
+    public RequestStatus getStatus() {
+        return status;
+    }
 
-    public void setStatus(String status) { this.status = status; }
+    public void setStatus(RequestStatus status) {
+        this.status = status;
+    }
 
-    public Faculty getFaculty() { return faculty; }
+    public Faculty getFaculty() {
+        return faculty;
+    }
 
-    public void setFaculty(Faculty faculty) { this.faculty = faculty; }
+    public void setFaculty(Faculty faculty) {
+        this.faculty = faculty;
+    }
 
-    public Team getTeam() { return team; }
+    public Team getTeam() {
+        return team;
+    }
 
-    public void setTeam(Team team) { this.team = team; }
+    public void setTeam(Team team) {
+        this.team = team;
+    }
 }

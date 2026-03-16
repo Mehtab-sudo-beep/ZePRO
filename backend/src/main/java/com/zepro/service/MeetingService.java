@@ -5,9 +5,11 @@ import com.zepro.dto.faculty.MeetingResponse;
 import com.zepro.model.Meeting;
 import com.zepro.model.MeetingStatus;
 import com.zepro.model.ProjectRequest;
+import com.zepro.model.RequestStatus;
 import com.zepro.repository.MeetingRepository;
 import com.zepro.repository.ProjectRequestRepository;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,22 +25,34 @@ public class MeetingService {
     }
 
     // Schedule meeting
-    public MeetingResponse scheduleMeeting(CreateMeetingRequest request) {
+  public MeetingResponse scheduleMeeting(CreateMeetingRequest request) {
 
-        ProjectRequest projectRequest =
-                requestRepository.findById(request.getRequestId()).orElseThrow();
+    System.out.println("Scheduling meeting...");
+    System.out.println("Request ID: " + request.getRequestId());
+    System.out.println("Meeting Link: " + request.getMeetingLink());
+    System.out.println("Meeting Time: " + request.getMeetingTime());
 
-        Meeting meeting = new Meeting();
-        meeting.setRequest(projectRequest);
-        meeting.setMeetingLink(request.getMeetingLink());
-        meeting.setMeetingTime(request.getMeetingTime());
-        meeting.setStatus(MeetingStatus.PENDING);
+    ProjectRequest projectRequest =
+            requestRepository.findById(request.getRequestId())
+                    .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        meetingRepository.save(meeting);
+    // Create meeting
+    Meeting meeting = new Meeting();
+    meeting.setRequest(projectRequest);
+    meeting.setMeetingLink(request.getMeetingLink());
+    meeting.setMeetingTime(request.getMeetingTime());
+    meeting.setStatus(MeetingStatus.PENDING);
 
-        return mapToResponse(meeting);
-    }
+    meetingRepository.save(meeting);
 
+    projectRequest.setStatus(RequestStatus.APPROVED);
+    requestRepository.save(projectRequest);
+
+    System.out.println("Meeting saved successfully");
+    System.out.println("Request marked as APPROVED");
+
+    return mapToResponse(meeting);
+}
     // Cancel meeting
     public MeetingResponse cancelMeeting(Long meetingId) {
 
@@ -74,14 +88,27 @@ public class MeetingService {
 
     private MeetingResponse mapToResponse(Meeting meeting) {
 
-        MeetingResponse response = new MeetingResponse();
+    MeetingResponse response = new MeetingResponse();
 
-        response.setMeetingId(meeting.getMeetingId());
-        response.setRequestId(meeting.getRequest().getRequestId());
-        response.setMeetingLink(meeting.getMeetingLink());
-        response.setMeetingTime(meeting.getMeetingTime());
-        response.setStatus(meeting.getStatus().name());
+    response.setMeetingId(meeting.getMeetingId());
+    response.setRequestId(meeting.getRequest().getRequestId());
 
-        return response;
-    }
+    response.setMeetingLink(meeting.getMeetingLink());
+    response.setMeetingTime(meeting.getMeetingTime());
+    response.setStatus(meeting.getStatus().name());
+
+    response.setTeamId(meeting.getRequest().getTeam().getTeamId());
+    response.setTeamName(meeting.getRequest().getTeam().getTeamName());
+
+    response.setFacultyId(meeting.getRequest().getFaculty().getFacultyId());
+
+    return response;
+}
+    public List<MeetingResponse> getAllMeetings() {
+
+    return meetingRepository.findAll()
+            .stream()
+            .map(this::mapToResponse)
+            .toList();
+}
 }

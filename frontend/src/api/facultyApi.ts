@@ -67,16 +67,30 @@ export const getSubDomains = async (domainId: number) => {
   const res = await axios.get(`${API}/api/subdomains/${domainId}`);
   return res.data;
 };
+export const getAllMeetings = async (token: string) => {
+  const res = await axios.get(`${API}/faculty/meetings`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return res.data;
+};
+
 export const scheduleMeeting = async (
   requestId: number,
-  meetingLink: string,
   meetingTime: string,
+  meetingLink: string,
   token: string,
 ) => {
   const res = await axios.post(
     `${API}/faculty/meetings`,
-    { requestId, meetingLink, meetingTime },
-    { headers: { Authorization: `Bearer ${token}` } },
+    {
+      requestId,
+      meetingTime,
+      meetingLink,
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
   );
 
   return res.data;
@@ -101,11 +115,12 @@ export const completeMeeting = async (meetingId: number, token: string) => {
 
   return res.data;
 };
-
-export const getMeetingByRequest = async (requestId: number, token: string) => {
-  const res = await axios.get(`${API}/faculty/meetings/request/${requestId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export const cancelRequest = async (requestId: number, token: string) => {
+  const res = await axios.put(
+    `${API}/faculty/requests/${requestId}/cancel`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
 
   return res.data;
 };

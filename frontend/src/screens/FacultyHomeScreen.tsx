@@ -15,7 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-import { getPendingRequests, getFacultyProjects } from '../api/facultyApi';
+import {
+  getPendingRequests,
+  getFacultyProjects,
+  getAllMeetings,
+} from '../api/facultyApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'FacultyHome'>;
 
@@ -26,74 +30,40 @@ const FacultyHomeScreen: React.FC = () => {
 
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-
-  /* ================= SCREEN LOAD DEBUG ================= */
+  const [meetings, setMeetings] = useState<any[]>([]);
 
   useEffect(() => {
     console.log('===== FacultyHomeScreen Loaded =====');
 
-    console.log('USER OBJECT:', user);
-    console.log('USER NAME:', user?.name);
-    console.log('USER EMAIL:', user?.email);
-    console.log('USER ROLE:', user?.role);
-    console.log('USER TOKEN:', user?.token);
-    console.log('USER FACULTY ID:', user?.facultyId);
-
     if (user?.token && user?.facultyId) {
-      console.log('User valid → calling loadData()');
       loadData();
-    } else {
-      console.log('User not ready yet → skipping API call');
     }
   }, [user]);
-
-  /* ================= API CALL ================= */
 
   const loadData = async () => {
     try {
       console.log('===== loadData() START =====');
-      console.log('TOKEN:', user?.token);
-      console.log('FACULTY ID:', user?.facultyId);
-
-      console.log('Calling getPendingRequests API...');
 
       const req = await getPendingRequests(user.token);
 
-      console.log('Pending Requests API Response:', req);
-
-      console.log('Calling getFacultyProjects API...');
-
       const proj = await getFacultyProjects(user.facultyId, user.token);
 
-      console.log('Projects API Response:', proj);
+      const meet = await getAllMeetings(user.token);
+
+      console.log('Requests:', req);
+      console.log('Projects:', proj);
+      console.log('Meetings:', meet);
 
       setRequests(req || []);
       setProjects(proj || []);
-
-      console.log('State updated successfully');
+      setMeetings(meet || []);
     } catch (err: any) {
-      console.log('===== API ERROR =====');
-
-      if (err.response) {
-        console.log('STATUS:', err.response.status);
-        console.log('ERROR DATA:', err.response.data);
-      } else {
-        console.log('UNKNOWN ERROR:', err);
-      }
+      console.log('API ERROR:', err);
     }
   };
 
-  /* ================= USER VALIDATION ================= */
-
-  if (!user) {
-    console.log('User is NULL → returning null screen');
-    return null;
-  }
-
-  if (user.role !== 'FACULTY') {
-    console.log('User role is not FACULTY:', user.role);
-    return null;
-  }
+  if (!user) return null;
+  if (user.role !== 'FACULTY') return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -105,7 +75,6 @@ const FacultyHomeScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Content */}
         <ScrollView contentContainerStyle={styles.content}>
           {/* Pending Requests */}
           <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -121,19 +90,16 @@ const FacultyHomeScreen: React.FC = () => {
 
             {requests.slice(0, 2).map(r => (
               <Text
-                key={r.projectId}
+                key={r.requestId}
                 style={[styles.item, { color: colors.subText }]}
               >
-                • {r.title} – Team {r.teamId}
+                • Team {r.teamId}
               </Text>
             ))}
 
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                console.log('Navigating → FacultyRequests');
-                navigation.navigate('FacultyRequests');
-              }}
+              onPress={() => navigation.navigate('FacultyRequests')}
             >
               <Text style={styles.primaryBtnText}>View All Requests</Text>
             </TouchableOpacity>
@@ -162,10 +128,7 @@ const FacultyHomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={[styles.outlineBtn, { borderColor: colors.primary }]}
-              onPress={() => {
-                console.log('Navigating → FacultyProjects');
-                navigation.navigate('FacultyProjects');
-              }}
+              onPress={() => navigation.navigate('FacultyProjects')}
             >
               <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
                 View Project Details
@@ -179,16 +142,24 @@ const FacultyHomeScreen: React.FC = () => {
               Meetings
             </Text>
 
-            <Text style={[styles.item, { color: colors.subText }]}>
-              No upcoming meetings
-            </Text>
+            {meetings.length === 0 && (
+              <Text style={[styles.item, { color: colors.subText }]}>
+                No upcoming meetings
+              </Text>
+            )}
+
+            {meetings.slice(0, 2).map(m => (
+              <Text
+                key={m.meetingId}
+                style={[styles.item, { color: colors.subText }]}
+              >
+                • Team {m.teamId} – {new Date(m.meetingTime).toLocaleString()}
+              </Text>
+            ))}
 
             <TouchableOpacity
               style={[styles.outlineBtn, { borderColor: colors.primary }]}
-              onPress={() => {
-                console.log('Navigating → FacultyMeetings');
-                navigation.navigate('FacultyMeetings');
-              }}
+              onPress={() => navigation.navigate('FacultyMeetings')}
             >
               <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
                 View Meetings
@@ -216,10 +187,7 @@ const FacultyHomeScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => {
-              console.log('Navigating → CreateProject');
-              navigation.navigate('CreateProject');
-            }}
+            onPress={() => navigation.navigate('FacultyCreateMenu')}
           >
             <Image
               source={require('../assets/create.png')}
@@ -230,10 +198,7 @@ const FacultyHomeScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => {
-              console.log('Navigating → FacultyMore');
-              navigation.navigate('FacultyMore');
-            }}
+            onPress={() => navigation.navigate('FacultyMore')}
           >
             <Image
               source={require('../assets/more.png')}
@@ -255,78 +220,84 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    height: 60,
-    paddingHorizontal: 16,
+    height: 64,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 3,
+    borderBottomWidth: 0.5,
+    borderColor: '#eee',
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '700',
   },
 
-  content: { padding: 16 },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 90,
+  },
 
   card: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 16,
-    elevation: 3,
+    elevation: 4,
   },
 
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 12,
   },
 
   item: {
     fontSize: 14,
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   primaryBtn: {
     paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 12,
+    borderRadius: 10,
+    marginTop: 14,
     alignItems: 'center',
   },
 
   primaryBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#fff',
+    fontWeight: '700',
   },
 
   outlineBtn: {
-    borderWidth: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 12,
+    borderWidth: 1.2,
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginTop: 14,
     alignItems: 'center',
   },
 
   outlineBtnText: {
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
   bottomTab: {
-    height: 60,
-    borderTopWidth: 1,
+    height: 68,
+    borderTopWidth: 0.5,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    paddingBottom: 6,
   },
 
   tabItem: {
     alignItems: 'center',
-    justifyContent: 'center',
   },
 
   tabIcon: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     marginBottom: 4,
     resizeMode: 'contain',
   },

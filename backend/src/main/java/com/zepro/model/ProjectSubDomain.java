@@ -1,5 +1,7 @@
 package com.zepro.model;
+
 import jakarta.persistence.*;
+
 @Entity
 public class ProjectSubDomain {
 
@@ -12,4 +14,24 @@ public class ProjectSubDomain {
 
     @ManyToOne
     private SubDomain subDomain;
+
+    public Long getId() {
+        return id;
+    }
+
+    public Project getProject() {
+        return project;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+    }
+
+    public SubDomain getSubDomain() {
+        return subDomain;
+    }
+
+    public void setSubDomain(SubDomain subDomain) {
+        this.subDomain = subDomain;
+    }
 }

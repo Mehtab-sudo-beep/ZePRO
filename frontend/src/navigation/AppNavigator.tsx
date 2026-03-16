@@ -35,6 +35,9 @@ import DepartmentListScreen from '../screens/DepartmentListScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import CreateProjectScreen from '../screens/CreateProjectScreen';
+import FacultyCreateMenuScreen from '../screens/FacultyCreateMenuScreen';
+import CreateDomainScreen from '../screens/CreateDomainScreen';
+import CreateSubDomainScreen from '../screens/CreateSubDomainScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -81,6 +84,9 @@ export type RootStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   CreateProject: undefined;
+  FacultyCreateMenu: undefined;
+  CreateDomain: undefined;
+  CreateSubDomain: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -140,6 +146,12 @@ const AppNavigator = () => {
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+      <Stack.Screen
+        name="FacultyCreateMenu"
+        component={FacultyCreateMenuScreen}
+      />
+      <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
+      <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
     </Stack.Navigator>
   );
 };
