@@ -1,26 +1,56 @@
 package com.zepro.controller;
 
-import com.zepro.dto.faculty.CreateProjectRequest;
-import com.zepro.dto.faculty.ProjectResponse;
-import com.zepro.service.FacultyService;
+import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import com.zepro.dto.faculty.AssignProjectRequest;
+import com.zepro.dto.faculty.CreateProjectRequest;
+import com.zepro.dto.faculty.DomainRequest;
+import com.zepro.dto.faculty.ProjectResponse;
+import com.zepro.dto.faculty.SubDomainRequest;
+import com.zepro.model.Domain;
+import com.zepro.model.Faculty;
+import com.zepro.model.ProjectRequest;
+import com.zepro.model.SubDomain;
+import com.zepro.repository.FacultyRepository;
+import com.zepro.service.DomainService;
+import com.zepro.service.FacultyService;
+import com.zepro.service.RequestService;
 
 @RestController
 @RequestMapping("/faculty")
 public class FacultyController {
 
     private final FacultyService facultyService;
+    private final DomainService domainService;
+    private final FacultyRepository facultyRepository;
+    private final RequestService requestService;
 
-    public FacultyController(FacultyService facultyService) {
+    public FacultyController(FacultyService facultyService,
+                             DomainService domainService,
+                             FacultyRepository facultyRepository,
+                             RequestService requestService) {
+
         this.facultyService = facultyService;
+        this.domainService = domainService;
+        this.facultyRepository = facultyRepository;
+        this.requestService = requestService;
     }
 
     @PostMapping("/project")
-    public ProjectResponse createProject(@RequestBody CreateProjectRequest request) {
-        return facultyService.createProject(request);
+    public ProjectResponse createProject(
+            @RequestBody CreateProjectRequest request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        return facultyService.createProject(request, faculty);
     }
 
     @GetMapping("/{facultyId}/projects")
@@ -34,11 +64,37 @@ public class FacultyController {
     }
 
     @PostMapping("/assign-project")
-    public String assignProject(
-            @RequestParam Long projectId,
-            @RequestParam Long teamId) {
+    public String assignProject(@RequestBody AssignProjectRequest request) {
 
-        facultyService.assignProject(projectId, teamId);
+        facultyService.assignProject(
+                request.getProjectId(),
+                request.getTeamId()
+        );
+
         return "Project assigned";
+    }
+
+    @PostMapping("/domain")
+    public Domain createDomain(
+            @RequestBody DomainRequest req,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        return domainService.createDomain(req.getName(), faculty);
+    }
+
+    @PostMapping("/subdomain")
+    public SubDomain createSubDomain(@RequestBody SubDomainRequest req) {
+        return facultyService.createSubDomain(req.getName(), req.getDomainId());
+    }
+
+    @PutMapping("/requests/{requestId}/cancel")
+    public ProjectRequest cancelRequest(@PathVariable Long requestId) {
+        return requestService.cancelRequest(requestId);
     }
 }
