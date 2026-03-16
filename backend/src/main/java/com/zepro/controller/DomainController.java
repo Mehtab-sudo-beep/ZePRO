@@ -1,14 +1,16 @@
 package com.zepro.controller;
 
+import com.zepro.dto.faculty.DomainResponse;
+import com.zepro.dto.faculty.SubDomainResponse;
 import com.zepro.model.Domain;
+import com.zepro.model.SubDomain;
 import com.zepro.service.DomainService;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/domains")
+@RequestMapping("/api")
 public class DomainController {
 
     private final DomainService domainService;
@@ -17,13 +19,13 @@ public class DomainController {
         this.domainService = domainService;
     }
 
-    @PostMapping
-    public Domain createDomain(@RequestBody Domain domain) {
-        return domainService.createDomain(domain);
-    }
-
-    @GetMapping
-    public List<Domain> getDomains() {
+    @GetMapping("/domains")
+    public List<DomainResponse> getDomains() {
         return domainService.getDomains();
     }
+
+    @GetMapping("/subdomains/{domainId}")
+public List<SubDomainResponse> getSubDomains(@PathVariable Long domainId) {
+    return domainService.getSubDomains(domainId);
+}
 }

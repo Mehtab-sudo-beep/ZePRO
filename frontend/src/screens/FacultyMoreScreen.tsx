@@ -38,12 +38,11 @@ const FacultyMoreScreen: React.FC = () => {
     );
   };
 
-  if (!user || user.role !== 'faculty') return null;
+  if (!user || user.role !== 'FACULTY') return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
-
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>More</Text>
@@ -53,11 +52,18 @@ const FacultyMoreScreen: React.FC = () => {
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/avatar.png')}
-            style={[styles.profileImage, { borderColor: colors.card, backgroundColor: colors.card }]}
+            style={[
+              styles.profileImage,
+              { borderColor: colors.card, backgroundColor: colors.card },
+            ]}
           />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.text }]}>{user.name}</Text>
-            <Text style={[styles.profileEmail, { color: colors.subText }]}>{user.email}</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>
+              {user.name}
+            </Text>
+            <Text style={[styles.profileEmail, { color: colors.subText }]}>
+              {user.email}
+            </Text>
           </View>
         </View>
 
@@ -95,13 +101,20 @@ const FacultyMoreScreen: React.FC = () => {
         </ScrollView>
 
         {/* Bottom Tab */}
-        <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
-
+        <View
+          style={[
+            styles.bottomTab,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyHome')}
           >
-            <Image source={require('../assets/home.png')} style={styles.tabIcon} />
+            <Image
+              source={require('../assets/home.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
@@ -109,15 +122,22 @@ const FacultyMoreScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyRequests')}
           >
-            <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
+            <Image
+              source={require('../assets/meeting.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>Request</Text>
           </TouchableOpacity>
 
           <View style={styles.tabItem}>
-            <Image source={require('../assets/more-color.png')} style={styles.tabIcon} />
-            <Text style={[styles.tabActive, { color: colors.primary }]}>More</Text>
+            <Image
+              source={require('../assets/more-color.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>
+              More
+            </Text>
           </View>
-
         </View>
       </View>
     </SafeAreaView>
@@ -143,7 +163,9 @@ const MenuItem = ({
     style={[styles.item, { borderColor: colors.border }]}
     onPress={onPress}
   >
-    <Text style={[styles.itemText, { color: danger ? '#DC2626' : colors.text }]}>
+    <Text
+      style={[styles.itemText, { color: danger ? '#DC2626' : colors.text }]}
+    >
       {title}
     </Text>
     <Text style={[styles.arrow, { color: colors.subText }]}>›</Text>

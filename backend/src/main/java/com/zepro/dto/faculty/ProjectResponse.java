@@ -5,6 +5,8 @@ import java.util.List;
 public class ProjectResponse {
 
     private Long projectId;
+    private Long requestId;   // ← ADD THIS
+
     private String title;
     private String description;
     private String status;
@@ -28,6 +30,10 @@ public class ProjectResponse {
 
     public Long getProjectId() { return projectId; }
     public void setProjectId(Long projectId) { this.projectId = projectId; }
+
+    // NEW
+    public Long getRequestId() { return requestId; }
+    public void setRequestId(Long requestId) { this.requestId = requestId; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
