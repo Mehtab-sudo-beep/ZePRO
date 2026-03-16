@@ -104,9 +104,10 @@ public class MeetingService {
 
     return response;
 }
-    public List<MeetingResponse> getAllMeetings() {
+    public List<MeetingResponse> getAllMeetings(Long facultyId) {
 
-    return meetingRepository.findAll()
+    return meetingRepository
+            .findByRequestFacultyFacultyId(facultyId)
             .stream()
             .map(this::mapToResponse)
             .toList();

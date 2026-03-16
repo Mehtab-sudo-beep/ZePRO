@@ -2,18 +2,26 @@ package com.zepro.controller;
 
 import com.zepro.dto.faculty.CreateMeetingRequest;
 import com.zepro.dto.faculty.MeetingResponse;
+import com.zepro.model.Faculty;
+import com.zepro.repository.FacultyRepository;
 import com.zepro.service.MeetingService;
-import java.util.List;
+
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/faculty/meetings")
 public class FacultyMeetingController {
 
     private final MeetingService meetingService;
+    private final FacultyRepository facultyRepository;
 
-    public FacultyMeetingController(MeetingService meetingService) {
+    public FacultyMeetingController(MeetingService meetingService,
+                                    FacultyRepository facultyRepository) {
         this.meetingService = meetingService;
+        this.facultyRepository = facultyRepository;
     }
 
     @PostMapping
@@ -35,8 +43,16 @@ public class FacultyMeetingController {
     public MeetingResponse getMeeting(@PathVariable Long requestId) {
         return meetingService.getMeetingByRequest(requestId);
     }
+
     @GetMapping
-public List<MeetingResponse> getAllMeetings() {
-    return meetingService.getAllMeetings();
-}
+    public List<MeetingResponse> getAllMeetings(Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow();
+
+        return meetingService.getAllMeetings(faculty.getFacultyId());
+    }
 }

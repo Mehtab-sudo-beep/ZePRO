@@ -83,106 +83,108 @@ const FacultyRequestsScreen = () => {
           </View>
         )}
 
-        {requests.map(r => {
-          const isSelected = selectedRequest === r.requestId;
+        {requests.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}> No pending requests</Text>
+          </View>
+        ) : (
+          requests.map(r => {
+            const isSelected = selectedRequest === r.requestId;
 
-          return (
-            <View key={r.requestId} style={styles.card}>
-              <Text style={styles.team}>👥 Team {r.teamId}</Text>
-              <Text style={styles.request}>Request ID: {r.requestId}</Text>
+            return (
+              <View key={r.requestId} style={styles.card}>
+                <Text style={styles.team}>👥 Team {r.teamId}</Text>
+                <Text style={styles.request}>Request ID: {r.requestId}</Text>
 
-              {!isSelected && (
-                <>
-                  <TouchableOpacity
-                    style={styles.scheduleBtn}
-                    onPress={() => setSelectedRequest(r.requestId)}
-                  >
-                    <Text style={styles.btnText}>Schedule Meeting</Text>
-                  </TouchableOpacity>
+                {!isSelected && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.scheduleBtn}
+                      onPress={() => setSelectedRequest(r.requestId)}
+                    >
+                      <Text style={styles.btnText}>Schedule Meeting</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => handleCancel(r.requestId)}
-                  >
-                    <Text style={styles.btnText}>Cancel Request</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => handleCancel(r.requestId)}
+                    >
+                      <Text style={styles.btnText}>Cancel Request</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
-              {isSelected && (
-                <View style={styles.form}>
-                  <Text style={styles.label}>Meeting Link</Text>
+                {isSelected && (
+                  <View style={styles.form}>
+                    <Text style={styles.label}>Meeting Link</Text>
 
-                  <TextInput
-                    placeholder="Paste Google Meet / Zoom link (optional)"
-                    placeholderTextColor="#999"
-                    value={meetingLink}
-                    onChangeText={setMeetingLink}
-                    style={styles.input}
-                  />
-
-                  <TouchableOpacity
-                    style={styles.picker}
-                    onPress={() => setShowDate(true)}
-                  >
-                    <Text style={styles.pickerText}>
-                      Select Meeting Date 📅
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.picker}
-                    onPress={() => setShowTime(true)}
-                  >
-                    <Text style={styles.pickerText}>
-                      Select Meeting Time ⏰
-                    </Text>
-                  </TouchableOpacity>
-
-                  <Text style={styles.helper}>
-                    Selected: {date.toLocaleString()}
-                  </Text>
-
-                  {showDate && (
-                    <DateTimePicker
-                      value={date}
-                      mode="date"
-                      onChange={(event, selectedDate) => {
-                        setShowDate(false);
-                        if (selectedDate) setDate(selectedDate);
-                      }}
+                    <TextInput
+                      placeholder="Paste Google Meet / Zoom link (optional)"
+                      placeholderTextColor="#999"
+                      value={meetingLink}
+                      onChangeText={setMeetingLink}
+                      style={styles.input}
                     />
-                  )}
 
-                  {showTime && (
-                    <DateTimePicker
-                      value={date}
-                      mode="time"
-                      onChange={(event, selectedDate) => {
-                        setShowTime(false);
-                        if (selectedDate) setDate(selectedDate);
-                      }}
-                    />
-                  )}
+                    <TouchableOpacity
+                      style={styles.picker}
+                      onPress={() => setShowDate(true)}
+                    >
+                      <Text style={styles.pickerText}>Select Meeting Date</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.confirmBtn}
-                    onPress={() => handleSchedule(r.requestId)}
-                  >
-                    <Text style={styles.btnText}>Confirm Meeting</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.picker}
+                      onPress={() => setShowTime(true)}
+                    >
+                      <Text style={styles.pickerText}>Select Meeting Time</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.cancelBtn}
-                    onPress={() => setSelectedRequest(null)}
-                  >
-                    <Text style={styles.btnText}>Back</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          );
-        })}
+                    <Text style={styles.helper}>
+                      Selected: {date.toLocaleString()}
+                    </Text>
+
+                    {showDate && (
+                      <DateTimePicker
+                        value={date}
+                        mode="date"
+                        onChange={(event, selectedDate) => {
+                          setShowDate(false);
+                          if (selectedDate) setDate(selectedDate);
+                        }}
+                      />
+                    )}
+
+                    {showTime && (
+                      <DateTimePicker
+                        value={date}
+                        mode="time"
+                        onChange={(event, selectedDate) => {
+                          setShowTime(false);
+                          if (selectedDate) setDate(selectedDate);
+                        }}
+                      />
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.confirmBtn}
+                      onPress={() => handleSchedule(r.requestId)}
+                    >
+                      <Text style={styles.btnText}>Confirm Meeting</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => setSelectedRequest(null)}
+                    >
+                      <Text style={styles.btnText}>Back</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -292,6 +294,17 @@ const styles = StyleSheet.create({
   successText: {
     color: '#15803D',
     textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  emptyBox: {
+    marginTop: 80,
+    alignItems: 'center',
+  },
+
+  emptyText: {
+    fontSize: 18,
+    color: '#6B7280',
     fontWeight: '600',
   },
 });
