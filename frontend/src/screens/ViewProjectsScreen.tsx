@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,78 +11,101 @@ import {
 
 import { ThemeContext } from '../theme/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-/* ---------- TYPES ---------- */
+import { getAllProjects, sendProjectRequest } from "../api/studentApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 
 interface Project {
-  id: string;
-  name: string;
-  faculty: string;
+  projectId: number;
+  title: string;
+  facultyName: string;
   domain: string;
   subdomain: string;
-  problem: string;
+  description: string;
   slots: number;
 }
 
 type SearchFilter = 'DOMAIN' | 'FACULTY';
 
-/* ---------- SAMPLE DATA ---------- */
-
-const PROJECTS: Project[] = [
-  {
-    id: '1',
-    name: 'Smart Attendance System',
-    faculty: 'Dr. Vinay V. Panicker',
-    domain: 'Machine Learning',
-    subdomain: 'Computer Vision',
-    problem: 'Automate student attendance using face recognition.',
-    slots: 2,
-  },
-  {
-    id: '2',
-    name: 'E-Commerce Recommendation Engine',
-    faculty: 'Dr. Anitha Menon',
-    domain: 'Machine Learning',
-    subdomain: 'Recommendation Systems',
-    problem: 'Suggest products based on user behavior.',
-    slots: 0,
-  },
-  {
-    id: '3',
-    name: 'College Event Management App',
-    faculty: 'Prof. Rahul Nair',
-    domain: 'Web Development',
-    subdomain: 'Full Stack',
-    problem: 'Manage registrations and event updates.',
-    slots: 3,
-  },
-];
-
-/* ---------- COMPONENT ---------- */
-
 const ProjectListScreen: React.FC = () => {
+
+  const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
 
+  const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<SearchFilter>('DOMAIN');
 
-  const filteredProjects = PROJECTS.filter(project => {
+  useEffect(() => {
+
+    const loadProjects = async () => {
+
+      try {
+
+        const res = await getAllProjects();
+
+        if (Array.isArray(res.data)) {
+          setProjects(res.data);
+        } 
+        else if (Array.isArray(res.data.data)) {
+          setProjects(res.data.data);
+        } 
+        else {
+          setProjects([]);
+        }
+
+      } catch (err) {
+
+        console.log("PROJECT LOAD ERROR:", err);
+        setProjects([]);
+
+      }
+
+    };
+
+    loadProjects();
+
+  }, []);
+
+  const filteredProjects = (projects || []).filter(project => {
+
     const query = search.toLowerCase();
-    if (filter === 'DOMAIN') {
-      return project.domain.toLowerCase().includes(query);
+
+    if (filter === "DOMAIN") {
+      return project.domain?.toLowerCase().includes(query);
     }
-    return project.faculty.toLowerCase().includes(query);
+
+    return project.facultyName?.toLowerCase().includes(query);
+
   });
 
-  const sendRequest = (projectName: string) => {
-    Alert.alert(
-      'Request Sent',
-      `Your request for "${projectName}" has been sent.`,
-      [{ text: 'OK' }],
-    );
+  const sendRequest = async (projectId: number, projectTitle: string) => {
+
+    try {
+
+      const studentId = await AsyncStorage.getItem("studentId");
+
+      await sendProjectRequest({
+        studentId: Number(studentId),
+        projectId: projectId,
+      });
+
+      Alert.alert(
+        "Request Sent",
+        `Your request for "${projectTitle}" has been sent`
+      );
+
+    } catch (err) {
+
+      console.log("PROJECT REQUEST ERROR:", err);
+      Alert.alert("Error", "Could not send request");
+
+    }
+
   };
 
   const renderItem = ({ item }: { item: Project }) => (
+
     <View
       style={[
         styles.card,
@@ -92,10 +115,13 @@ const ProjectListScreen: React.FC = () => {
         },
       ]}
     >
-      <Text style={[styles.title, { color: colors.text }]}>{item.name}</Text>
+
+      <Text style={[styles.title, { color: colors.text }]}>
+        {item.title}
+      </Text>
 
       <Text style={[styles.faculty, { color: colors.primary }]}>
-        {item.faculty}
+        {item.facultyName}
       </Text>
 
       <Text style={[styles.text, { color: colors.text }]}>
@@ -110,35 +136,51 @@ const ProjectListScreen: React.FC = () => {
 
       <Text style={[styles.text, { color: colors.text }]}>
         <Text style={styles.label}>Problem: </Text>
-        {item.problem}
+        {item.description}
       </Text>
 
       <Text
         style={[
           styles.slots,
-          { color: item.slots > 0 ? colors.primary : 'red' },
+          { color: item.slots > 0 ? colors.primary : "red" },
         ]}
       >
         {item.slots > 0
           ? `Slots Available: ${item.slots}`
-          : 'No Slots Available'}
+          : "No Slots Available"}
       </Text>
 
       {item.slots > 0 && (
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => sendRequest(item.name)}
+          onPress={() => sendRequest(item.projectId, item.title)}
         >
           <Text style={styles.buttonText}>Send Request</Text>
         </TouchableOpacity>
       )}
+
     </View>
+
   );
 
   return (
+
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+
+      <View style={styles.header}>
+
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ fontSize: 22, color: colors.text }}>←</Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Projects
+        </Text>
+
+      </View>
+
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* SEARCH BAR (Clean) */}
+
         <View
           style={[
             styles.searchContainer,
@@ -148,20 +190,25 @@ const ProjectListScreen: React.FC = () => {
             },
           ]}
         >
+
           <TextInput
             placeholder={
-              filter === 'DOMAIN' ? 'Search by domain' : 'Search by faculty'
+              filter === 'DOMAIN'
+                ? 'Search by domain'
+                : 'Search by faculty'
             }
             placeholderTextColor={colors.subText}
             value={search}
             onChangeText={setSearch}
             style={[styles.searchInput, { color: colors.text }]}
           />
+
         </View>
 
-        {/* FILTER OPTIONS */}
         <View style={styles.filterRow}>
+
           {['DOMAIN', 'FACULTY'].map(type => (
+
             <TouchableOpacity
               key={type}
               style={[
@@ -174,6 +221,7 @@ const ProjectListScreen: React.FC = () => {
               ]}
               onPress={() => setFilter(type as SearchFilter)}
             >
+
               <Text
                 style={{
                   color: filter === type ? '#fff' : colors.text,
@@ -182,35 +230,57 @@ const ProjectListScreen: React.FC = () => {
               >
                 {type}
               </Text>
+
             </TouchableOpacity>
+
           ))}
+
         </View>
 
         {filteredProjects.length === 0 ? (
+
           <Text style={[styles.noProjectText, { color: colors.subText }]}>
             No projects found
           </Text>
+
         ) : (
+
           <FlatList
             data={filteredProjects}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item.projectId.toString()}
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
           />
+
         )}
+
       </View>
+
     </SafeAreaView>
+
   );
+
 };
 
 export default ProjectListScreen;
 
-/* ---------- STYLES ---------- */
-
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     padding: 16,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 12,
+  },
+
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
   },
 
   searchContainer: {
@@ -287,4 +357,5 @@ const styles = StyleSheet.create({
     marginTop: 40,
     fontSize: 15,
   },
+
 });
