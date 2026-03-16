@@ -44,3 +44,14 @@ export const rejectRequest = (requestId: number) => {
 export const getSentRequests = (studentId: number) => {
   return API.get(`/student/sent-requests/${studentId}`);
 };
+export const getAllProjects = () => {
+  return API.get("/student/projects");
+};
+
+/* SEND project request */
+export const sendProjectRequest = (data: {
+  studentId: number;
+  projectId: number;
+}) => {
+  return API.post("/student/request-project", data);
+};

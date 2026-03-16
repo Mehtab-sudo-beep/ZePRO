@@ -1,11 +1,15 @@
 package com.zepro.service;
 
 import com.zepro.dto.student.*;
+import com.zepro.model.Project;
+import com.zepro.model.ProjectRequest;
 import com.zepro.model.Student;
 import com.zepro.model.Team;
 import com.zepro.repository.StudentRepository;
 import com.zepro.repository.TeamRepository;
 import com.zepro.repository.TeamJoinRequestRepository;
+import com.zepro.repository.ProjectRequestRepository;
+import com.zepro.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
 import com.zepro.model.TeamJoinRequest;
 import java.util.ArrayList;
@@ -18,12 +22,18 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final TeamRepository teamRepository;
     private final TeamJoinRequestRepository joinRequestRepository;
+    private final ProjectRequestRepository projectRequestRepository;
+private final ProjectRepository projectRepository;
     public StudentService(StudentRepository studentRepository,
                           TeamRepository teamRepository,
-                          TeamJoinRequestRepository joinRequestRepository) {
+                          TeamJoinRequestRepository joinRequestRepository,
+                          ProjectRequestRepository projectRequestRepository,
+                          ProjectRepository projectRepository) {
         this.studentRepository = studentRepository;
         this.teamRepository = teamRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.projectRequestRepository = projectRequestRepository;
+        this.projectRepository = projectRepository; 
     }
 
     // ------------------------------------------------
@@ -91,26 +101,92 @@ public class StudentService {
         return "Successfully joined the team";
     }
 
+
+    public List<ProjectResponse> getAllProjects() {
+
+    List<Project> projects = projectRepository.findAll();
+
+    return projects.stream()
+            .map(project -> new ProjectResponse(
+                    project.getProjectId(),
+                    project.getTitle(),
+                    project.getDescription(),
+                    project.getFaculty().getUser().getName(),
+                    6   // default slots
+            ))
+            .toList();
+}
     // ------------------------------------------------
     // REQUEST PROJECT
     // ------------------------------------------------
 
     public String requestProject(ProjectRequestDTO request) {
 
-        Student student = studentRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+    Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        if (!student.isTeamLead()) {
-            throw new RuntimeException("Only team lead can request project");
-        }
-
-        Team team = student.getTeam();
-
-        // Here you will later create ProjectRequest entity
-        // and store it in DB
-
-        return "Project request sent successfully for team: " + team.getTeamName();
+    if (!student.isTeamLead()) {
+        throw new RuntimeException("Only team lead can request a project");
     }
+
+    Team team = student.getTeam();
+
+    if (team == null) {
+        throw new RuntimeException("Student is not in a team");
+    }
+
+    Project project = projectRepository.findById(request.getProjectId())
+            .orElseThrow(() -> new RuntimeException("Project not found"));
+
+    boolean alreadyRequested =
+            projectRequestRepository.existsByTeamTeamIdAndProjectProjectId(
+                    team.getTeamId(),
+                    project.getProjectId()
+            );
+
+    if (alreadyRequested) {
+        throw new RuntimeException("Project request already sent");
+    }
+
+    ProjectRequest projectRequest = new ProjectRequest();
+    projectRequest.setTeam(team);
+    projectRequest.setProject(project);
+    projectRequest.setStatus("PENDING");
+
+    projectRequestRepository.save(projectRequest);
+
+    return "Project request sent successfully";
+}
+
+
+    public List<ProjectRequestHistoryResponse> getProjectRequestsHistory(Long studentId) {
+
+    Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> new RuntimeException("Student not found"));
+
+    // Only team lead can view sent requests
+    if (!student.isTeamLead()) {
+        throw new RuntimeException("Only team lead can view project requests");
+    }
+
+    Team team = student.getTeam();
+
+    if (team == null) {
+        throw new RuntimeException("Student is not in a team");
+    }
+
+    List<ProjectRequest> requests =
+            projectRequestRepository.findByTeamTeamId(team.getTeamId());
+
+    return requests.stream()
+            .map(req -> new ProjectRequestHistoryResponse(
+                    req.getRequestId(),
+                    req.getProject().getTitle(),
+                    req.getProject().getFaculty().getUser().getName(),
+                    req.getStatus()
+            ))
+            .toList();
+}
 
     // ------------------------------------------------
     // GET ASSIGNED PROJECT
