@@ -55,3 +55,14 @@ export const sendProjectRequest = (data: {
 }) => {
   return API.post("/student/request-project", data);
 };
+
+export const getRequestedProjects = (studentId: number) => {
+  return API.get(`/student/requested-projects/${studentId}`);
+};
+export const getProjectScheduleResponses = (studentId: number) => {
+  return API.get(`/student/project-requests/${studentId}`);
+};
+
+export const getMeetingDetails = (requestId: number) => {
+  return API.get(`/student/meeting-details/${requestId}`);
+};

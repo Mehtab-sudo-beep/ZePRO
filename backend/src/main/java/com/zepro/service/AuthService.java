@@ -141,6 +141,24 @@ public class AuthService {
             user.setRole(UserRole.FACULTY_COORDINATOR);
         }
     }
+    if(user.getRole() == UserRole.FACULTY){
+
+        Faculty faculty = facultyRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+
+        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
+            user.setRole(UserRole.FACULTY_COORDINATOR);
+        }
+    }               
+    if(user.getRole() == UserRole.ADMIN){
+
+        Admin admin = adminRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Admin profile not found"));
+
+        // No additional info needed for admin
+    }   
     return new LoginResponse(
             token,
             user.getRole().name(),

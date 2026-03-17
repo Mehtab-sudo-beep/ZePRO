@@ -13,30 +13,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Log Out',
-          style: 'destructive',
-          onPress: () => {
-            setUser(null);
-            navigation.replace('Login');
-          },
-        },
-      ],
-      { cancelable: true },
-    );
-  };
+  const logout = async () => {
+  await AsyncStorage.removeItem("token");
+  await AsyncStorage.removeItem("studentId");
+  navigation.replace("Login");
+};
 
   if (!user || user.role !== 'STUDENT') return null;
 
@@ -103,7 +90,7 @@ const MoreScreen: React.FC = () => {
           <MenuItem
             title="Log Out"
             danger
-            onPress={handleLogout}
+            onPress={logout}
             colors={colors}
           />
         </ScrollView>

@@ -10,5 +10,5 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     List<Project> findByFacultyFacultyId(Long facultyId);
 
     List<Project> findByStatus(String status);
-
+    List<Project> findByFacultyFacultyIdAndProjectId(Long facultyId, Long projectId);
 }

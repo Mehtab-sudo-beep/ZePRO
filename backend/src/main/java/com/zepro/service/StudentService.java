@@ -1,6 +1,7 @@
 package com.zepro.service;
 
 import com.zepro.dto.student.*;
+import com.zepro.model.Meeting;
 import com.zepro.model.Project;
 import com.zepro.model.ProjectRequest;
 import com.zepro.model.Student;
@@ -9,6 +10,7 @@ import com.zepro.repository.StudentRepository;
 import com.zepro.repository.TeamRepository;
 import com.zepro.repository.TeamJoinRequestRepository;
 import com.zepro.repository.ProjectRequestRepository;
+import com.zepro.repository.MeetingRepository;
 import com.zepro.repository.ProjectRepository;
 import org.springframework.stereotype.Service;
 import com.zepro.model.TeamJoinRequest;
@@ -23,16 +25,19 @@ public class StudentService {
     private final TeamRepository teamRepository;
     private final TeamJoinRequestRepository joinRequestRepository;
     private final ProjectRequestRepository projectRequestRepository;
+    private final MeetingRepository meetingRepository;
 private final ProjectRepository projectRepository;
     public StudentService(StudentRepository studentRepository,
                           TeamRepository teamRepository,
                           TeamJoinRequestRepository joinRequestRepository,
                           ProjectRequestRepository projectRequestRepository,
+                          MeetingRepository meetingRepository,
                           ProjectRepository projectRepository) {
         this.studentRepository = studentRepository;
         this.teamRepository = teamRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.projectRequestRepository = projectRequestRepository;
+        this.meetingRepository = meetingRepository;
         this.projectRepository = projectRepository; 
     }
 
@@ -126,14 +131,10 @@ private final ProjectRepository projectRepository;
             .orElseThrow(() -> new RuntimeException("Student not found"));
 
     if (!student.isTeamLead()) {
-        throw new RuntimeException("Only team lead can request a project");
+        throw new RuntimeException("Only team lead can send project request");
     }
 
     Team team = student.getTeam();
-
-    if (team == null) {
-        throw new RuntimeException("Student is not in a team");
-    }
 
     Project project = projectRepository.findById(request.getProjectId())
             .orElseThrow(() -> new RuntimeException("Project not found"));
@@ -145,17 +146,36 @@ private final ProjectRepository projectRepository;
             );
 
     if (alreadyRequested) {
-        throw new RuntimeException("Project request already sent");
+        throw new RuntimeException("Your team already requested this project");
     }
 
-    ProjectRequest projectRequest = new ProjectRequest();
-    projectRequest.setTeam(team);
-    projectRequest.setProject(project);
-    projectRequest.setStatus("PENDING");
+    ProjectRequest req = new ProjectRequest();
+    req.setTeam(team);
+    req.setProject(project);
+    req.setStatus("PENDING");
 
-    projectRequestRepository.save(projectRequest);
+    projectRequestRepository.save(req);
 
-    return "Project request sent successfully";
+    return "Project request sent";
+}
+
+public List<Long> getRequestedProjects(Long studentId){
+
+    Student student = studentRepository.findById(studentId)
+            .orElseThrow();
+
+    Team team = student.getTeam();
+
+    if(team == null){
+        return List.of();
+    }
+
+    List<ProjectRequest> requests =
+            projectRequestRepository.findByTeamTeamId(team.getTeamId());
+
+    return requests.stream()
+            .map(req -> req.getProject().getProjectId())
+            .toList();
 }
 
 
@@ -218,22 +238,96 @@ private final ProjectRepository projectRepository;
 
     public ProjectRequestStatusResponse getProjectRequestsStatus(Long studentId) {
 
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
+    Student student = studentRepository.findById(studentId)
+            .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        if (!student.isTeamLead()) {
-            throw new RuntimeException("Only team lead can view requests");
+    Team team = student.getTeam();
+
+    if (team == null) {
+        throw new RuntimeException("Student is not in a team");
+    }
+
+    List<ProjectRequest> requests =
+            projectRequestRepository.findByTeamTeamId(team.getTeamId());
+
+    List<UpcomingRequestResponse> upcoming = new ArrayList<>();
+    List<CompletedRequestResponse> completed = new ArrayList<>();
+
+    for (ProjectRequest req : requests) {
+
+        String status = req.getStatus();
+
+        // APPROVED request
+        if (status.equals("APPROVED")) {
+
+            completed.add(
+                    new CompletedRequestResponse(
+                            req.getRequestId(),
+
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "APPROVED"
+                    )
+            );
+
+            break;
         }
 
-        ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
+        // REJECTED request
+        if (status.equals("REJECTED")) {
 
-        // Later this will fetch real project requests
+            completed.add(
+                    new CompletedRequestResponse(
+                            req.getRequestId(),
 
-        response.setUpcomingRequests(new ArrayList<>());
-        response.setCompletedRequests(new ArrayList<>());
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "REJECTED"
+                    )
+            );
+        }
 
-        return response;
+        // Meetings related to this request
+        List<Meeting> meetings =
+                meetingRepository.findByRequestRequestId(req.getRequestId());
+
+        for (Meeting meeting : meetings) {
+
+            if (meeting.getStatus().equals("SCHEDULED")) {
+
+                upcoming.add(
+                        new UpcomingRequestResponse(
+                                req.getRequestId(), // IMPORTANT
+                                req.getProject().getTitle(),
+                                req.getProject().getFaculty().getUser().getName(),
+                                meeting.getMeetingTime(),
+                                meeting.getLocation(),
+                                meeting.getMeetingLink()
+                        )
+                );
+            }
+
+            if (meeting.getStatus().equals("COMPLETED")) {
+
+                completed.add(
+                        new CompletedRequestResponse(
+                                req.getRequestId(),
+
+                                req.getProject().getTitle(),
+                                req.getProject().getFaculty().getUser().getName(),
+                                "MEETING COMPLETED"
+                        )
+                );
+            }
+        }
     }
+
+    ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
+    response.setUpcomingRequests(upcoming);
+    response.setCompletedRequests(completed);
+
+    return response;
+}       
 
     // ------------------------------------------------
     // TEAM INFO
@@ -399,4 +493,40 @@ public List<SentRequestResponse> getSentRequests(Long studentId) {
             ))
             .toList();
 }
+public MeetingDetailsResponse getMeetingDetails(Long requestId) {
+
+    ProjectRequest request = projectRequestRepository.findById(requestId)
+            .orElseThrow(() -> new RuntimeException("Request not found"));
+
+    Meeting meeting = meetingRepository
+            .findByRequestRequestId(requestId)
+            .stream()
+            .findFirst()
+            .orElseThrow(() -> new RuntimeException("Meeting not found"));
+
+    Project project = request.getProject();
+    Team team = request.getTeam();
+
+    MeetingDetailsResponse response = new MeetingDetailsResponse();
+
+    response.setTitle(meeting.getTitle());
+    response.setFaculty(project.getFaculty().getUser().getName());
+    response.setProjectName(project.getTitle());
+
+    response.setLocation(meeting.getLocation());
+
+    response.setDate(meeting.getMeetingTime().toLocalDate().toString());
+    response.setTime(meeting.getMeetingTime().toLocalTime().toString());
+
+    List<String> members =
+            team.getMembers()
+                    .stream()
+                    .map(s -> s.getUser().getName())
+                    .toList();
+
+    response.setMembers(members);
+
+    return response;
+}
+
 }

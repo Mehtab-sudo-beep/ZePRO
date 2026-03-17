@@ -4,24 +4,22 @@ import java.util.List;
 
 public class ProjectRequestStatusResponse {
 
-    private List<String> upcomingRequests;
-    private List<String> completedRequests;
+    private List<UpcomingRequestResponse> upcomingRequests;
+    private List<CompletedRequestResponse> completedRequests;
 
-    public ProjectRequestStatusResponse() {}
-
-    public List<String> getUpcomingRequests() {
+    public List<UpcomingRequestResponse> getUpcomingRequests() {
         return upcomingRequests;
     }
 
-    public List<String> getCompletedRequests() {
-        return completedRequests;
-    }
-
-    public void setUpcomingRequests(List<String> upcomingRequests) {
+    public void setUpcomingRequests(List<UpcomingRequestResponse> upcomingRequests) {
         this.upcomingRequests = upcomingRequests;
     }
 
-    public void setCompletedRequests(List<String> completedRequests) {
+    public List<CompletedRequestResponse> getCompletedRequests() {
+        return completedRequests;
+    }
+
+    public void setCompletedRequests(List<CompletedRequestResponse> completedRequests) {
         this.completedRequests = completedRequests;
     }
 }

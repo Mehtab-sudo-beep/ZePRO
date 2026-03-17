@@ -5,7 +5,6 @@ import StudentHomeScreen from '../screens/StudentHomeScreen';
 import ViewProjectsScreen from '../screens/ViewProjectsScreen';
 import ScheduledMeetingsScreen from '../screens/ScheduledMeetingsScreen';
 import MeetingDetailsScreen from '../screens/MeetingDeatialsScreen';
-import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
 import FacultyRequestsScreen from '../screens/FacultyRequestHandling';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
@@ -40,9 +39,7 @@ export type RootStackParamList = {
   StudentHome: undefined;
   ViewProjects: undefined;
   ScheduledMeetings: undefined;
-  MeetingDetails: {
-    meeting: Meeting;
-  };
+  MeetingDetails: { requestId: number };
   FacultyHome: undefined;
   FacultyRequests: undefined;
   FacultyProjects: undefined;

@@ -88,4 +88,12 @@ public List<ProjectRequestHistoryResponse> getProjectRequestHistory(
 
     return studentService.getProjectRequestsHistory(studentId);
 }
+@GetMapping("/requested-projects/{studentId}")
+public List<Long> getRequestedProjects(@PathVariable Long studentId){
+    return studentService.getRequestedProjects(studentId);
+}
+@GetMapping("/meeting-details/{requestId}")
+public MeetingDetailsResponse getMeetingDetails(@PathVariable Long requestId) {
+    return studentService.getMeetingDetails(requestId);
+}
 }
