@@ -34,7 +34,7 @@ const { user, setUser } = useContext(AuthContext);
   const [showAllocatedModal, setShowAllocatedModal] = useState(false);
   const [allocatedProject, setAllocatedProject] = useState<any>(null);
   const [loadingAllocated, setLoadingAllocated] = useState(false);
-
+  const [allocatedMessage, setAllocatedMessage] = useState<string | null>(null);
   const [showProjectStatusModal, setShowProjectStatusModal] = useState(false);
   const [projectStatus, setProjectStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
@@ -54,18 +54,28 @@ const { user, setUser } = useContext(AuthContext);
   const isTeamLead = isInTeam && user.isTeamLead === true;
 
   const handleViewAllocatedProject = async () => {
-    setLoadingAllocated(true);
-    setShowAllocatedModal(true);
-    try {
-      const res = await getAssignedProject(user.studentId);
-      setAllocatedProject(res);
-    } catch (err: any) {
-      setAllocatedProject(null);
-      Alert.alert('No Project', err?.response?.data?.message || 'No project assigned yet');
-    } finally {
-      setLoadingAllocated(false);
+  setLoadingAllocated(true);
+  setAllocatedProject(null);
+  setAllocatedMessage(null);
+
+  try {
+    const res = await getAssignedProject(user.studentId);
+
+    if (res.data && res.data.status === "APPROVED") {
+      setAllocatedProject(res.data);
+      setShowAllocatedModal(true);   // popup only here
+    } else {
+      setAllocatedMessage("Your project has not been allocated yet.");
     }
-  };
+
+  } catch (err: any) {
+    setAllocatedMessage(
+      err?.response?.data?.message || "Your project has not been allocated yet."
+    );
+  } finally {
+    setLoadingAllocated(false);
+  }
+};
 
   const handleViewProjectStatus = async () => {
     setLoadingStatus(true);
@@ -266,6 +276,18 @@ const { user, setUser } = useContext(AuthContext);
                 View Allocated Project
               </Text>
             </TouchableOpacity>
+            {allocatedMessage && (
+  <View
+    style={[
+      styles.messageBox,
+      { borderColor: colors.border, backgroundColor: colors.background },
+    ]}
+  >
+    <Text style={[styles.messageText, { color: colors.subText }]}>
+      {allocatedMessage}
+    </Text>
+  </View>
+)}
 
             {isTeamLead && (
               <TouchableOpacity
@@ -460,7 +482,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
+messageBox: {
+  marginTop: 10,
+  borderWidth: 1,
+  borderRadius: 8,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  width: "100%",
+},
 
+messageText: {
+  fontSize: 13,
+  lineHeight: 18,
+},
   tab: {
     fontSize: 12,
   },

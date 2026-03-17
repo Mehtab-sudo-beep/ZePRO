@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { ThemeContext } from '../theme/ThemeContext';
+import { getProjectScheduleResponses } from '../api/studentApi';
 
 type NavProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -23,6 +24,7 @@ type NavProp = NativeStackNavigationProp<
 type TabType = 'UPCOMING' | 'COMPLETED';
 
 type Meeting = {
+  requestId: number;
   title: string;
   faculty: string;
   projectName: string;
@@ -43,62 +45,67 @@ const ScheduledMeetingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Replace with your actual API call
-    const fetchMeetings = async () => {
-      setLoading(true);
-      try {
-        // Example: const res = await getScheduledMeetings(user.studentId);
-        // setMeetings(res.data);
-        // For now, use static data as fallback
-        setMeetings([
-          {
-            title: 'Project Discussion',
-            faculty: 'Dr. Vinay V. Panicker',
-            projectName: 'Project Allocation System',
-            domain: 'Software Engineering',
-            subDomain: 'Full Stack Development',
-            location: 'Seminar Hall – 2',
-            date: '12 Feb 2026',
-            time: '10:30 AM',
-            members: ['Mehtab Shaik', 'Student A', 'Student B'],
-            response: 'Accepted',
-            statusColor: '#16A34A',
-          },
-          {
-            title: 'Requirement Review',
-            faculty: 'Dr. Anoop K.',
-            projectName: 'Internship Management Portal',
-            domain: 'Information Systems',
-            subDomain: 'Requirement Analysis',
-            location: 'Faculty Cabin – CS Block',
-            date: '14 Feb 2026',
-            time: '02:00 PM',
-            members: ['Mehtab Shaik', 'Student C'],
-            response: 'Pending',
-            statusColor: '#F59E0B',
-          },
-          {
-            title: 'Initial Proposal Review',
-            faculty: 'Dr. Suresh Kumar',
-            projectName: 'Smart Attendance System',
-            domain: 'Data Analytics',
-            subDomain: 'Machine Learning',
-            location: 'Online (Google Meet)',
-            date: '02 Feb 2026',
-            time: '11:00 AM',
-            members: ['Mehtab Shaik', 'Student D', 'Student E'],
-            response: 'Rejected',
-            statusColor: '#DC2626',
-          },
-        ]);
-      } catch (err) {
-        // handle error
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMeetings();
-  }, []);
+  const fetchMeetings = async () => {
+    setLoading(true);
+
+    try {
+      const studentId = 5; // use the same id you tested in Postman
+
+      const res = await getProjectScheduleResponses(studentId);
+
+      const data = res.data;
+
+      const upcomingMapped: Meeting[] = data.upcomingRequests.map((m: any) => {
+        const dateObj = new Date(m.meetingTime);
+
+        return {
+  requestId: m.requestId,
+  title: m.projectTitle,
+  faculty: m.facultyName,
+  projectName: m.projectTitle,
+          domain: '',
+          subDomain: '',
+          location: m.location,
+          date: dateObj.toLocaleDateString(),
+          time: dateObj.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          members: [],
+          response: 'Pending',
+          statusColor: '#F59E0B',
+        };
+      });
+
+      const completedMapped: Meeting[] = data.completedRequests.map((m: any) => {
+        const color = m.status === 'APPROVED' ? '#16A34A' : '#DC2626';
+
+        return {
+          requestId: m.requestId,
+          title: m.projectTitle,
+          faculty: m.facultyName,
+          projectName: m.projectTitle,
+          domain: '',
+          subDomain: '',
+          location: '',
+          date: '',
+          time: '',
+          members: [],
+          response: m.status === 'APPROVED' ? 'Accepted' : 'Rejected',
+          statusColor: color,
+        };
+      });
+
+      setMeetings([...upcomingMapped, ...completedMapped]);
+    } catch (err) {
+      console.log('Meeting API error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchMeetings();
+}, []);
 
   const navigation = useNavigation<NavProp>();
   const { colors } = useContext(ThemeContext);
@@ -117,6 +124,13 @@ const ScheduledMeetingsScreen: React.FC = () => {
 
     return matchesTab && matchesSearch;
   });
+  if (loading) {
+  return (
+    <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
+      <Text>Loading meetings...</Text>
+    </View>
+  );
+}
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -199,9 +213,11 @@ const ScheduledMeetingsScreen: React.FC = () => {
         <ScrollView>
           {filteredMeetings.map((meeting, index) => (
             <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate('MeetingDetails', { meeting })}
-            >
+  key={index}
+  onPress={() =>
+    navigation.navigate('MeetingDetails', { requestId: meeting.requestId })
+  }
+>
               <View
                 style={[
                   styles.card,

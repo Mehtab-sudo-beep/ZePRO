@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 
@@ -29,7 +30,7 @@ const ReceivedRequestsScreen: React.FC = () => {
 
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-
+ const isDark = colors.background === '#111827';
  const [requests, setRequests] = useState<Request[]>([]);
 
   const loadRequests = async () => {
@@ -102,8 +103,11 @@ const ReceivedRequestsScreen: React.FC = () => {
 
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={{ fontSize: 22, color: colors.text }}>←</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
 
           <View>
@@ -236,4 +240,16 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  headerSub: {
+    fontSize: 12,
+    marginTop: 1,
+  },
 });

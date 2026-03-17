@@ -59,6 +59,9 @@ const { token, role, studentId, isInTeam, isTeamLead } = res.data;
     else if (role === 'FACULTY_COORDINATOR') {
       navigation.navigate('FacultyCoordinatorDashboard');
     }
+    else if (role === 'ADMIN') {
+      navigation.replace('AddInstitute');
+    }
 
   } catch (error: any) {
 

@@ -7,14 +7,15 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 
 import { ThemeContext } from '../theme/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getAllProjects, sendProjectRequest } from "../api/studentApi";
+import { getAllProjects, sendProjectRequest, getRequestedProjects } from "../api/studentApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-
+import { AuthContext } from "../context/AuthContext";
 interface Project {
   projectId: number;
   title: string;
@@ -35,37 +36,44 @@ const ProjectListScreen: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<SearchFilter>('DOMAIN');
+  const [requestedProjects, setRequestedProjects] = useState<number[]>([]);
+const { user } = useContext(AuthContext);
+ const isDark = colors.background === '#111827';
+
+const isTeamLead = user?.isTeamLead === true;
+
 
   useEffect(() => {
 
-    const loadProjects = async () => {
+  const loadProjects = async () => {
 
-      try {
+    try {
 
-        const res = await getAllProjects();
+      const studentId = await AsyncStorage.getItem("studentId");
 
-        if (Array.isArray(res.data)) {
-          setProjects(res.data);
-        } 
-        else if (Array.isArray(res.data.data)) {
-          setProjects(res.data.data);
-        } 
-        else {
-          setProjects([]);
-        }
+      const res = await getAllProjects();
 
-      } catch (err) {
-
-        console.log("PROJECT LOAD ERROR:", err);
+      if (Array.isArray(res.data)) {
+        setProjects(res.data);
+      } else {
         setProjects([]);
-
       }
 
-    };
+      const req = await getRequestedProjects(Number(studentId));
 
-    loadProjects();
+      setRequestedProjects(req.data);
 
-  }, []);
+    } catch (err) {
+
+      console.log("PROJECT LOAD ERROR:", err);
+
+    }
+
+  };
+
+  loadProjects();
+
+}, []);
 
   const filteredProjects = (projects || []).filter(project => {
 
@@ -90,10 +98,12 @@ const ProjectListScreen: React.FC = () => {
         projectId: projectId,
       });
 
-      Alert.alert(
-        "Request Sent",
-        `Your request for "${projectTitle}" has been sent`
-      );
+      setRequestedProjects(prev => [...prev, projectId]);
+
+Alert.alert(
+  "Request Sent",
+  `Your request for "${projectTitle}" has been sent`
+);
 
     } catch (err) {
 
@@ -104,8 +114,11 @@ const ProjectListScreen: React.FC = () => {
 
   };
 
-  const renderItem = ({ item }: { item: Project }) => (
+  const renderItem = ({ item }: { item: Project }) => {
 
+  const isRequested = requestedProjects.includes(item.projectId);
+
+  return (
     <View
       style={[
         styles.card,
@@ -129,16 +142,6 @@ const ProjectListScreen: React.FC = () => {
         {item.domain}
       </Text>
 
-      <Text style={[styles.text, { color: colors.text }]}>
-        <Text style={styles.label}>Sub-domain: </Text>
-        {item.subdomain}
-      </Text>
-
-      <Text style={[styles.text, { color: colors.text }]}>
-        <Text style={styles.label}>Problem: </Text>
-        {item.description}
-      </Text>
-
       <Text
         style={[
           styles.slots,
@@ -150,18 +153,40 @@ const ProjectListScreen: React.FC = () => {
           : "No Slots Available"}
       </Text>
 
-      {item.slots > 0 && (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => sendRequest(item.projectId, item.title)}
-        >
-          <Text style={styles.buttonText}>Send Request</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[
+          styles.button,
+          {
+            backgroundColor: isRequested
+            ? "black"
+            : !isTeamLead
+            ? "#999"
+            : colors.primary,
+          },
+        ]}
+        onPress={() => {
+
+          if (!isTeamLead) {
+            
+            return;
+          }
+
+          if (isRequested) {
+              Alert.alert("Request already sent for this project");
+              return;
+          }
+
+          sendRequest(item.projectId, item.title);
+        }}
+      >
+        <Text style={styles.buttonText}>
+          {isRequested ? "Request Sent" : "Send Request"}
+        </Text>
+      </TouchableOpacity>
 
     </View>
-
   );
+};
 
   return (
 
@@ -169,9 +194,13 @@ const ProjectListScreen: React.FC = () => {
 
       <View style={styles.header}>
 
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ fontSize: 22, color: colors.text }}>←</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Image
+                    source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+                    style={styles.backIcon}
+                  />
+                  </TouchableOpacity>
+        
 
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Projects
@@ -357,5 +386,16 @@ const styles = StyleSheet.create({
     marginTop: 40,
     fontSize: 15,
   },
-
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  headerSub: {
+    fontSize: 12,
+    marginTop: 1,
+  },
 });
