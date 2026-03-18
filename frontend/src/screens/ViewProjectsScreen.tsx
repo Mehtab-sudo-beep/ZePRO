@@ -158,7 +158,7 @@ Alert.alert(
           styles.button,
           {
             backgroundColor: isRequested
-            ? "black"
+            ? "#6B7280"   // gray-500
             : !isTeamLead
             ? "#999"
             : colors.primary,

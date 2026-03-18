@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { ThemeContext } from '../theme/ThemeContext';
 import { getProjectScheduleResponses } from '../api/studentApi';
-
+import { AuthContext } from '../context/AuthContext';
 type NavProp = NativeStackNavigationProp<
   RootStackParamList,
   'ScheduledMeetings'
@@ -43,13 +43,14 @@ const ScheduledMeetingsScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const { user } = useContext(AuthContext);
+ 
   useEffect(() => {
   const fetchMeetings = async () => {
     setLoading(true);
 
     try {
-      const studentId = 5; // use the same id you tested in Postman
+       const studentId = user?.studentId;  
 
       const res = await getProjectScheduleResponses(studentId);
 
@@ -105,7 +106,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
   };
 
   fetchMeetings();
-}, []);
+}, [user?.studentId]);
 
   const navigation = useNavigation<NavProp>();
   const { colors } = useContext(ThemeContext);
