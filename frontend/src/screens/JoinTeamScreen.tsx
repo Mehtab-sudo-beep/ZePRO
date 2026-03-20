@@ -9,52 +9,78 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
-
+import { AlertContext } from '../context/AlertContext';
+import { getAllTeams, sendJoinRequest } from "../api/studentApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect } from "react";
 /* =========================
    TYPES
 ========================= */
 interface Team {
-  id: string;
-  name: string;
-  leader: string;
+  teamId: number;
+  teamName: string;
+  teamLead: string;
   members: string[];
-  description: string;
+  alreadyRequested: boolean;
 }
 
 const JoinTeamScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
+  const { showAlert } = useContext(AlertContext);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const teams: Team[] = [
-    {
-      id: '1',
-      name: 'AI Innovators',
-      leader: 'Rahul',
-      members: ['Rahul', 'Anjali', 'Kiran'],
-      description: 'Working on AI-based healthcare project.',
-    },
-    {
-      id: '2',
-      name: 'Code Masters',
-      leader: 'Sneha',
-      members: ['Sneha', 'Vishal'],
-      description: 'Building full-stack web applications.',
-    },
-    {
-      id: '3',
-      name: 'Cyber Warriors',
-      leader: 'Arjun',
-      members: ['Arjun', 'Megha', 'Rohit'],
-      description: 'Focused on cybersecurity tools and research.',
-    },
-  ];
+  const [teams, setTeams] = useState<Team[]>([]);
+  useEffect(() => {
 
-  const sendRequest = () => {
-    Alert.alert(
-      'Request Sent',
-      'Your request has been sent to the Team Leader (UI only)',
-    );
+  const loadTeams = async () => {
+    try {
+
+      const studentId = await AsyncStorage.getItem("studentId");
+
+      const res = await getAllTeams(Number(studentId));
+
+      setTeams(res.data);
+
+    } catch (err) {
+
+      console.log("TEAM LIST ERROR:", err);
+
+    }
   };
+
+  loadTeams();   // 🔴 THIS WAS MISSING
+
+}, []);
+  const sendRequest = async () => {
+  try {
+
+    const studentId = await AsyncStorage.getItem("studentId");
+
+    await sendJoinRequest({
+      studentId: Number(studentId),
+      teamId: selectedTeam!.teamId,
+    });
+
+    showAlert("Request Sent", "Team leader will review your request.");
+
+    // 🔴 reload teams so alreadyRequested becomes true
+    const res = await getAllTeams(Number(studentId));
+    setTeams(res.data);
+
+    // update selected team also
+    const updatedTeam = res.data.find(
+      (t: Team) => t.teamId === selectedTeam!.teamId
+    );
+
+    setSelectedTeam(updatedTeam || null);
+
+  } catch (err) {
+
+    console.log("JOIN REQUEST ERROR:", err);
+    showAlert("Error sending request");
+
+  }
+};
 
   /* =========================
      TEAM DETAILS SCREEN
@@ -74,11 +100,11 @@ const JoinTeamScreen: React.FC = () => {
             ]}
           >
             <Text style={[styles.teamName, { color: colors.text }]}>
-              {selectedTeam.name}
+              {selectedTeam.teamName}
             </Text>
 
             <Text style={[styles.info, { color: colors.subText }]}>
-              Leader: {selectedTeam.leader}
+              Leader: {selectedTeam.teamLead}
             </Text>
 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -91,21 +117,25 @@ const JoinTeamScreen: React.FC = () => {
               </Text>
             ))}
 
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Project Description
-            </Text>
-
-            <Text style={[styles.info, { color: colors.subText }]}>
-              {selectedTeam.description}
-            </Text>
+            
           </View>
 
-          <TouchableOpacity
-            style={[styles.requestBtn, { backgroundColor: colors.primary }]}
-            onPress={sendRequest}
-          >
-            <Text style={styles.btnText}>Send Join Request</Text>
-          </TouchableOpacity>
+                      {selectedTeam.alreadyRequested ? (
+
+              <View style={[styles.requestBtn, { backgroundColor: "#999" }]}>
+                <Text style={styles.btnText}>Request Already Sent</Text>
+              </View>
+
+            ) : (
+
+              <TouchableOpacity
+                style={[styles.requestBtn, { backgroundColor: colors.primary }]}
+                onPress={sendRequest}
+              >
+                <Text style={styles.btnText}>Send Join Request</Text>
+              </TouchableOpacity>
+
+            )}
 
           <TouchableOpacity
             style={[
@@ -130,31 +160,29 @@ const JoinTeamScreen: React.FC = () => {
      TEAM LIST SCREEN
   ========================= */
   const renderTeam = ({ item }: { item: Team }) => (
-    <TouchableOpacity
-      style={[
-        styles.teamCard,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-      onPress={() => setSelectedTeam(item)}
-    >
-      <Text style={[styles.teamName, { color: colors.text }]}>{item.name}</Text>
+  <TouchableOpacity
+    style={[
+      styles.teamCard,
+      {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+      },
+    ]}
+    onPress={() => setSelectedTeam(item)}
+  >
+    <Text style={[styles.teamName, { color: colors.text }]}>
+      {item.teamName}
+    </Text>
 
-      <Text style={[styles.info, { color: colors.subText }]}>
-        Leader: {item.leader}
-      </Text>
+    <Text style={[styles.info, { color: colors.subText }]}>
+      Leader: {item.teamLead}
+    </Text>
 
-      <Text style={[styles.info, { color: colors.subText }]}>
-        Description: {item.description}
-      </Text>
-
-      <Text style={[styles.info, { color: colors.subText }]}>
-        Members: {item.members.length}/3
-      </Text>
-    </TouchableOpacity>
-  );
+    <Text style={[styles.info, { color: colors.subText }]}>
+      Members: {item.members.length}/3
+    </Text>
+  </TouchableOpacity>
+);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -163,7 +191,7 @@ const JoinTeamScreen: React.FC = () => {
 
         <FlatList
           data={teams}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.teamId.toString()}
           renderItem={renderTeam}
           contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}

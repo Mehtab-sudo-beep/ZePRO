@@ -11,6 +11,7 @@ import com.zepro.model.Admin;
 import com.zepro.model.Faculty;
 import com.zepro.model.Student;
 import com.zepro.model.Users;
+import com.zepro.model.UserRole;
 import com.zepro.repository.AdminRepository;
 import com.zepro.repository.FacultyRepository;
 import com.zepro.repository.StudentRepository;
@@ -41,6 +42,10 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
+
+    // ------------------------------------------------
+    // SIGNUP
+    // ------------------------------------------------
 
     public String signup(SignupRequest request){
 
@@ -80,6 +85,14 @@ public class AuthService {
 
                 adminRepository.save(admin);
                 break;
+
+            case FACULTY_COORDINATOR:
+                // Implement if needed
+                Faculty facultyCoord = new Faculty();
+                facultyCoord.setUser(savedUser);
+                facultyCoord.setIsCoordinator(true);
+                facultyRepository.save(facultyCoord);
+                break;
         }
 
         return "User created successfully";
@@ -97,36 +110,78 @@ public class AuthService {
         throw new RuntimeException("Invalid password");
     }
 
-    String token = jwtUtil.generateToken(
-            user.getEmail(),
-            user.getRole().name()
-    );
+    String token = jwtUtil.generateToken(user.getEmail());
 
-    Long facultyId = null;
+    Long studentId = null;
+    boolean isInTeam = false;
+    boolean isTeamLead = false;
 
-    if(user.getRole().name().equals("FACULTY")){
+    if(user.getRole() == UserRole.STUDENT){
 
-        Faculty faculty = facultyRepository
-                .findByUser_Email(email)
-                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        Student student = studentRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Student profile not found"));
 
-        facultyId = faculty.getFacultyId();
+        studentId = student.getStudentId();
+        isInTeam = student.isInTeam();
+        isTeamLead = student.isTeamLead();
     }
 
-    return new LoginResponse(token, user.getRole().name(), facultyId);
+    if(user.getRole() == UserRole.FACULTY_COORDINATOR){
+
+        Faculty faculty = facultyRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+
+        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
+            user.setRole(UserRole.FACULTY_COORDINATOR);
+        }
+    }
+    if(user.getRole() == UserRole.FACULTY){
+
+        Faculty faculty = facultyRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+
+        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
+            user.setRole(UserRole.FACULTY_COORDINATOR);
+        }
+    }               
+    if(user.getRole() == UserRole.ADMIN){
+
+        Admin admin = adminRepository
+                .findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Admin profile not found"));
+
+        // No additional info needed for admin
+    }   
+    return new LoginResponse(
+            token,
+            user.getRole().name(),
+            studentId,
+            isInTeam,
+            isTeamLead
+    );
 }
 
-    // UPDATED METHOD
+    // ------------------------------------------------
+    // FORGOT PASSWORD
+    // ------------------------------------------------
+
     public String forgotPassword(ForgotPasswordRequest request){
 
         Users user = userRepository
                 .findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Later you will send reset email here
+        // Later you can implement email sending here
 
         return "Password reset link sent";
     }
+
+    // ------------------------------------------------
+    // RESET PASSWORD
+    // ------------------------------------------------
 
     public void resetPassword(String token,String newPassword){
         // implement reset logic later

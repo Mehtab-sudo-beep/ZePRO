@@ -10,50 +10,58 @@ public class Meeting {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long meetingId;
 
-    @OneToOne
-    @JoinColumn(name = "request_id")
+    @ManyToOne
     private ProjectRequest request;
 
-    private LocalDateTime meetingTime;
+    @ManyToOne
+    private Team team;
+
+    @ManyToOne
+    private Project project;
+
+    private String title;
+
+    private String location;
 
     private String meetingLink;
 
-    @Enumerated(EnumType.STRING)
-    private MeetingStatus status;
+    private LocalDateTime meetingTime;
 
-    public Long getMeetingId() {
-        return meetingId;
-    }
+    private String status; // SCHEDULED / CANCELLED
 
-    public ProjectRequest getRequest() {
-        return request;
-    }
+    public Long getMeetingId() { return meetingId; }
 
-    public void setRequest(ProjectRequest request) {
-        this.request = request;
-    }
+    public ProjectRequest getRequest() { return request; }
 
-    public LocalDateTime getMeetingTime() {
-        return meetingTime;
-    }
+    public Team getTeam() { return team; }
 
-    public void setMeetingTime(LocalDateTime meetingTime) {
-        this.meetingTime = meetingTime;
-    }
+    public Project getProject() { return project; }
 
-    public String getMeetingLink() {
-        return meetingLink;
-    }
+    public String getTitle() { return title; }
 
-    public void setMeetingLink(String meetingLink) {
-        this.meetingLink = meetingLink;
-    }
+    public String getLocation() { return location; }
 
-    public MeetingStatus getStatus() {
-        return status;
-    }
+    public String getMeetingLink() { return meetingLink; }
 
-    public void setStatus(MeetingStatus status) {
-        this.status = status;
-    }
+    public LocalDateTime getMeetingTime() { return meetingTime; }
+
+    public String getStatus() { return status; }
+
+    public void setMeetingId(Long meetingId) { this.meetingId = meetingId; }
+
+    public void setRequest(ProjectRequest request) { this.request = request; }
+
+    public void setTeam(Team team) { this.team = team; }
+
+    public void setProject(Project project) { this.project = project; }
+
+    public void setTitle(String title) { this.title = title; }
+
+    public void setLocation(String location) { this.location = location; }
+
+    public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
+
+    public void setMeetingTime(LocalDateTime meetingTime) { this.meetingTime = meetingTime; }
+
+    public void setStatus(String status) { this.status = status; }
 }

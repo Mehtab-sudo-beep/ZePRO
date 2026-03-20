@@ -41,4 +41,8 @@ public class AuthController {
         authService.resetPassword(token, newPassword);
         return "Password updated";
     }
+    @PostMapping("/logout")
+    public String logout() {
+        return "Logged out successfully";
+    }
 }

@@ -1,125 +1,182 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  Image,
   TouchableOpacity,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const INITIAL_REQUESTS = [
-  {
-    id: '1',
-    studentName: 'Ravi Shankar',
-    rollNo: '21CS045',
-    sentOn: '01 Mar 2026',
-    status: 'Pending',
-  },
-  {
-    id: '2',
-    studentName: 'Sneha Reddy',
-    rollNo: '21CS067',
-    sentOn: '28 Feb 2026',
-    status: 'Pending',
-  },
-  {
-    id: '3',
-    studentName: 'Kiran Patel',
-    rollNo: '21CS032',
-    sentOn: '26 Feb 2026',
-    status: 'Accepted',
-  },
-];
+import {
+  getReceivedRequests,
+  approveRequest,
+  rejectRequest,
+} from '../api/studentApi';
+
+interface Request {
+  requestId: number;
+  studentId: number;
+  studentName: string;
+  status: string;
+}
 
 const ReceivedRequestsScreen: React.FC = () => {
+
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-  const [requests, setRequests] = useState(INITIAL_REQUESTS);
+ const isDark = colors.background === '#111827';
+ const [requests, setRequests] = useState<Request[]>([]);
 
-  const handleAccept = (id: string) => {
-    setRequests(prev =>
-      prev.map(r => r.id === id ? { ...r, status: 'Accepted' } : r)
-    );
-  };
+  const loadRequests = async () => {
+  try {
 
-  const handleReject = (id: string) => {
-    setRequests(prev =>
-      prev.map(r => r.id === id ? { ...r, status: 'Rejected' } : r)
-    );
+    const studentId = await AsyncStorage.getItem("studentId");
+
+    const res = await getReceivedRequests(Number(studentId));
+
+    console.log("REQUESTS:", res.data);
+
+    // ensure array
+    if (Array.isArray(res.data)) {
+      setRequests(res.data);
+    } else {
+      setRequests([]);
+    }
+
+  } catch (err) {
+    console.log("RECEIVED REQUEST ERROR:", err);
+  }
+};
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  const handleAccept = async (id: number) => {
+
+  try {
+
+    await approveRequest(id);
+
+    setRequests(prev => prev.filter(r => r.requestId !== id));
+
+  } catch (err) {
+
+    console.log("APPROVE ERROR:", err);
+
+  }
+
+};
+
+  const handleReject = async (id: number) => {
+
+    try {
+
+      await rejectRequest(id);
+
+      loadRequests();
+
+    } catch (err) {
+
+      console.log("REJECT ERROR:", err);
+
+    }
+
   };
 
   const statusColor = (status: string) => {
-    if (status === 'Accepted') return '#16A34A';
-    if (status === 'Rejected') return '#DC2626';
+    if (status === 'APPROVED') return '#16A34A';
+    if (status === 'REJECTED') return '#DC2626';
     return '#D97706';
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+
       <View style={styles.container}>
+
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, { color: colors.text }]}>←</Text>
+            <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
           </TouchableOpacity>
+
           <View>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Join Requests</Text>
-            <Text style={[styles.headerSub, { color: colors.subText }]}>
-              {requests.filter(r => r.status === 'Pending').length} pending
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Join Requests
+            </Text>
+            <Text style={{ color: colors.subText }}>
+              {requests.length} pending
             </Text>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.listContent}>
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+
           {requests.map((req) => (
+
             <View
-              key={req.id}
-              style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text, borderLeftColor: '#2563EB' }]}
+              key={req.requestId}
+              style={[styles.card, { backgroundColor: colors.card }]}
             >
+
               <View style={styles.cardRow}>
-                <Text style={[styles.studentName, { color: colors.text }]}>{req.studentName}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '18' }]}>
-                  <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
-                    {req.status}
-                  </Text>
-                </View>
+
+                <Text style={{ color: colors.text, fontWeight: "700" }}>
+                  {req.studentName}
+                </Text>
+
+                <Text style={{ color: statusColor(req.status) }}>
+                  {req.status}
+                </Text>
+
               </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.divider} />
 
-              <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Roll No</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{req.rollNo}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Sent On</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{req.sentOn}</Text>
-              </View>
+              <Text style={{ color: colors.subText }}>
+  Student ID: {req.studentId}
+</Text>
 
-              {req.status === 'Pending' && (
-                <View style={styles.actionRow}>
+              {req.status === "PENDING" && (
+
+                <View style={styles.actions}>
+
                   <TouchableOpacity
-                    style={[styles.acceptBtn, { borderColor: '#16A34A' }]}
-                    onPress={() => handleAccept(req.id)}
+                    style={[styles.acceptBtn]}
+                    onPress={() => handleAccept(req.requestId)}
                   >
-                    <Text style={[styles.acceptText, { color: '#16A34A' }]}>Accept</Text>
+                    <Text style={{ color: "#16A34A" }}>Accept</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
-                    style={[styles.rejectBtn, { borderColor: '#DC2626' }]}
-                    onPress={() => handleReject(req.id)}
+                    style={[styles.rejectBtn]}
+                    onPress={() => handleReject(req.requestId)}
                   >
-                    <Text style={[styles.rejectText, { color: '#DC2626' }]}>Reject</Text>
+                    <Text style={{ color: "#DC2626" }}>Reject</Text>
                   </TouchableOpacity>
+
                 </View>
+
               )}
+
             </View>
+
           ))}
+
         </ScrollView>
+
       </View>
+
     </SafeAreaView>
   );
 };
@@ -127,19 +184,60 @@ const ReceivedRequestsScreen: React.FC = () => {
 export default ReceivedRequestsScreen;
 
 const styles = StyleSheet.create({
+
   container: { flex: 1 },
 
   header: {
-    height: 68,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
-    borderBottomWidth: 1,
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
     gap: 12,
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  card: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#ddd",
+    marginVertical: 10,
+  },
+
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+
+  acceptBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#16A34A",
+    padding: 10,
+    alignItems: "center",
+    borderRadius: 6,
+  },
+
+  rejectBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#DC2626",
+    padding: 10,
+    alignItems: "center",
+    borderRadius: 6,
   },
 
   backButton: {
@@ -149,109 +247,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  back: { fontSize: 22 },
-
-  headerTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   headerSub: {
     fontSize: 12,
     marginTop: 1,
-  },
-
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 16,
-  },
-
-  card: {
-    borderRadius: 16,
-    padding: 16,
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-    borderLeftWidth: 4,
-  },
-
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  studentName: {
-    fontSize: 15,
-    fontWeight: '700',
-    flex: 1,
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  divider: {
-    height: 1,
-    marginVertical: 12,
-    borderRadius: 1,
-  },
-
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-
-  infoLabel: {
-    fontSize: 13,
-  },
-
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
-  },
-
-  acceptBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-
-  acceptText: {
-    fontWeight: '700',
-    fontSize: 13,
-  },
-
-  rejectBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-
-  rejectText: {
-    fontWeight: '700',
-    fontSize: 13,
   },
 });

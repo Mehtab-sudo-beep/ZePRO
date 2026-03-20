@@ -15,8 +15,8 @@ public class Team {
     @OneToOne
     private Student teamLead;
 
-    @OneToMany(mappedBy = "team")
-    private List<Student> members;
+    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
+private List<Student> members;
 
     public Long getTeamId() {
         return teamId;
