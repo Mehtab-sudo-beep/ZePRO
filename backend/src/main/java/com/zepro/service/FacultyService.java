@@ -1,59 +1,84 @@
 package com.zepro.service;
 
 import com.zepro.dto.faculty.CreateProjectRequest;
-import com.zepro.dto.faculty.PendingRequestResponse;
 import com.zepro.dto.faculty.ProjectResponse;
-import com.zepro.dto.faculty.ScheduleMeetingRequest;
-import com.zepro.model.Faculty;
-import com.zepro.model.Meeting;
-import com.zepro.model.Project;
-import com.zepro.model.ProjectRequest;
-import com.zepro.model.Team;
+import com.zepro.model.*;
+import com.zepro.repository.*;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import com.zepro.repository.*;;
 @Service
 public class FacultyService {
 
     private final ProjectRepository projectRepository;
     private final FacultyRepository facultyRepository;
     private final TeamRepository teamRepository;
-    private final MeetingRepository meetingRepository;
+    private final DomainRepository domainRepository;
+    private final SubDomainRepository subDomainRepository;
     private final ProjectRequestRepository projectRequestRepository;
+    private final ProjectDomainRepository projectDomainRepository;
+private final ProjectSubDomainRepository projectSubDomainRepository;
+
     public FacultyService(ProjectRepository projectRepository,
-                          FacultyRepository facultyRepository,
-                          TeamRepository teamRepository,MeetingRepository meetingRepository, ProjectRequestRepository projectRequestRepository) {
-        this.projectRepository = projectRepository;
-        this.facultyRepository = facultyRepository;
-        this.teamRepository = teamRepository;
-        this.meetingRepository=meetingRepository;
-        this.projectRequestRepository=projectRequestRepository;
-    }
+                      FacultyRepository facultyRepository,
+                      TeamRepository teamRepository,
+                      DomainRepository domainRepository,
+                      SubDomainRepository subDomainRepository,
+                      ProjectRequestRepository projectRequestRepository,
+                      ProjectDomainRepository projectDomainRepository,
+                      ProjectSubDomainRepository projectSubDomainRepository) {
 
-    public ProjectResponse createProject(CreateProjectRequest request) {
+    this.projectRepository = projectRepository;
+    this.facultyRepository = facultyRepository;
+    this.teamRepository = teamRepository;
+    this.domainRepository = domainRepository;
+    this.subDomainRepository = subDomainRepository;
+    this.projectRequestRepository = projectRequestRepository;
+    this.projectDomainRepository = projectDomainRepository;
+    this.projectSubDomainRepository = projectSubDomainRepository;
+}
 
-        Faculty faculty = facultyRepository.findById(request.getFacultyId())
-                .orElseThrow();
+    public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
-        Project project = new Project();
-        project.setTitle(request.getTitle());
-        project.setDescription(request.getDescription());
-        project.setFaculty(faculty);
-        project.setStatus("OPEN");
+    Project project = new Project();
 
-        Project saved = projectRepository.save(project);
+    project.setTitle(request.getTitle());
+    project.setDescription(request.getDescription());
+    project.setFaculty(faculty);
+    project.setStatus("OPEN");
 
-        return new ProjectResponse(
-                saved.getProjectId(),
-                saved.getTitle(),
-                saved.getDescription(),
-                saved.getStatus()
-        );
-    }
+    Project saved = projectRepository.save(project);
 
+    // get domain
+    Domain domain = domainRepository.findById(request.getDomainId())
+            .orElseThrow(() -> new RuntimeException("Domain not found"));
+
+    // get subdomain
+    SubDomain subDomain = subDomainRepository.findById(request.getSubDomainId())
+            .orElseThrow(() -> new RuntimeException("Subdomain not found"));
+
+    // insert into project_domain table
+    ProjectDomain projectDomain = new ProjectDomain();
+    projectDomain.setProject(saved);
+    projectDomain.setDomain(domain);
+    projectDomainRepository.save(projectDomain);
+
+    // insert into project_sub_domain table
+    ProjectSubDomain projectSubDomain = new ProjectSubDomain();
+    projectSubDomain.setProject(saved);
+    projectSubDomain.setSubDomain(subDomain);
+    projectSubDomainRepository.save(projectSubDomain);
+
+    return new ProjectResponse(
+            saved.getProjectId(),
+            saved.getTitle(),
+            saved.getDescription(),
+            saved.getStatus()
+    );
+}
     public List<ProjectResponse> getProjects(Long facultyId) {
 
         return projectRepository.findByFacultyFacultyId(facultyId)
@@ -65,118 +90,77 @@ public class FacultyService {
                         p.getStatus()))
                 .collect(Collectors.toList());
     }
-public void assignProject(Long facultyId, Long projectId, Long teamId) {
 
-    Project project = projectRepository.findById(projectId)
-            .orElseThrow(() -> new RuntimeException("Project not found"));
+    public void assignProject(Long projectId, Long teamId) {
 
-    if (!project.getFaculty().getFacultyId().equals(facultyId)) {
-        throw new RuntimeException("You cannot assign projects created by other faculty");
+    Project project = projectRepository.findById(projectId).orElseThrow();
+
+    if(!project.getStatus().equals("REQUESTED")){
+        throw new RuntimeException("Project not requested yet");
     }
 
-    Team team = teamRepository.findById(teamId)
-            .orElseThrow(() -> new RuntimeException("Team not found"));
+    Team team = teamRepository.findById(teamId).orElseThrow();
 
     project.setTeam(team);
     project.setStatus("ASSIGNED");
+
     projectRepository.save(project);
 
-    // get all requests for this project
+    ProjectRequest request = projectRequestRepository
+            .findByTeamTeamId(teamId)
+            .orElseThrow();
+
+    request.setStatus(RequestStatus.APPROVED);
+
+    projectRequestRepository.save(request);
+}
+
+ public List<ProjectResponse> getPendingRequests(Long facultyId) {
+
     List<ProjectRequest> requests =
-            projectRequestRepository.findByProjectProjectId(projectId);
+            projectRequestRepository.findByFacultyFacultyIdAndStatus(
+        facultyId,
+        RequestStatus.PENDING
+);
 
-    for (ProjectRequest req : requests) {
+    return requests.stream().map(request -> {
 
-        if (req.getTeam().getTeamId().equals(teamId)) {
-            req.setStatus("APPROVED");
-        } else {
-            req.setStatus("REJECTED");
+        ProjectResponse response = new ProjectResponse();
+
+        response.setRequestId(request.getRequestId());
+
+        Team team = request.getTeam();
+
+        if (team != null) {
+            response.setTeamId(team.getTeamId());
+            response.setTeamName(team.getTeamName());
         }
 
-        projectRequestRepository.save(req);
-    }
+        response.setStatus(request.getStatus().name());
+
+        return response;
+
+    }).toList();
 }
-    public List<ProjectResponse> getPendingRequests(Long facultyId) {
+  public SubDomain createSubDomain(String name, Long domainId) {
 
-    return projectRequestRepository
-            .findByStatusAndProjectFacultyFacultyId("PENDING", facultyId)
-            .stream()
-            .map(req -> {
+        Domain domain = domainRepository.findById(domainId)
+                .orElseThrow(() -> new RuntimeException("Domain not found"));
 
-                Project project = req.getProject();
-                Team team = req.getTeam();
+        SubDomain sub = new SubDomain();
+        sub.setName(name);
+        sub.setDomain(domain);
 
-                ProjectResponse response = new ProjectResponse();
-
-                response.setProjectId(project.getProjectId());
-                response.setTitle(project.getTitle());
-                response.setDescription(project.getDescription());
-                response.setStatus(req.getStatus());
-
-                if (team != null) {
-
-                    response.setTeamId(team.getTeamId());
-                    response.setTeamName(team.getTeamName());
-
-                    if (team.getTeamLead() != null) {
-                        response.setTeamLead(
-                                team.getTeamLead().getUser().getName()
-                        );
-                    }
-
-                    List<String> members =
-                            team.getMembers()
-                                    .stream()
-                                    .map(student -> student.getUser().getName())
-                                    .toList();
-
-                    response.setTeamMembers(members);
-                }
-
-                return response;
-
-            })
-            .toList();
-}
-public void scheduleMeeting(Long facultyId, ScheduleMeetingRequest req) {
-
-    ProjectRequest request = projectRequestRepository
-            .findById(req.getRequestId())
-            .orElseThrow(() -> new RuntimeException("Request not found"));
-
-    Project project = request.getProject();
-
-    if (!project.getFaculty().getFacultyId().equals(facultyId)) {
-        throw new RuntimeException("You cannot schedule meetings for other faculty projects");
+        return subDomainRepository.save(sub);
     }
 
-    Team team = request.getTeam();
+    public ProjectRequest cancelRequest(Long requestId) {
 
-    Meeting meeting = new Meeting();
+    ProjectRequest request =
+            projectRequestRepository.findById(requestId).orElseThrow();
 
-    meeting.setRequest(request);
-    meeting.setTeam(team);
-    meeting.setProject(project);
+    request.setStatus(RequestStatus.CANCELLED);
 
-    meeting.setTitle(req.getTitle());
-    meeting.setLocation(req.getLocation());
-    meeting.setMeetingLink(req.getMeetingLink());
-    meeting.setMeetingTime(req.getMeetingTime());
-
-    meeting.setStatus("SCHEDULED");
-
-    meetingRepository.save(meeting);
-}
-public void cancelRequest(Long facultyId, Long requestId) {
-
-    ProjectRequest request = projectRequestRepository
-            .findById(requestId)
-            .orElseThrow(() -> new RuntimeException("Request not found"));
-
-    if (!request.getProject().getFaculty().getFacultyId().equals(facultyId)) {
-        throw new RuntimeException("You cannot cancel requests for other faculty projects");
-    }
-
-    projectRequestRepository.delete(request);
+    return projectRequestRepository.save(request);
 }
 }

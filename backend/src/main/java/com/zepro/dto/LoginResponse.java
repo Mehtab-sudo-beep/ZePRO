@@ -4,6 +4,12 @@ public class LoginResponse {
 
     private String token;
     private String role;
+    private Long facultyId;
+
+    public LoginResponse(String token, String role, Long facultyId) {
+        this.token = token;
+        this.role = role;
+        this.facultyId = facultyId;
     private Long studentId;
     private boolean isInTeam;
     private boolean isTeamLead;
@@ -25,6 +31,8 @@ public class LoginResponse {
         return role;
     }
 
+    public Long getFacultyId() {
+        return facultyId;
     public Long getStudentId() {
         return studentId;
     }
