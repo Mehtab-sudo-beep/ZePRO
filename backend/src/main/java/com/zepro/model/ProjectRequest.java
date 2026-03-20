@@ -18,6 +18,14 @@ public class ProjectRequest {
     @ManyToOne
     private Team team;
 
+    @ManyToOne
+    private Team team;
+
+    @ManyToOne
+    private Project project;
+
+    private String status; // PENDING / APPROVED / REJECTED
+
     public Long getRequestId() {
         return requestId;
     }
@@ -48,5 +56,24 @@ public class ProjectRequest {
 
     public void setTeam(Team team) {
         this.team = team;
+    }
+    public Project getProject() {
+        return project;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
+    }
+
+    public void setProject(Project project) {
+        this.project = project;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

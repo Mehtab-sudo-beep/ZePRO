@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,31 +10,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSentRequests } from '../api/studentApi';
 
-const SENT_REQUESTS = [
-  {
-    teamName: 'Team Nexus',
-    teamLead: 'Arjun Mehta',
-    sentOn: '28 Feb 2026',
-    status: 'Pending',
-  },
-  {
-    teamName: 'Code Crafters',
-    teamLead: 'Priya Nair',
-    sentOn: '25 Feb 2026',
-    status: 'Rejected',
-  },
-  {
-    teamName: 'InnoVibe',
-    teamLead: 'Rahul Verma',
-    sentOn: '20 Feb 2026',
-    status: 'Accepted',
-  },
-];
+interface Request {
+  requestId: number;
+  teamName: string;
+  teamLead: string;
+  status: string;
+}
 
 const statusColor = (status: string) => {
-  if (status === 'Accepted') return '#16A34A';
-  if (status === 'Rejected') return '#DC2626';
+  if (status === 'ACCEPTED') return '#16A34A';
+  if (status === 'REJECTED') return '#DC2626';
   return '#D97706';
 };
 
@@ -42,9 +30,36 @@ const SentRequestsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
 
+  const [requests, setRequests] = useState<Request[]>([]);
+
+  useEffect(() => {
+
+    const loadRequests = async () => {
+
+      try {
+
+        const studentId = await AsyncStorage.getItem("studentId");
+
+        const res = await getSentRequests(Number(studentId));
+
+        setRequests(res.data);
+
+      } catch (err) {
+
+        console.log("SENT REQUEST ERROR:", err);
+
+      }
+
+    };
+
+    loadRequests();
+
+  }, []);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
+
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -53,38 +68,66 @@ const SentRequestsScreen: React.FC = () => {
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Sent Requests</Text>
             <Text style={[styles.headerSub, { color: colors.subText }]}>
-              {SENT_REQUESTS.length} requests sent
+              {requests.length} requests sent
             </Text>
           </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.listContent}>
-          {SENT_REQUESTS.map((req, index) => (
+
+          {requests.map((req) => (
+
             <View
-              key={index}
-              style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.text, borderLeftColor: '#2563EB' }]}
+              key={req.requestId}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                  shadowColor: colors.text,
+                  borderLeftColor: '#2563EB',
+                },
+              ]}
             >
+
               <View style={styles.cardRow}>
-                <Text style={[styles.teamName, { color: colors.text }]}>{req.teamName}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '18' }]}>
-                  <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
+                <Text style={[styles.teamName, { color: colors.text }]}>
+                  {req.teamName}
+                </Text>
+
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: statusColor(req.status) + '18' },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: statusColor(req.status) },
+                    ]}
+                  >
                     {req.status}
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View
+                style={[styles.divider, { backgroundColor: colors.border }]}
+              />
 
               <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Team Lead</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{req.teamLead}</Text>
+                <Text style={[styles.infoLabel, { color: colors.subText }]}>
+                  Team Lead
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {req.teamLead}
+                </Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Sent On</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{req.sentOn}</Text>
-              </View>
+
             </View>
+
           ))}
+
         </ScrollView>
       </View>
     </SafeAreaView>

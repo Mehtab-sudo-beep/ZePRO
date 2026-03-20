@@ -15,12 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
-
+import { AlertContext } from '../context/AlertContext';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const { showAlert } = useContext(AlertContext);
 
   const isDark = theme === 'dark';
 
@@ -49,53 +50,53 @@ const SettingsScreen: React.FC = () => {
   const saveName = () => {
     if (!user) return;
     if (!newName.trim()) {
-      Alert.alert('Error', 'Name cannot be empty.');
+      showAlert('Error', 'Name cannot be empty.');
       return;
     }
     setUser({ ...user, name: newName.trim() });
     setEditNameVisible(false);
-    Alert.alert('Success', 'Name updated successfully.');
+    showAlert('Success', 'Name updated successfully.');
   };
 
   const saveEmail = () => {
     if (!user) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address.');
+      showAlert('Error', 'Please enter a valid email address.');
       return;
     }
     setUser({ ...user, email: newEmail.trim() });
     setEditEmailVisible(false);
-    Alert.alert('Success', 'Email updated successfully.');
+    showAlert('Success', 'Email updated successfully.');
   };
 
   const savePassword = () => {
     if (!currentPassword) {
-      Alert.alert('Error', 'Please enter your current password.');
+      showAlert('Error', 'Please enter your current password.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters.');
+      showAlert('Error', 'New password must be at least 6 characters.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match.');
+      showAlert('Error', 'New passwords do not match.');
       return;
     }
     if (currentPassword === newPassword) {
-      Alert.alert('Error', 'New password must be different from current password.');
+      showAlert('Error', 'New password must be different from current password.');
       return;
     }
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setEditPasswordVisible(false);
-    Alert.alert('Success', 'Password updated successfully.');
+    showAlert('Success', 'Password updated successfully.');
   };
 
   const handleDeleteAccount = () => {
     if (deleteConfirmText !== 'DELETE') {
-      Alert.alert('Error', 'Please type DELETE to confirm.');
+      showAlert('Error', 'Please type DELETE to confirm.');
       return;
     }
     setUser(null);
@@ -172,14 +173,14 @@ const SettingsScreen: React.FC = () => {
           {/* ── SUPPORT ── */}
           <Text style={[styles.sectionTitle, isDark && styles.darkSubText]}>Support</Text>
 
-          <TouchableOpacity style={card} onPress={() => Alert.alert('User Manual for Faculty', 'Opens after complteion of project')}>
+          <TouchableOpacity style={card} onPress={() => showAlert('User Manual for Faculty', 'Opens after complteion of project')}>
             <Text style={txt}>User Manual</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={card}
-            onPress={() => Alert.alert('Privacy Policy', 'Opens privacy policy page.')}
+            onPress={() => showAlert('Privacy Policy', 'Opens privacy policy page.')}
           >
             <Text style={txt}>Privacy Policy</Text>
             <Text style={styles.arrow}>›</Text>
@@ -187,7 +188,7 @@ const SettingsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={card}
-            onPress={() => Alert.alert('Version', 'App Version: 1.0.0')}
+            onPress={() => showAlert('Version', 'App Version: 1.0.0')}
           >
             <Text style={txt}>About / Version</Text>
             <Text style={[styles.arrow, { fontSize: 13 }]}>1.0.0</Text>
@@ -280,7 +281,7 @@ const SettingsScreen: React.FC = () => {
                   style={styles.saveBtn}
                   onPress={() => {
                     setEditPhoneVisible(false);
-                    Alert.alert('Success', 'Phone number updated.');
+                    showAlert('Success', 'Phone number updated.');
                   }}
                 >
                   <Text style={styles.saveText}>Save</Text>

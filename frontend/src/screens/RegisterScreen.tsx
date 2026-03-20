@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,14 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { signup } from '../api/authApi';
+import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 const RegisterScreen: React.FC<Props> = ({ navigation }) => {
+  const { showAlert } = useContext(AlertContext);
+  const { colors } = useContext(ThemeContext);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,24 +26,24 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword || !role) {
-      Alert.alert('Error', 'Please fill all fields and select role');
+      showAlert('Error', 'Please fill all fields and select role');
       return;
     }
 
     if (!email.endsWith('@gmail.com')) {
-      Alert.alert('Error', 'Only Gmail addresses are allowed');
+      showAlert('Error', 'Only Gmail addresses are allowed');
       return;
     }
 
     // ✅ Password length validation
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
+      showAlert('Error', 'Password must be at least 8 characters long');
       return;
     }
 
     // ✅ Password match validation
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 
@@ -51,41 +55,41 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         role: role,
       });
 
-      Alert.alert('Success', `Registered as ${role}`);
+      showAlert('Success', `Registered as ${role}`);
       navigation.navigate('Login');
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'Registration Failed',
         'Unable to create account. Please try again.',
       );
     }
   };
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
-        <Text style={styles.brandTitle}>ZePRO</Text>
-        <Text style={styles.brandSubtitle}>Project Allocation Portal</Text>
+        <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
+        <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Project Allocation Portal</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Register to continue</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>Register to continue</Text>
 
         <TextInput
           placeholder="Full Name"
           value={name}
           onChangeText={setName}
-          style={styles.input}
-          placeholderTextColor="#9ca3af"
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+          placeholderTextColor={colors.subText}
         />
 
         <TextInput
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           autoCapitalize="none"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.subText}
         />
 
         <TextInput
@@ -93,8 +97,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          style={styles.input}
-          placeholderTextColor="#9ca3af"
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+          placeholderTextColor={colors.subText}
         />
 
         <TextInput
@@ -102,23 +106,25 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          style={styles.input}
-          placeholderTextColor="#9ca3af"
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+          placeholderTextColor={colors.subText}
         />
 
-        <Text style={styles.roleLabel}>Select Role</Text>
+        <Text style={[styles.roleLabel, { color: colors.text }]}>Select Role</Text>
 
         <View style={styles.roleContainer}>
           <TouchableOpacity
             style={[
               styles.roleButton,
-              role === 'STUDENT' && styles.selectedRole,
+              { borderColor: colors.border, backgroundColor: colors.background },
+              role === 'STUDENT' && [styles.selectedRole, { backgroundColor: colors.primary, borderColor: colors.primary }],
             ]}
             onPress={() => setRole('STUDENT')}
           >
             <Text
               style={[
                 styles.roleText,
+                { color: colors.text },
                 role === 'STUDENT' && styles.selectedRoleText,
               ]}
             >
@@ -129,13 +135,15 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             style={[
               styles.roleButton,
-              role === 'FACULTY' && styles.selectedRole,
+              { borderColor: colors.border, backgroundColor: colors.background },
+              role === 'FACULTY' && [styles.selectedRole, { backgroundColor: colors.primary, borderColor: colors.primary }],
             ]}
             onPress={() => setRole('FACULTY')}
           >
             <Text
               style={[
                 styles.roleText,
+                { color: colors.text },
                 role === 'FACULTY' && styles.selectedRoleText,
               ]}
             >
@@ -144,12 +152,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.registerBtn} onPress={handleRegister}>
+        <TouchableOpacity style={[styles.registerBtn, { backgroundColor: colors.primary }]} onPress={handleRegister}>
           <Text style={styles.registerText}>Register</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginLink}>Already have an account? Login</Text>
+        <TouchableOpacity onPress={() => navigation.replace('Login')}>
+          <Text style={[styles.loginLink, { color: colors.primary }]}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>
     </View>

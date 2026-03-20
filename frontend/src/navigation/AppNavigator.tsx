@@ -8,6 +8,8 @@ import MeetingDetailsScreen from '../screens/MeetingDeatialsScreen';
 import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
 import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
+import FacultyHomeScreen from '../screens/FacultyHomeScreen';
+import FacultyRequestsScreen from '../screens/FacultyRequestHandling';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
@@ -29,7 +31,7 @@ import AddDepartmentScreen from '../screens/AddDepartmentScreen';
 import AdminChangeRulesScreen from '../screens/ChangeRulesScreen';
 import ChangeDeadlinesScreen from '../screens/ChangeDeadlineScreen';
 import FacultyCoordinatorMoreScreen from '../screens/FacultyCoordinatorMoreScreen';
-import FacultyViewMeetingsScreen from '../screens/FacultyMeetingsScreen';
+import FacultyViewMeetingsScreen from '../screens/FacultyViewMeetingsScreen';
 import InstituteListScreen from '../screens/InstituteListScreen';
 import DepartmentListScreen from '../screens/DepartmentListScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -38,6 +40,7 @@ import CreateProjectScreen from '../screens/CreateProjectScreen';
 import FacultyCreateMenuScreen from '../screens/FacultyCreateMenuScreen';
 import CreateDomainScreen from '../screens/CreateDomainScreen';
 import CreateSubDomainScreen from '../screens/CreateSubDomainScreen';
+import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -47,6 +50,7 @@ export type RootStackParamList = {
   MeetingDetails: {
     meeting: Meeting;
   };
+  MeetingDetails: { requestId: number };
   FacultyHome: undefined;
   FacultyRequests: undefined;
   FacultyProjects: undefined;
@@ -152,8 +156,24 @@ const AppNavigator = () => {
       />
       <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
       <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
+      <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
+      <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
+      <Stack.Screen name='FacultyCoordinatorMore' component={FacultyCoordinatorMoreScreen}/>
+      <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
+      <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
+      <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
+      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
+      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
+      <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
+      <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen}          />
+      <Stack.Screen name="InstituteList" component={InstituteListScreen}/>
+      <Stack.Screen name="DepartmentList" component={DepartmentListScreen}/>
+      <Stack.Screen name="Register" component={RegisterScreen}/>
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen}/>
+      <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
     </Stack.Navigator>
   );
 };
 
 export default AppNavigator;
+

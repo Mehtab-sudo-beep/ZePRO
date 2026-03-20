@@ -11,83 +11,108 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { login } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
-
+import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { setUser } = useContext(AuthContext);
+  const { showAlert } = useContext(AlertContext);
+  const { colors } = useContext(ThemeContext);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secure] = useState(true);
 
-  const handleLogin = async () => {
-    console.log('Login button clicked');
+const handleLogin = async () => {
+  try {
 
-    try {
-      const res = await login({
-        email: email.trim(),
-        password: password,
-      });
-
-      console.log('Response from backend:', res.data);
-
-      const user = res.data;
-
-      if (!user) {
-        Alert.alert('Login Failed', 'Invalid credentials');
-        return;
-      }
-
-      setUser(user);
-
-      if (user.role === 'FACULTY') {
-        navigation.replace('FacultyHome');
-      } else if (user.role === 'ADMIN') {
-        navigation.replace('InstituteList');
-      } else if (user.role === 'FACULTY_COORDINATOR') {
-        navigation.replace('FacultyCoordinatorDashboard');
-      } else {
-        navigation.replace('StudentHome');
-      }
-    } catch (error) {
-      console.log('Login error:', error);
-      Alert.alert('Login Failed', 'Invalid credentials or server error');
+    if (!email || !password) {
+      showAlert("Error", "Please enter email and password");
+      return;
     }
-  };
+
+    const res = await login({
+      email,
+      password
+    });
+
+const { token, role, studentId, isInTeam, isTeamLead } = res.data;
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('role', role);
+
+    if (studentId) {
+      await AsyncStorage.setItem('studentId', studentId.toString());
+    }
+
+    if (role === 'STUDENT') {
+      setUser({
+  token,
+  role,
+  studentId,
+  isInTeam,
+  isTeamLead
+});
+      console.log("STUDENT LOGGED IN:", res.data);
+      navigation.replace('StudentHome');
+    } 
+    else if (role === 'FACULTY') {
+      navigation.navigate('FacultyHome');
+    }
+    else if (role === 'FACULTY_COORDINATOR') {
+      navigation.navigate('FacultyCoordinatorDashboard');
+    }
+    else if (role === 'ADMIN') {
+      navigation.replace('AddInstitute');
+    }
+
+  } catch (error: any) {
+
+    console.log("LOGIN ERROR:", error);
+
+    if (error.response) {
+      showAlert("Login Failed", error.response.data.message || "Invalid credentials");
+    } else if (error.request) {
+      showAlert("Network Error", "Cannot connect to server");
+    } else {
+      showAlert("Error", "Something went wrong");
+    }
+  }
+};
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
-        <Text style={styles.brandTitle}>ZePRO</Text>
-        <Text style={styles.brandSubtitle}>Project Allocation Portal</Text>
+        <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
+        <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Project Allocation Portal</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.signInTitle}>Sign in</Text>
-        <Text style={styles.signInSubtitle}>Enter your details below</Text>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+        <Text style={[styles.signInTitle, { color: colors.text }]}>Sign in</Text>
+        <Text style={[styles.signInSubtitle, { color: colors.subText }]}>Enter your details below</Text>
 
         <TextInput
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           autoCapitalize="none"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.subText}
         />
 
-        <View style={styles.passwordContainer}>
+        <View style={[styles.passwordContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <TextInput
             placeholder="Password"
             secureTextEntry={secure}
             value={password}
             onChangeText={setPassword}
-            style={styles.passwordInput}
-            placeholderTextColor="#9ca3af"
+            style={[styles.passwordInput, { color: colors.text }]}
+            placeholderTextColor={colors.subText}
           />
         </View>
 
-        <TouchableOpacity style={styles.loginBtn} onPress={handleLogin}>
+        <TouchableOpacity style={[styles.loginBtn, { backgroundColor: colors.primary }]} onPress={handleLogin}>
           <Text style={styles.loginText}>Login</Text>
         </TouchableOpacity>
 
@@ -95,10 +120,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity
             onPress={() => navigation.navigate('ForgotPassword')}
           >
-            <Text style={styles.link}>Forgot Password?</Text>
+            <Text style={[styles.link, { color: colors.primary }]}>Forgot Password?</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.link}> Sign Up?</Text>
+            <Text style={[styles.link, { color: colors.primary }]}> Sign Up?</Text>
           </TouchableOpacity>
         </View>
       </View>

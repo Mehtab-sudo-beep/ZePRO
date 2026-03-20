@@ -11,5 +11,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     Optional<Meeting> findByRequestRequestId(Long requestId);
 
     List<Meeting> findByRequestFacultyFacultyId(Long facultyId);
+    List<Meeting> findByTeamTeamId(Long teamId);
 
 }

@@ -38,4 +38,9 @@ public class CreateProjectRequest {
     public void setSubDomainId(Long subDomainId) {
         this.subDomainId = subDomainId;
     }
+    private Long facultyId;
+
+  
+    public Long getFacultyId() { return facultyId; }
+    public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
 }

@@ -1,20 +1,16 @@
 package com.zepro.repository;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.zepro.model.ProjectRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.zepro.model.ProjectRequest;
-import com.zepro.model.RequestStatus;
+import java.util.List;
 
 public interface ProjectRequestRepository extends JpaRepository<ProjectRequest, Long> {
+    List<ProjectRequest> findByStatus(String status);
 
-    List<ProjectRequest> findByFacultyFacultyIdAndStatus(
-            Long facultyId,
-            RequestStatus status
-    );
+    List<ProjectRequest> findByTeamTeamId(Long teamId);
 
-    Optional<ProjectRequest> findByTeamTeamId(Long teamId);
-
+    boolean existsByTeamTeamIdAndProjectProjectId(Long teamId, Long projectId);
+    List<ProjectRequest> findByStatusAndProjectFacultyFacultyId(String status, Long facultyId);
+    List<ProjectRequest> findByProjectProjectId(Long projectId);
 }
