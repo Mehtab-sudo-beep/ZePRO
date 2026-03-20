@@ -97,12 +97,8 @@ public class AuthService {
 
         return "User created successfully";
     }
-
-    // ------------------------------------------------
-    // LOGIN
-    // ------------------------------------------------
-
-    public LoginResponse login(LoginRequest request){
+    
+   public LoginResponse login(LoginRequest request){
 
     String email = request.getEmail().trim();
 

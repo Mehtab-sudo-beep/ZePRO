@@ -1,14 +1,13 @@
 package com.zepro.repository;
 
-import com.zepro.model.Faculty;
-import com.zepro.model.Users;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import com.zepro.model.Faculty;
 
 public interface FacultyRepository extends JpaRepository<Faculty, Long> {
 
-    Optional<Faculty> findByUser(Users user);
+    Optional<Faculty> findByUser_Email(String email);
 
 }
