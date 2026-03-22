@@ -2,11 +2,14 @@ package com.zepro.dto.student;
 
 public class AssignedProjectResponse {
 
-<<<<<<< HEAD
     private Long projectId;
     private String title;
     private String description;
     private String facultyName;
+    private String teamName;
+    private String projectTitle;
+
+    public AssignedProjectResponse() {}
 
     public Long getProjectId() {
         return projectId;
@@ -24,6 +27,14 @@ public class AssignedProjectResponse {
         return facultyName;
     }
 
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public String getProjectTitle() {
+        return projectTitle;
+    }
+
     public void setProjectId(Long projectId) {
         this.projectId = projectId;
     }
@@ -38,18 +49,6 @@ public class AssignedProjectResponse {
 
     public void setFacultyName(String facultyName) {
         this.facultyName = facultyName;
-=======
-    private String teamName;
-    private String projectTitle;
-
-    public AssignedProjectResponse() {}
-
-    public String getTeamName() {
-        return teamName;
-    }
-
-    public String getProjectTitle() {
-        return projectTitle;
     }
 
     public void setTeamName(String teamName) {
@@ -58,6 +57,5 @@ public class AssignedProjectResponse {
 
     public void setProjectTitle(String projectTitle) {
         this.projectTitle = projectTitle;
->>>>>>> origin/main
     }
 }

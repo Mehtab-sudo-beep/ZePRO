@@ -27,7 +27,8 @@ public class Meeting {
 
     private LocalDateTime meetingTime;
 
-    private String status; // SCHEDULED / CANCELLED
+    @Enumerated(EnumType.STRING)
+    private MeetingStatus status; // SCHEDULED / CANCELLED / PENDING / DONE
 
     public Long getMeetingId() { return meetingId; }
 
@@ -45,7 +46,7 @@ public class Meeting {
 
     public LocalDateTime getMeetingTime() { return meetingTime; }
 
-    public String getStatus() { return status; }
+    public MeetingStatus getStatus() { return status; }
 
     public void setMeetingId(Long meetingId) { this.meetingId = meetingId; }
 
@@ -63,5 +64,5 @@ public class Meeting {
 
     public void setMeetingTime(LocalDateTime meetingTime) { this.meetingTime = meetingTime; }
 
-    public void setStatus(String status) { this.status = status; }
+    public void setStatus(MeetingStatus status) { this.status = status; }
 }

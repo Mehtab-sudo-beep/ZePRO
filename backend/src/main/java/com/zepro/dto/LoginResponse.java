@@ -10,6 +10,8 @@ public class LoginResponse {
         this.token = token;
         this.role = role;
         this.facultyId = facultyId;
+    }
+
     private Long studentId;
     private boolean isInTeam;
     private boolean isTeamLead;
@@ -33,6 +35,8 @@ public class LoginResponse {
 
     public Long getFacultyId() {
         return facultyId;
+    }
+
     public Long getStudentId() {
         return studentId;
     }

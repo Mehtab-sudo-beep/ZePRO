@@ -8,8 +8,6 @@ import MeetingDetailsScreen from '../screens/MeetingDeatialsScreen';
 import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
 import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
-import FacultyHomeScreen from '../screens/FacultyHomeScreen';
-import FacultyRequestsScreen from '../screens/FacultyRequestHandling';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
@@ -48,9 +46,9 @@ export type RootStackParamList = {
   ViewProjects: undefined;
   ScheduledMeetings: undefined;
   MeetingDetails: {
-    meeting: Meeting;
+    meeting?: Meeting;
+    requestId?: number;
   };
-  MeetingDetails: { requestId: number };
   FacultyHome: undefined;
   FacultyRequests: undefined;
   FacultyProjects: undefined;
@@ -156,20 +154,6 @@ const AppNavigator = () => {
       />
       <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
       <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
-      <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
-      <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
-      <Stack.Screen name='FacultyCoordinatorMore' component={FacultyCoordinatorMoreScreen}/>
-      <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
-      <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
-      <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
-      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen}/>
-      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen}/>
-      <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen}/>
-      <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen}          />
-      <Stack.Screen name="InstituteList" component={InstituteListScreen}/>
-      <Stack.Screen name="DepartmentList" component={DepartmentListScreen}/>
-      <Stack.Screen name="Register" component={RegisterScreen}/>
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen}/>
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
     </Stack.Navigator>
   );

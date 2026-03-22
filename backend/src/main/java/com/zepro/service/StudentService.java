@@ -6,6 +6,7 @@ import com.zepro.model.Project;
 import com.zepro.model.ProjectRequest;
 import com.zepro.model.Student;
 import com.zepro.model.Team;
+import com.zepro.model.RequestStatus;
 import com.zepro.repository.StudentRepository;
 import com.zepro.repository.TeamRepository;
 import com.zepro.repository.TeamJoinRequestRepository;
@@ -152,7 +153,7 @@ private final ProjectRepository projectRepository;
     ProjectRequest req = new ProjectRequest();
     req.setTeam(team);
     req.setProject(project);
-    req.setStatus("PENDING");
+    req.setStatus(RequestStatus.PENDING);
 
     projectRequestRepository.save(req);
 
@@ -203,7 +204,7 @@ public List<Long> getRequestedProjects(Long studentId){
                     req.getRequestId(),
                     req.getProject().getTitle(),
                     req.getProject().getFaculty().getUser().getName(),
-                    req.getStatus()
+                    req.getStatus() != null ? req.getStatus().name() : null
             ))
             .toList();
 }
@@ -255,7 +256,7 @@ public List<Long> getRequestedProjects(Long studentId){
 
     for (ProjectRequest req : requests) {
 
-        String status = req.getStatus();
+        String status = req.getStatus() != null ? req.getStatus().name() : "";
 
         // APPROVED request
         if (status.equals("APPROVED")) {
@@ -288,12 +289,13 @@ public List<Long> getRequestedProjects(Long studentId){
         }
 
         // Meetings related to this request
-        List<Meeting> meetings =
+        java.util.Optional<Meeting> meetingOpt =
                 meetingRepository.findByRequestRequestId(req.getRequestId());
 
-        for (Meeting meeting : meetings) {
+        if (meetingOpt.isPresent()) {
+            Meeting meeting = meetingOpt.get();
 
-            if (meeting.getStatus().equals("SCHEDULED")) {
+            if (meeting.getStatus() == com.zepro.model.MeetingStatus.PENDING) {
 
                 upcoming.add(
                         new UpcomingRequestResponse(
@@ -307,7 +309,7 @@ public List<Long> getRequestedProjects(Long studentId){
                 );
             }
 
-            if (meeting.getStatus().equals("COMPLETED")) {
+            if (meeting.getStatus() == com.zepro.model.MeetingStatus.DONE) {
 
                 completed.add(
                         new CompletedRequestResponse(
@@ -550,7 +552,7 @@ public MeetingDetailsResponse getMeetingDetails(Long requestId) {
                         req.getRequestId(),
                         req.getProject().getTitle(),
                         req.getProject().getFaculty().getUser().getName(),
-                        req.getStatus()
+                        req.getStatus() != null ? req.getStatus().name() : null
                 ))
                 .toList();
     }

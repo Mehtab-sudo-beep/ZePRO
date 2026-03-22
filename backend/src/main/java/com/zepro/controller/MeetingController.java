@@ -5,6 +5,9 @@ import com.zepro.service.MeetingService;
 
 import org.springframework.web.bind.annotation.*;
 
+import com.zepro.dto.faculty.CreateMeetingRequest;
+import com.zepro.dto.faculty.MeetingResponse;
+
 @RestController
 @RequestMapping("/meetings")
 public class MeetingController {
@@ -16,7 +19,7 @@ public class MeetingController {
     }
 
     @PostMapping("/schedule")
-    public Meeting scheduleMeeting(@RequestBody Meeting meeting) {
-        return meetingService.scheduleMeeting(meeting);
+    public MeetingResponse scheduleMeeting(@RequestBody CreateMeetingRequest request) {
+        return meetingService.scheduleMeeting(request);
     }
 }

@@ -110,7 +110,7 @@ public class AuthService {
         throw new RuntimeException("Invalid password");
     }
 
-    String token = jwtUtil.generateToken(user.getEmail());
+    String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
     Long studentId = null;
     boolean isInTeam = false;
@@ -130,7 +130,7 @@ public class AuthService {
     if(user.getRole() == UserRole.FACULTY_COORDINATOR){
 
         Faculty faculty = facultyRepository
-                .findByUser(user)
+                .findByUser_Email(user.getEmail())
                 .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
 
         if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
@@ -140,7 +140,7 @@ public class AuthService {
     if(user.getRole() == UserRole.FACULTY){
 
         Faculty faculty = facultyRepository
-                .findByUser(user)
+                .findByUser_Email(user.getEmail())
                 .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
 
         if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
