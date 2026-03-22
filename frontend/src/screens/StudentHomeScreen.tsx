@@ -42,13 +42,6 @@ const { user, setUser } = useContext(AuthContext);
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
-  if (!user || user.role !== 'STUDENT') {
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Text>Loading...</Text>
-    </SafeAreaView>
-  );
-}
 
   const { isInTeam } = user;
   const isTeamLead = isInTeam && user.isTeamLead === true;
@@ -107,7 +100,7 @@ const { user, setUser } = useContext(AuthContext);
 
         setTeamInfo(res.data);
 
-        setUser(prev => ({
+        setUser((prev: any) => ({
           ...prev!,
           isInTeam: true,
           isTeamLead: res.data.teamLeadId === prev?.studentId
@@ -129,6 +122,14 @@ const { user, setUser } = useContext(AuthContext);
 
   }, [setUser])
 );
+
+  if (!user || user.role !== 'STUDENT') {
+    return (
+      <SafeAreaView style={{ flex: 1 }}>
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>

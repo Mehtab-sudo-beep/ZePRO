@@ -46,22 +46,23 @@ const { token, role, studentId, isInTeam, isTeamLead } = res.data;
       await AsyncStorage.setItem('studentId', studentId.toString());
     }
 
+    setUser({
+      token,
+      role,
+      studentId,
+      isInTeam,
+      isTeamLead
+    });
+
     if (role === 'STUDENT') {
-      setUser({
-  token,
-  role,
-  studentId,
-  isInTeam,
-  isTeamLead
-});
       console.log("STUDENT LOGGED IN:", res.data);
       navigation.replace('StudentHome');
     } 
     else if (role === 'FACULTY') {
-      navigation.navigate('FacultyHome');
+      navigation.replace('FacultyHome');
     }
     else if (role === 'FACULTY_COORDINATOR') {
-      navigation.navigate('FacultyCoordinatorDashboard');
+      navigation.replace('FacultyCoordinatorDashboard');
     }
     else if (role === 'ADMIN') {
       navigation.replace('AddInstitute');

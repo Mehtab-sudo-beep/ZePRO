@@ -107,7 +107,7 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
     projectRepository.save(project);
 
     ProjectRequest request = projectRequestRepository
-            .findByTeamTeamId(teamId)
+            .findByTeamTeamId(teamId).stream().findFirst()
             .orElseThrow();
 
     request.setStatus(RequestStatus.APPROVED);
