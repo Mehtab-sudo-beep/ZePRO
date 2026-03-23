@@ -19,6 +19,7 @@ interface Request {
   teamName: string;
   teamLead: string;
   status: string;
+  rejectionReason?: string;
 }
 
 const statusColor = (status: string) => {
@@ -30,32 +31,21 @@ const statusColor = (status: string) => {
 const SentRequestsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-    const isDark = colors.background === '#111827';
+  const isDark = colors.background === '#111827';
 
   const [requests, setRequests] = useState<Request[]>([]);
 
   useEffect(() => {
-
     const loadRequests = async () => {
-
       try {
-
-        const studentId = await AsyncStorage.getItem("studentId");
-
+        const studentId = await AsyncStorage.getItem('studentId');
         const res = await getSentRequests(Number(studentId));
-
         setRequests(res.data);
-
       } catch (err) {
-
-        console.log("SENT REQUEST ERROR:", err);
-
+        console.log('SENT REQUEST ERROR:', err);
       }
-
     };
-
     loadRequests();
-
   }, []);
 
   return (
@@ -65,11 +55,11 @@ const SentRequestsScreen: React.FC = () => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <Image
-                      source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
-                      style={styles.backIcon}
-                    />
-                  </TouchableOpacity>
+            <Image
+              source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+              style={styles.backIcon}
+            />
+          </TouchableOpacity>
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Sent Requests</Text>
             <Text style={[styles.headerSub, { color: colors.subText }]}>
@@ -80,58 +70,56 @@ const SentRequestsScreen: React.FC = () => {
 
         <ScrollView contentContainerStyle={styles.listContent}>
 
-          {requests.map((req) => (
-
-            <View
-              key={req.requestId}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: colors.card,
-                  shadowColor: colors.text,
-                  borderLeftColor: '#2563EB',
-                },
-              ]}
-            >
-
-              <View style={styles.cardRow}>
-                <Text style={[styles.teamName, { color: colors.text }]}>
-                  {req.teamName}
-                </Text>
-
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: statusColor(req.status) + '18' },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: statusColor(req.status) },
-                    ]}
-                  >
-                    {req.status}
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={[styles.divider, { backgroundColor: colors.border }]}
-              />
-
-              <View style={styles.infoRow}>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>
-                  Team Lead
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {req.teamLead}
-                </Text>
-              </View>
-
+          {requests.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Text style={{ color: colors.subText, fontSize: 16 }}>No requests sent yet</Text>
             </View>
+          ) : (
+            requests.map((req) => (
+              <View
+                key={req.requestId}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: colors.card,
+                    shadowColor: colors.text,
+                    borderLeftColor: statusColor(req.status),
+                  },
+                ]}
+              >
+                <View style={styles.cardRow}>
+                  <Text style={[styles.teamName, { color: colors.text }]}>
+                    {req.teamName}
+                  </Text>
+                  <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '18' }]}>
+                    <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
+                      {req.status}
+                    </Text>
+                  </View>
+                </View>
 
-          ))}
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: colors.subText }]}>Team Lead</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>{req.teamLead}</Text>
+                </View>
+
+                {/* Show rejection reason if rejected */}
+                {req.status === 'REJECTED' && req.rejectionReason ? (
+                  <View style={[styles.reasonBox, { backgroundColor: '#FEE2E2' }]}>
+                    <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700', marginBottom: 3 }}>
+                      Rejection Reason:
+                    </Text>
+                    <Text style={{ color: '#DC2626', fontSize: 13, lineHeight: 18 }}>
+                      {req.rejectionReason}
+                    </Text>
+                  </View>
+                ) : null}
+
+              </View>
+            ))
+          )}
 
         </ScrollView>
       </View>
@@ -165,7 +153,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  back: { fontSize: 22 },
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
 
   headerTitle: {
     fontSize: 19,
@@ -182,6 +174,11 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
     gap: 16,
+  },
+
+  emptyBox: {
+    marginTop: 80,
+    alignItems: 'center',
   },
 
   card: {
@@ -237,10 +234,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  
-  backIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
+
+  reasonBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
   },
 });

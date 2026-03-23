@@ -3,11 +3,7 @@ package com.zepro.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(
-    uniqueConstraints = @UniqueConstraint(
-        columnNames = {"student_id", "team_id"}
-    )
-)
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = { "student_id", "team_id" }))
 public class TeamJoinRequest {
 
     @Id
@@ -22,8 +18,17 @@ public class TeamJoinRequest {
     @JoinColumn(name = "team_id")
     private Team team;
 
-    private String status;
- // PENDING, APPROVED, REJECTED
+    private String status; // PENDING, APPROVED, REJECTED
+
+    private String rejectionReason;
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
 
     public Long getRequestId() {
         return requestId;

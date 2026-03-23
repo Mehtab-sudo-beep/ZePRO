@@ -6,12 +6,15 @@ public class SentRequestResponse {
     private String teamName;
     private String teamLead;
     private String status;
+    private String rejectionReason;
 
-    public SentRequestResponse(Long requestId, String teamName, String teamLead, String status) {
+    public SentRequestResponse(Long requestId, String teamName, String teamLead, String status,
+            String rejectionReason) {
         this.requestId = requestId;
         this.teamName = teamName;
         this.teamLead = teamLead;
         this.status = status;
+        this.rejectionReason = rejectionReason;
     }
 
     public Long getRequestId() {
@@ -28,5 +31,9 @@ public class SentRequestResponse {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 }

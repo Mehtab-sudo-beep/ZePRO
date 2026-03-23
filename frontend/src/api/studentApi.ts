@@ -40,8 +40,8 @@ export const approveRequest = (requestId: number) => {
   return API.post(`/student/approve-request/${requestId}`);
 };
 
-export const rejectRequest = (requestId: number) => {
-  return API.post(`/student/reject-request/${requestId}`);
+export const rejectRequest = (requestId: number, reason: string) => {
+  return API.post(`/student/reject-request/${requestId}`, { rejectionReason: reason });
 };
 export const getSentRequests = (studentId: number) => {
   return API.get(`/student/sent-requests/${studentId}`);

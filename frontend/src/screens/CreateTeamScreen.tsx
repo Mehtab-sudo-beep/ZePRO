@@ -5,8 +5,8 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ScrollView,
+  Image,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -25,40 +25,49 @@ const CreateTeamScreen = ({ navigation }: Props) => {
   const [teamName, setTeamName] = useState('');
   const [description, setDescription] = useState('');
 
- const handleCreateTeam = async () => {
+  const handleCreateTeam = async () => {
 
-  try {
+    try {
 
-    const studentId = await AsyncStorage.getItem('studentId');
+      const studentId = await AsyncStorage.getItem('studentId');
 
-    await createTeam({
-      teamName,
-      studentId: Number(studentId)
-    });
+      await createTeam({
+        teamName,
+        studentId: Number(studentId),
+        description
+      });
 
-    setUser({
-      ...user,
-      isInTeam: true,
-      isTeamLead: true
-    });
+      setUser({
+        ...user,
+        isInTeam: true,
+        isTeamLead: true
+      });
 
-    showAlert("Team created successfully");
+      showAlert("Team created successfully");
 
-    navigation.replace("StudentHome");
+      navigation.replace("StudentHome");
 
-  } catch (err) {
+    } catch (err) {
 
-    console.log("CREATE TEAM ERROR:", err);
-    showAlert("Error creating team");
+      console.log("CREATE TEAM ERROR:", err);
+      showAlert("Error creating team");
 
-  }
-};
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
         {/* Header (Lowered + No Z logo) */}
-        <View style={styles.headerContainer}>
+        <View style={[styles.headerContainer, { backgroundColor: colors.card }]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Image
+              source={colors.background === '#111827'
+                ? require('../assets/angle-white.png')
+                : require('../assets/angle.png')}
+              style={styles.backIcon}
+            />
+          </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>
             Create New Team
           </Text>
@@ -146,9 +155,29 @@ export default CreateTeamScreen;
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingTop: 30, // lowered properly
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    height: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginLeft: -8,
+  },
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
 
   title: {

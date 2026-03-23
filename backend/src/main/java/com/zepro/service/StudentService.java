@@ -422,15 +422,15 @@ public class StudentService {
 
                 Team team = student.getTeam();
 
-                List<TeamJoinRequest> requests = joinRequestRepository.findByTeamTeamIdAndStatus(team.getTeamId(),
-                                "PENDING");
+                List<TeamJoinRequest> requests = joinRequestRepository.findByTeamTeamId(team.getTeamId());
 
                 return requests.stream()
                                 .map(req -> new JoinRequestResponse(
                                                 req.getRequestId(),
                                                 req.getStudent().getStudentId(),
                                                 req.getStudent().getUser().getName(),
-                                                req.getStatus()))
+                                                req.getStatus(),
+                                                req.getRejectionReason()))
                                 .toList();
         }
 
@@ -467,14 +467,16 @@ public class StudentService {
                 return "Student added to team successfully";
         }
 
-        public String rejectJoinRequest(Long requestId) {
+        public String rejectJoinRequest(Long requestId, String reason) {
 
                 TeamJoinRequest request = joinRequestRepository.findById(requestId)
                                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-                joinRequestRepository.delete(request);
+                request.setStatus("REJECTED");
+                request.setRejectionReason(reason != null ? reason : "");
+                joinRequestRepository.save(request);
 
-                return "Request rejected and removed";
+                return "Request rejected";
         }
 
         public List<TeamListResponse> getAllTeams(Long studentId) {
@@ -514,7 +516,8 @@ public class StudentService {
                                                 req.getRequestId(),
                                                 req.getTeam().getTeamName(),
                                                 req.getTeam().getTeamLead().getUser().getName(),
-                                                req.getStatus()))
+                                                req.getStatus(),
+                                                req.getRejectionReason()))
                                 .toList();
         }
 
