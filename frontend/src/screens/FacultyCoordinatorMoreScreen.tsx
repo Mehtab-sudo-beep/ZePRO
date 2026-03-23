@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -28,7 +29,10 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('role');
+            await AsyncStorage.removeItem('facultyId');
             setUser(null);
             navigation.replace('Login');
           },

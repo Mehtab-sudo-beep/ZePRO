@@ -16,6 +16,15 @@ public class MeetingResponse {
 
     private Long facultyId;
 
+    // 🔥 ADD THESE
+    private String projectTitle;
+    private String domain;
+    private String subDomain;
+    private String location;
+    private String title;
+    private String requestStatus;
+    // ----------- GETTERS & SETTERS -----------
+
     public Long getMeetingId() {
         return meetingId;
     }
@@ -79,4 +88,55 @@ public class MeetingResponse {
     public void setFacultyId(Long facultyId) {
         this.facultyId = facultyId;
     }
+
+    // 🔥 NEW GETTERS/SETTERS
+
+    public String getProjectTitle() {
+        return projectTitle;
+    }
+
+    public void setProjectTitle(String projectTitle) {
+        this.projectTitle = projectTitle;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
+
+    public String getSubDomain() {
+        return subDomain;
+    }
+
+    public void setSubDomain(String subDomain) {
+        this.subDomain = subDomain;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getRequestStatus() {
+        return requestStatus;
+    }
+
+    public void setRequestStatus(String requestStatus) {
+        this.requestStatus = requestStatus;
+    }
+
 }

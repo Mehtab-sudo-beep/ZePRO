@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,7 @@ type Meeting = {
   members: string[];
   response: string;
   statusColor: string;
+  timestamp?: number;
 };
 
 const ScheduledMeetingsScreen: React.FC = () => {
@@ -44,69 +45,82 @@ const ScheduledMeetingsScreen: React.FC = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useContext(AuthContext);
- 
+
   useEffect(() => {
-  const fetchMeetings = async () => {
-    setLoading(true);
+    const fetchMeetings = async () => {
+      setLoading(true);
 
-    try {
-       const studentId = user?.studentId;  
+      try {
+        const studentId = user?.studentId;
 
-      const res = await getProjectScheduleResponses(studentId);
+        const res = await getProjectScheduleResponses(studentId);
 
-      const data = res.data;
+        const data = res.data || {};
 
-      const upcomingMapped: Meeting[] = data.upcomingRequests.map((m: any) => {
-        const dateObj = new Date(m.meetingTime);
+        const upcomingMapped: Meeting[] = (data.upcomingRequests || []).map((m: any) => {
+          const dateObj = m.meetingTime ? new Date(m.meetingTime) : null;
 
-        return {
-  requestId: m.requestId,
-  title: m.projectTitle,
-  faculty: m.facultyName,
-  projectName: m.projectTitle,
-          domain: '',
-          subDomain: '',
-          location: m.location,
-          date: dateObj.toLocaleDateString(),
-          time: dateObj.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          members: [],
-          response: 'Pending',
-          statusColor: '#F59E0B',
-        };
-      });
+          return {
+            requestId: m.requestId,
+            title: m.projectTitle,
+            faculty: m.facultyName,
+            projectName: m.projectTitle,
+            domain: '',
+            subDomain: '',
+            location: m.location || 'Online',
+            date: dateObj ? dateObj.toLocaleDateString() : '',
+            time: dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            members: [],
+            response: 'SCHEDULED',
+            statusColor: '#8B5CF6',
+            timestamp: dateObj ? dateObj.getTime() : 0,
+          };
+        }).sort((a: Meeting, b: Meeting) => (a.timestamp || 0) - (b.timestamp || 0));
 
-      const completedMapped: Meeting[] = data.completedRequests.map((m: any) => {
-        const color = m.status === 'APPROVED' ? '#16A34A' : '#DC2626';
+        const completedMapped: Meeting[] = (data.completedRequests || []).map((m: any) => {
+          let color = '#3B82F6';     // blue  — meeting completed, awaiting decision
+          let respTxt = 'Meeting Completed';
 
-        return {
-          requestId: m.requestId,
-          title: m.projectTitle,
-          faculty: m.facultyName,
-          projectName: m.projectTitle,
-          domain: '',
-          subDomain: '',
-          location: '',
-          date: '',
-          time: '',
-          members: [],
-          response: m.status === 'APPROVED' ? 'Accepted' : 'Rejected',
-          statusColor: color,
-        };
-      });
+          if (m.status === 'ACCEPTED') {
+            color = '#16A34A';        // green
+            respTxt = 'Accepted';
+          } else if (m.status === 'REJECTED') {
+            color = '#DC2626';        // red
+            respTxt = 'Rejected';
+          } else if (m.status === 'CANCELLED') {
+            color = '#6B7280';        // grey
+            respTxt = 'Cancelled';
+          } else if (m.status === 'MEETING COMPLETED') {
+            color = '#F59E0B';        // amber — done but pending faculty decision
+            respTxt = 'Awaiting Decision';
+          }
 
-      setMeetings([...upcomingMapped, ...completedMapped]);
-    } catch (err) {
-      console.log('Meeting API error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+          return {
+            requestId: m.requestId,
+            title: m.projectTitle,
+            faculty: m.facultyName,
+            projectName: m.projectTitle,
+            domain: '',
+            subDomain: '',
+            location: '',
+            date: '',
+            time: '',
+            members: [],
+            response: respTxt,
+            statusColor: color,
+          };
+        });
 
-  fetchMeetings();
-}, [user?.studentId]);
+        setMeetings([...upcomingMapped, ...completedMapped]);
+      } catch (err) {
+        console.log('Meeting API error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMeetings();
+  }, [user?.studentId]);
 
   const navigation = useNavigation<NavProp>();
   const { colors } = useContext(ThemeContext);
@@ -116,22 +130,26 @@ const ScheduledMeetingsScreen: React.FC = () => {
   const filteredMeetings = meetings.filter(meeting => {
     const matchesTab =
       activeTab === 'UPCOMING'
-        ? meeting.response === 'Pending'
-        : meeting.response === 'Accepted' || meeting.response === 'Rejected';
+        ? meeting.response === 'SCHEDULED'
+        : meeting.response === 'Accepted' ||
+        meeting.response === 'Rejected' ||
+        meeting.response === 'Awaiting Decision' ||
+        meeting.response === 'Meeting Completed' ||
+        meeting.response === 'Cancelled';
 
     const matchesSearch =
-      meeting.faculty.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      meeting.projectName.toLowerCase().includes(searchQuery.toLowerCase());
+      (meeting.faculty || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (meeting.projectName || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesTab && matchesSearch;
   });
   if (loading) {
-  return (
-    <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
-      <Text>Loading meetings...</Text>
-    </View>
-  );
-}
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading meetings...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -214,11 +232,11 @@ const ScheduledMeetingsScreen: React.FC = () => {
         <ScrollView>
           {filteredMeetings.map((meeting, index) => (
             <TouchableOpacity
-  key={index}
-  onPress={() =>
-    navigation.navigate('MeetingDetails', { requestId: meeting.requestId })
-  }
->
+              key={index}
+              onPress={() =>
+                navigation.navigate('MeetingDetails', { requestId: meeting.requestId })
+              }
+            >
               <View
                 style={[
                   styles.card,

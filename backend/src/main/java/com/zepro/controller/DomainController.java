@@ -25,7 +25,7 @@ public class DomainController {
     }
 
     @GetMapping("/subdomains/{domainId}")
-public List<SubDomainResponse> getSubDomains(@PathVariable Long domainId) {
+public List<SubDomainResponse> getSubDomains(@PathVariable("domainId") Long domainId) {
     return domainService.getSubDomains(domainId);
 }
 }

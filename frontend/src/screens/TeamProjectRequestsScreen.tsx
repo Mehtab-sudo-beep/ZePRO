@@ -41,7 +41,9 @@ const TeamProjectRequestsScreen: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'APPROVED': return '#4caf50';
+      case 'ACCEPTED': return '#16A34A';
+      case 'SCHEDULED': return '#8B5CF6';
+      case 'COMPLETED': return '#3B82F6';
       case 'REJECTED': return '#f44336';
       case 'PENDING': return '#ff9800';
       default: return colors.primary;

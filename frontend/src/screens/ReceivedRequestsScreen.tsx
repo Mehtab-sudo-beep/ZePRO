@@ -91,7 +91,7 @@ const ReceivedRequestsScreen: React.FC = () => {
   };
 
   const statusColor = (status: string) => {
-    if (status === 'APPROVED') return '#16A34A';
+    if (status === 'ACCEPTED' || status === 'APPROVED') return '#16A34A';
     if (status === 'REJECTED') return '#DC2626';
     return '#D97706';
   };

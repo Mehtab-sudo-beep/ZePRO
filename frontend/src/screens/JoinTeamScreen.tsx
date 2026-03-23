@@ -19,6 +19,7 @@ import { useEffect } from "react";
 interface Team {
   teamId: number;
   teamName: string;
+  description?: string;
   teamLead: string;
   members: string[];
   alreadyRequested: boolean;
@@ -103,6 +104,12 @@ const JoinTeamScreen: React.FC = () => {
               {selectedTeam.teamName}
             </Text>
 
+            {selectedTeam.description ? (
+              <Text style={[styles.info, { color: colors.text, fontStyle: 'italic', marginBottom: 8 }]}>
+                {selectedTeam.description}
+              </Text>
+            ) : null}
+
             <Text style={[styles.info, { color: colors.subText }]}>
               Leader: {selectedTeam.teamLead}
             </Text>
@@ -173,6 +180,12 @@ const JoinTeamScreen: React.FC = () => {
     <Text style={[styles.teamName, { color: colors.text }]}>
       {item.teamName}
     </Text>
+
+    {item.description ? (
+      <Text style={[styles.info, { color: colors.text, fontStyle: 'italic' }]} numberOfLines={2}>
+        {item.description}
+      </Text>
+    ) : null}
 
     <Text style={[styles.info, { color: colors.subText }]}>
       Leader: {item.teamLead}

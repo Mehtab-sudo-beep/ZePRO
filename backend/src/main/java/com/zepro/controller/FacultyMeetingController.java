@@ -30,17 +30,13 @@ public class FacultyMeetingController {
     }
 
     @PutMapping("/{meetingId}/cancel")
-    public MeetingResponse cancelMeeting(@PathVariable Long meetingId) {
+    public MeetingResponse cancelMeeting(@PathVariable("meetingId") Long meetingId) {
         return meetingService.cancelMeeting(meetingId);
     }
 
-    @PutMapping("/{meetingId}/complete")
-    public MeetingResponse completeMeeting(@PathVariable Long meetingId) {
-        return meetingService.completeMeeting(meetingId);
-    }
 
     @GetMapping("/request/{requestId}")
-    public MeetingResponse getMeeting(@PathVariable Long requestId) {
+    public MeetingResponse getMeeting(@PathVariable("requestId") Long requestId) {
         return meetingService.getMeetingByRequest(requestId);
     }
 
@@ -55,4 +51,19 @@ public class FacultyMeetingController {
 
         return meetingService.getAllMeetings(faculty.getFacultyId());
     }
+
+    @PutMapping("/{meetingId}/complete")
+public MeetingResponse completeMeeting(@PathVariable("meetingId") Long meetingId) {
+    return meetingService.completeMeeting(meetingId);
+}
+
+@PutMapping("/request/{requestId}/accept")
+public void acceptProject(@PathVariable("requestId") Long requestId) {
+    meetingService.acceptProject(requestId);
+}
+
+@PutMapping("/request/{requestId}/reject")
+public void rejectProject(@PathVariable("requestId") Long requestId) {
+    meetingService.rejectProject(requestId);
+}
 }

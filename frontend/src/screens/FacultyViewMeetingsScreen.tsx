@@ -8,12 +8,18 @@ import {
   Modal,
   TextInput,
   Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
-
+import { AuthContext } from '../context/AuthContext';
+import {
+  getAllMeetings,
+  cancelMeeting,
+  completeMeeting,
+  acceptProject,
+  rejectProject
+} from '../api/facultyApi';
 interface Meeting {
   id: string;
   title: string;
@@ -27,63 +33,53 @@ interface Meeting {
   members: string[];
   status: 'upcoming' | 'completed' | 'cancelled';
 }
-
-const SAMPLE_MEETINGS: Meeting[] = [
-  {
-    id: 'M001',
-    title: 'Project Kickoff Meeting',
-    faculty: 'Dr. Sarah Johnson',
-    projectName: 'AI-Based Chatbot',
-    domain: 'Artificial Intelligence',
-    subDomain: 'NLP',
-    location: 'Room 204, CS Block',
-    date: '2025-02-12',
-    time: '10:00 AM',
-    members: ['John Doe', 'Jane Smith', 'Mike Johnson'],
-    status: 'upcoming',
-  },
-  {
-    id: 'M002',
-    title: 'Requirement Review',
-    faculty: 'Dr. Sarah Johnson',
-    projectName: 'AI-Based Chatbot',
-    domain: 'Artificial Intelligence',
-    subDomain: 'Machine Learning',
-    location: 'Lab 3, CS Block',
-    date: '2025-02-14',
-    time: '02:00 PM',
-    members: ['John Doe', 'Jane Smith'],
-    status: 'upcoming',
-  },
-  {
-    id: 'M003',
-    title: 'Mid-Review Discussion',
-    faculty: 'Dr. Sarah Johnson',
-    projectName: 'Campus Navigation App',
-    domain: 'Mobile Development',
-    subDomain: 'React Native',
-    location: 'Seminar Hall',
-    date: '2025-01-20',
-    time: '11:00 AM',
-    members: ['Alex Brown', 'Emma Davis'],
-    status: 'completed',
-  },
-];
-
+import { AlertContext } from '../context/AlertContext';
 const FacultyViewMeetingsScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
+  const { user } = useContext(AuthContext);
+  const { showAlert } = useContext(AlertContext);
   const navigation = useNavigation<any>();
 
-  const [meetings, setMeetings] = useState<Meeting[]>(SAMPLE_MEETINGS);
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [meetings, setMeetings] = useState<any[]>([]);
+  const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Meeting>>({});
+  const [editForm, setEditForm] = useState<Partial<any>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
 
-  const filteredMeetings = meetings.filter(m =>
-    activeFilter === 'all' ? true : m.status === activeFilter
-  );
+  React.useEffect(() => {
+    if (user?.token) {
+      loadMeetings();
+    }
+  }, [user?.token]);
+
+  const loadMeetings = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllMeetings(user.token);
+      setMeetings(data || []);
+    } catch (err) {
+      console.log('Error loading meetings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredMeetings = meetings.filter(m => {
+    const s = m.status?.toLowerCase() || 'scheduled';
+    const rs = m.requestStatus?.toLowerCase() || '';
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'upcoming') return s === 'scheduled' || s === 'pending';
+    if (activeFilter === 'completed') return s === 'done' || s === 'completed' || rs === 'accepted' || rs === 'rejected';
+    if (activeFilter === 'cancelled') return s === 'cancelled';
+    return true;
+  }).sort((a, b) => {
+    if (!a.meetingTime || !b.meetingTime) return 0;
+    const timeA = new Date(a.meetingTime).getTime();
+    const timeB = new Date(b.meetingTime).getTime();
+    return activeFilter === 'upcoming' ? timeA - timeB : timeB - timeA;
+  });
 
   const openDetail = (meeting: Meeting) => {
     setSelectedMeeting(meeting);
@@ -107,7 +103,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
 
   const handleSaveEdit = () => {
     if (!editForm.date || !editForm.time || !editForm.location || !editForm.title) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showAlert('Error', 'Please fill in all required fields');
       return;
     }
     setMeetings(meetings.map(m =>
@@ -115,34 +111,40 @@ const FacultyViewMeetingsScreen: React.FC = () => {
     ));
     setShowEditModal(false);
     setSelectedMeeting(null);
-    Alert.alert('Success', 'Meeting updated successfully!');
+    showAlert('Success', 'Meeting updated successfully!');
   };
 
-  const handleCancelMeeting = (meeting: Meeting) => {
-    Alert.alert(
+  const handleCancelMeeting = (meeting: any) => {
+    showAlert(
       'Cancel Meeting',
-      `Are you sure you want to cancel "${meeting.title}"?`,
+      `Are you sure you want to cancel "${meeting.title || 'this meeting'}"?`,
       [
-        { text: 'No', style: 'cancel' },
+        { text: 'No', style: 'cancel', onPress: () => { } },
         {
           text: 'Yes, Cancel',
           style: 'destructive',
-          onPress: () => {
-            setMeetings(meetings.map(m =>
-              m.id === meeting.id ? { ...m, status: 'cancelled' } : m
-            ));
-            setShowDetailModal(false);
-            Alert.alert('Done', 'Meeting has been cancelled.');
+          onPress: async () => {
+            try {
+              await cancelMeeting(meeting.meetingId, user.token);
+              loadMeetings();
+              setShowDetailModal(false);
+              showAlert('Done', 'Meeting has been cancelled.');
+            } catch (err) {
+              showAlert('Error', 'Could not cancel meeting');
+            }
           },
         },
       ]
     );
   };
 
-  const statusColor = (status: Meeting['status']) => {
-    if (status === 'upcoming') return { bg: '#D1FAE5', text: '#059669' };
-    if (status === 'completed') return { bg: '#DBEAFE', text: '#2563EB' };
-    return { bg: '#FEE2E2', text: '#DC2626' };
+  const statusColor = (statusRaw: string) => {
+    const s = (statusRaw || '').toLowerCase();
+    if (s === 'scheduled' || s === 'pending') return { bg: '#D1FAE5', text: '#059669' };
+    if (s === 'done' || s === 'completed') return { bg: '#DBEAFE', text: '#2563EB' };
+    if (s === 'accepted') return { bg: '#EDE9FE', text: '#7C3AED' };
+    if (s === 'rejected') return { bg: '#FEF3C7', text: '#D97706' };
+    return { bg: '#FEE2E2', text: '#DC2626' }; // cancelled
   };
 
   /* ── Detail Modal ─────────────────────────────────────── */
@@ -176,35 +178,108 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                 {selectedMeeting.title}
               </Text>
 
-              <DetailRow label="Project" value={selectedMeeting.projectName} colors={colors} />
-              <DetailRow label="Domain" value={selectedMeeting.domain} colors={colors} />
-              <DetailRow label="Sub-Domain" value={selectedMeeting.subDomain} colors={colors} />
-              <DetailRow label="Location" value={selectedMeeting.location} colors={colors} />
-              <DetailRow label="Date" value={selectedMeeting.date} colors={colors} />
-              <DetailRow label="Time" value={selectedMeeting.time} colors={colors} />
-
-              <Text style={[styles.membersTitle, { color: colors.text }]}>Team Members</Text>
-              {selectedMeeting.members.map((m, i) => (
-                <Text key={i} style={[styles.memberItem, { color: colors.subText }]}>• {m}</Text>
-              ))}
+              <DetailRow label="Project" value={selectedMeeting.projectTitle || 'N/A'} colors={colors} />
+              <DetailRow label="Domain" value={selectedMeeting.domain || 'N/A'} colors={colors} />
+              <DetailRow label="SubDomain" value={selectedMeeting.subDomain || 'N/A'} colors={colors} />
+              <DetailRow label="Location" value={selectedMeeting.location || 'Online'} colors={colors} />
+              <DetailRow label="Date" value={selectedMeeting.meetingTime ? new Date(selectedMeeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
+              <DetailRow label="Time" value={selectedMeeting.meetingTime ? new Date(selectedMeeting.meetingTime).toLocaleTimeString() : 'TBD'} colors={colors} />
+              <DetailRow label="Link" value={selectedMeeting.meetingLink || 'N/A'} colors={colors} />
 
               {/* Action Buttons */}
-              {selectedMeeting.status === 'upcoming' && (
-                <View style={styles.actionRow}>
+              {(selectedMeeting.status === 'SCHEDULED' || selectedMeeting.status === 'PENDING') && (
+                <View style={styles.actionColumn}>
                   <TouchableOpacity
-                    style={[styles.editBtn, { backgroundColor: colors.primary }]}
+                    style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                     onPress={() => openEdit(selectedMeeting)}
                   >
-                    <Text style={styles.editBtnText}>  Edit / Reschedule</Text>
+                    <Text style={styles.actionBtnText}>Edit / Reschedule</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
-                    style={styles.cancelBtn}
+                    style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
+                    onPress={async () => {
+                      try {
+                        await completeMeeting(selectedMeeting.meetingId, user.token);
+                        loadMeetings();
+                        setShowDetailModal(false);
+                        showAlert('Success', 'Meeting marked as completed');
+                      } catch (err) {
+                        showAlert('Error', 'Failed to mark meeting as done');
+                      }
+                    }}
+                  >
+                    <Text style={styles.actionBtnText}>Mark as Done</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionBtnOutline, { borderColor: '#EF4444' }]}
                     onPress={() => handleCancelMeeting(selectedMeeting)}
                   >
-                    <Text style={styles.cancelBtnText}>Cancel Meeting</Text>
+                    <Text style={[styles.actionBtnOutlineText, { color: '#EF4444' }]}>Cancel Meeting</Text>
                   </TouchableOpacity>
                 </View>
               )}
+              {/* ✅ ACCEPT / REJECT — only when DONE and not yet decided */}
+              {selectedMeeting.status === 'DONE' &&
+                selectedMeeting.requestStatus !== 'ACCEPTED' &&
+                selectedMeeting.requestStatus !== 'REJECTED' && (
+                  <View style={styles.actionColumn}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
+                      onPress={async () => {
+                        try {
+                          await acceptProject(selectedMeeting.requestId, user.token);
+                          loadMeetings();
+                          setShowDetailModal(false);
+                          showAlert('Success', 'Project Assigned');
+                        } catch (err) {
+                          showAlert('Error', 'Accept failed');
+                        }
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Accept Project</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionBtnOutline, { borderColor: '#EF4444' }]}
+                      onPress={async () => {
+                        try {
+                          await rejectProject(selectedMeeting.requestId, user.token);
+                          loadMeetings();
+                          setShowDetailModal(false);
+                          showAlert('Done', 'Project Rejected');
+                        } catch (err) {
+                          showAlert('Error', 'Reject failed');
+                        }
+                      }}
+                    >
+                      <Text style={[styles.actionBtnOutlineText, { color: '#EF4444' }]}>Reject Project</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+              {/* 🔒 Read-only outcome banner — shown once decision is final */}
+              {(selectedMeeting.requestStatus === 'ACCEPTED' ||
+                selectedMeeting.requestStatus === 'REJECTED') && (
+                  <View style={{
+                    marginTop: 24,
+                    padding: 14,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    backgroundColor: selectedMeeting.requestStatus === 'ACCEPTED' ? '#EDE9FE' : '#FEF3C7',
+                  }}>
+                    <Text style={{
+                      fontWeight: '700',
+                      fontSize: 15,
+                      color: selectedMeeting.requestStatus === 'ACCEPTED' ? '#7C3AED' : '#D97706',
+                    }}>
+                      {selectedMeeting.requestStatus === 'ACCEPTED'
+                        ? '✅ Project has been Accepted'
+                        : '❌ Project has been Rejected'}
+                    </Text>
+                  </View>
+                )}
             </ScrollView>
           </View>
         </View>
@@ -245,7 +320,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
             {/* Reschedule Section */}
             <View style={[styles.rescheduleBox, { borderColor: colors.primary + '44', backgroundColor: colors.primary + '0D' }]}>
               <Text style={[styles.rescheduleLabel, { color: colors.primary }]}>
-                  Reschedule
+                Reschedule
               </Text>
               <EditField
                 label="New Date  (YYYY-MM-DD)"
@@ -341,7 +416,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
               const sc = statusColor(meeting.status);
               return (
                 <TouchableOpacity
-                  key={meeting.id}
+                  key={meeting.meetingId}
                   style={[styles.card, { backgroundColor: colors.card }]}
                   onPress={() => openDetail(meeting)}
                   activeOpacity={0.85}
@@ -349,39 +424,46 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   {/* Card Top Row */}
                   <View style={styles.cardTopRow}>
                     <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
-                      {meeting.title}
+                      {meeting.title || `Meeting with ${meeting.teamName || 'Team'}`}
                     </Text>
                     <View style={[styles.cardBadge, { backgroundColor: sc.bg }]}>
                       <Text style={[styles.cardBadgeText, { color: sc.text }]}>
-                        {meeting.status}
+                        {(meeting.status || 'SCHEDULED').toUpperCase()}
                       </Text>
                     </View>
                   </View>
 
                   <Text style={[styles.cardProject, { color: colors.subText }]}>
-                    {meeting.projectName}
+                    Project: {meeting.projectTitle || 'N/A'}
+                  </Text>
+                  <Text style={[styles.cardProject, { color: colors.subText }]}>
+                    Domain: {meeting.domain || 'N/A'}
+                  </Text>
+
+                  <Text style={[styles.cardProject, { color: colors.subText }]}>
+                    SubDomain: {meeting.subDomain || 'N/A'}
                   </Text>
 
                   {/* Date / Time / Location */}
                   <View style={styles.cardMeta}>
-                    <MetaChip icon="" text={meeting.date} colors={colors} />
-                    <MetaChip icon="" text={meeting.time} colors={colors} />
-                    <MetaChip icon="" text={meeting.location} colors={colors} />
+                    <MetaChip icon="" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
+                    <MetaChip icon="" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleTimeString() : 'TBD'} colors={colors} />
+                    <MetaChip icon="" text={meeting.location || 'Online'} colors={colors} />
                   </View>
 
                   {/* Members */}
                   <Text style={[styles.cardMembers, { color: colors.subText }]}>
-                     {meeting.members.join(', ')}
+                    {meeting.meetingLink ? `Link: ${meeting.meetingLink}` : ''}
                   </Text>
 
                   {/* Quick Edit Button for upcoming */}
-                  {meeting.status === 'upcoming' && (
+                  {(meeting.status === 'SCHEDULED' || meeting.status === 'PENDING') && (
                     <TouchableOpacity
                       style={[styles.quickEditBtn, { borderColor: colors.primary }]}
                       onPress={() => openEdit(meeting)}
                     >
                       <Text style={[styles.quickEditText, { color: colors.primary }]}>
-                          Edit / Reschedule
+                        Edit / Reschedule
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -546,21 +628,29 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 15, fontWeight: '500', marginTop: 2 },
   membersTitle: { fontSize: 16, fontWeight: '600', marginTop: 20, marginBottom: 8 },
   memberItem: { fontSize: 14, marginBottom: 4 },
-  actionRow: { marginTop: 24, gap: 10 },
-  editBtn: {
+  actionColumn: { marginTop: 24, gap: 12 },
+  actionRow: { marginTop: 24, flexDirection: 'row', gap: 12 },
+  actionBtn: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-  editBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  cancelBtn: {
-    paddingVertical: 13,
-    borderRadius: 10,
+  actionBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+  actionBtnOutline: {
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#DC2626',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
   },
-  cancelBtnText: { color: '#DC2626', fontWeight: '600', fontSize: 15 },
+  actionBtnOutlineText: { fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
 
   // Edit Modal
   rescheduleBox: {

@@ -38,18 +38,22 @@ const handleLogin = async () => {
       password
     });
 
-const { token, role, studentId, isInTeam, isTeamLead } = res.data;
+const { token, role, studentId, facultyId, isInTeam, isTeamLead } = res.data;
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('role', role);
 
     if (studentId) {
       await AsyncStorage.setItem('studentId', studentId.toString());
     }
+    if (facultyId) {
+      await AsyncStorage.setItem('facultyId', facultyId.toString());
+    }
 
     setUser({
       token,
       role,
       studentId,
+      facultyId,
       isInTeam,
       isTeamLead
     });

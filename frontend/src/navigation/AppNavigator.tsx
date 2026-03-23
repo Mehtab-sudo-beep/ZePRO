@@ -89,6 +89,7 @@ export type RootStackParamList = {
   FacultyCreateMenu: undefined;
   CreateDomain: undefined;
   CreateSubDomain: undefined;
+  TeamProjectRequests: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -155,6 +156,7 @@ const AppNavigator = () => {
       <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
       <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
+      
     </Stack.Navigator>
   );
 };

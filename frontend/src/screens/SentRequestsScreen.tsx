@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ const statusColor = (status: string) => {
 const SentRequestsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
+    const isDark = colors.background === '#111827';
 
   const [requests, setRequests] = useState<Request[]>([]);
 
@@ -63,8 +65,11 @@ const SentRequestsScreen: React.FC = () => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={[styles.back, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
+                    <Image
+                      source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+                      style={styles.backIcon}
+                    />
+                  </TouchableOpacity>
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Sent Requests</Text>
             <Text style={[styles.headerSub, { color: colors.subText }]}>
@@ -231,5 +236,11 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
 });

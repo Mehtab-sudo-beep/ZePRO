@@ -54,7 +54,7 @@ public class FacultyController {
     }
 
     @GetMapping("/{facultyId}/projects")
-    public List<ProjectResponse> getProjects(@PathVariable Long facultyId) {
+    public List<ProjectResponse> getProjects(@PathVariable("facultyId") Long facultyId) {
         return facultyService.getProjects(facultyId);
     }
 
@@ -101,7 +101,7 @@ public class FacultyController {
     }
 
     @PutMapping("/requests/{requestId}/cancel")
-    public ProjectRequest cancelRequest(@PathVariable Long requestId) {
+    public ProjectRequest cancelRequest(@PathVariable("requestId") Long requestId) {
         return requestService.cancelRequest(requestId);
     }
 }

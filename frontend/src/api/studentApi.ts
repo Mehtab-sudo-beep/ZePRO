@@ -1,7 +1,9 @@
 import API from './api';
 
+
 export const createTeam = (data: {
   teamName: string;
+  description: string;
   studentId: number;
 }) => API.post('/student/create-team', data);
 
@@ -69,4 +71,18 @@ export const getMeetingDetails = (requestId: number) => {
 
 export const getTeamProjectRequests = (studentId: number) => {
   return API.get(`/student/team-project-requests/${studentId}`);
+};
+
+// ================= STUDENT PROFILE =================
+
+// ================= STUDENT PROFILE =================
+
+export const getStudentProfile = async () => {
+  const res = await API.get('/student/profile');
+  return res.data; // ✅ IMPORTANT
+};
+
+export const updateStudentProfile = async (data: any) => {
+  const res = await API.put('/student/profile', data);
+  return res.data; // ✅ IMPORTANT
 };

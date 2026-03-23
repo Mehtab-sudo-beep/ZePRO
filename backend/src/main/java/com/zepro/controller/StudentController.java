@@ -36,19 +36,19 @@ public String requestProject(@RequestBody ProjectRequestDTO request) {
 
     // STUDENT CHECKS ASSIGNED PROJECT
     @GetMapping("/assigned-project/{studentId}")
-    public AssignedProjectResponse getAssignedProject(@PathVariable Long studentId) {
+    public AssignedProjectResponse getAssignedProject(@PathVariable("studentId") Long studentId) {
         return studentService.getAssignedProject(studentId);
     }
 
     // View all project requests sent by the team lead (status: UPCOMING & COMPLETED)
     @GetMapping("/project-requests/{studentId}")
-    public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable Long studentId) {
+    public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("studentId") Long studentId) {
         return studentService.getProjectRequestsStatus(studentId);
     }
 
     // Get team info for a student
     @GetMapping("/team-info/{studentId}")
-    public TeamInfoResponse getTeamInfo(@PathVariable Long studentId) {
+    public TeamInfoResponse getTeamInfo(@PathVariable("studentId") Long studentId) {
         return studentService.getTeamInfo(studentId);
     }
     @PostMapping("/send-join-request")
@@ -59,23 +59,23 @@ public String requestProject(@RequestBody ProjectRequestDTO request) {
         );
     }
     @GetMapping("/team-join-requests/{studentId}")
-public List<JoinRequestResponse> getTeamJoinRequests(@PathVariable Long studentId){
+public List<JoinRequestResponse> getTeamJoinRequests(@PathVariable("studentId") Long studentId){
     return studentService.getTeamJoinRequests(studentId);
 }
     @PostMapping("/approve-request/{requestId}")
-    public String approveRequest(@PathVariable Long requestId){
+    public String approveRequest(@PathVariable("requestId") Long requestId){
         return studentService.approveJoinRequest(requestId);
     }
     @PostMapping("/reject-request/{requestId}")
-    public String rejectRequest(@PathVariable Long requestId){
+    public String rejectRequest(@PathVariable("requestId") Long requestId){
         return studentService.rejectJoinRequest(requestId);
     }
     @GetMapping("/teams/{studentId}")
-public List<TeamListResponse> getAllTeams(@PathVariable Long studentId) {
+public List<TeamListResponse> getAllTeams(@PathVariable("studentId") Long studentId) {
     return studentService.getAllTeams(studentId);
 }
     @GetMapping("/sent-requests/{studentId}")
-public List<SentRequestResponse> getSentRequests(@PathVariable Long studentId) {
+public List<SentRequestResponse> getSentRequests(@PathVariable("studentId") Long studentId) {
     return studentService.getSentRequests(studentId);
 }
 @GetMapping("/projects")
@@ -84,21 +84,21 @@ public List<ProjectResponse> getAllProjects() {
 }
     @GetMapping("/project-request-history/{studentId}")
 public List<ProjectRequestHistoryResponse> getProjectRequestHistory(
-        @PathVariable Long studentId) {
+        @PathVariable("studentId") Long studentId) {
 
     return studentService.getProjectRequestsHistory(studentId);
 }
 @GetMapping("/requested-projects/{studentId}")
-public List<Long> getRequestedProjects(@PathVariable Long studentId){
+public List<Long> getRequestedProjects(@PathVariable("studentId") Long studentId){
     return studentService.getRequestedProjects(studentId);
 }
     @GetMapping("/meeting-details/{requestId}")
-    public MeetingDetailsResponse getMeetingDetails(@PathVariable Long requestId) {
+    public MeetingDetailsResponse getMeetingDetails(@PathVariable("requestId") Long requestId) {
         return studentService.getMeetingDetails(requestId);
     }
 
     @GetMapping("/team-project-requests/{studentId}")
-    public List<TeamProjectRequestResponse> getTeamProjectRequests(@PathVariable Long studentId) {
+    public List<TeamProjectRequestResponse> getTeamProjectRequests(@PathVariable("studentId") Long studentId) {
         return studentService.getTeamProjectRequests(studentId);
     }
 }

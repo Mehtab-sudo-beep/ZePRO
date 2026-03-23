@@ -42,6 +42,7 @@ const { user, setUser } = useContext(AuthContext);
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
+  if (!user) return null;
 
   const { isInTeam } = user;
   const isTeamLead = isInTeam && user.isTeamLead === true;
@@ -54,7 +55,7 @@ const { user, setUser } = useContext(AuthContext);
   try {
     const res = await getAssignedProject(user.studentId);
 
-    if (res.data && res.data.status === "APPROVED") {
+    if (res.data && (res.data.status === "SCHEDULED" || res.data.status === "ACCEPTED" || res.data.status === "COMPLETED" || res.data.status === "APPROVED")) {
       setAllocatedProject(res.data);
       setShowAllocatedModal(true);   // popup only here
     } else {

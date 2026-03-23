@@ -12,6 +12,7 @@ public class Domain {
     private String name;
 
     @ManyToOne
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Faculty faculty;
 
     // getters

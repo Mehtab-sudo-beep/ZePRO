@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,63 +12,36 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 
-const FacultyProfileScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
-  const { user, setUser } = useContext(AuthContext);
-  const { colors } = useContext(ThemeContext);
-  const isDark = colors.background === '#111827';
+import {
+  getFacultyProfile,
+  updateFacultyProfile,
+} from '../api/facultyApi';
 
-  const [editModal, setEditModal] = useState(false);
-  const [editField, setEditField] = useState<{ key: string; label: string; value: string } | null>(null);
-  const [editValue, setEditValue] = useState('');
-
-  const [profile, setProfile] = useState({
-    name: user?.name || 'Dr. Faculty Name',
-    email: user?.email || 'faculty@institute.edu',
-    phone: '+91 98765 43210',
-    department: 'Computer Science & Engineering',
-    designation: 'Associate Professor',
-    employeeId: 'FAC2024001',
-    specialization: 'Machine Learning, AI',
-    experience: '8 Years',
-    qualification: 'Ph.D. Computer Science',
-    cabinNo: 'CS-204',
-    institute: 'National Institute of Technology',
-  });
-
-  const openEdit = (key: string, label: string, value: string) => {
-    setEditField({ key, label, value });
-    setEditValue(value);
-    setEditModal(true);
-  };
-
-  const saveEdit = () => {
-    if (!editValue.trim()) {
-      Alert.alert('Error', 'Field cannot be empty.');
-      return;
-    }
-    if (editField) {
-      setProfile(prev => ({ ...prev, [editField.key]: editValue.trim() }));
-      if (editField.key === 'name' && user) setUser({ ...user, name: editValue.trim() });
-      if (editField.key === 'email' && user) setUser({ ...user, email: editValue.trim() });
-    }
-    setEditModal(false);
-    Alert.alert('Success', 'Profile updated successfully.');
-  };
-
- const InfoRow = ({ label, value, editKey }: { label: string; value: string; editKey?: string }) => (
+// ✅ OUTSIDE COMPONENT
+const InfoRow = ({ label, value, editKey, onEdit, colors, isDark }: any) => (
   <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
     <View style={{ flex: 1 }}>
-      <Text style={[styles.infoLabel, { color: colors.subText }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: colors.subText }]}>
+        {label}
+      </Text>
+      <Text style={[styles.infoValue, { color: colors.text }]}>
+        {value || '-'}
+      </Text>
     </View>
+
     {editKey && (
-      <TouchableOpacity onPress={() => openEdit(editKey, label, value)}>
+      <TouchableOpacity onPress={() => onEdit(editKey, label, value)}>
         <Image
-          source={isDark ? require('../assets/edit-white.png') : require('../assets/edit.png')}
+          source={
+            isDark
+              ? require('../assets/edit-white.png')
+              : require('../assets/edit.png')
+          }
           style={styles.editIcon}
         />
       </TouchableOpacity>
@@ -76,117 +49,212 @@ const FacultyProfileScreen: React.FC = () => {
   </View>
 );
 
+const FacultyProfileScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const { user, setUser } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
+
+  const [profile, setProfile] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+
+  const [editModal, setEditModal] = useState(false);
+  const [editField, setEditField] = useState<any>(null);
+  const [editValue, setEditValue] = useState('');
+
+  // ✅ LOAD PROFILE
+  useEffect(() => {
+    const loadProfile = async () => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    console.log('🔥 TOKEN:', token);
+
+    const data = await getFacultyProfile(token!);
+
+    console.log('✅ PROFILE RESPONSE:', data);
+
+    setProfile(data);
+
+  } catch (err) {
+    console.log('❌ PROFILE ERROR:', err);
+    Alert.alert('Error', 'Failed to load profile');
+  } finally {
+    setLoading(false);
+  }
+};
+
+    loadProfile();
+  }, []);
+
+  const openEdit = (key: string, label: string, value: string) => {
+    setEditField({ key, label });
+    setEditValue(value || '');
+    setEditModal(true);
+  };
+
+  // ✅ UPDATE PROFILE
+  const saveEdit = async () => {
+  if (!editValue.trim()) {
+    Alert.alert('Error', 'Field cannot be empty.');
+    return;
+  }
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    const updated = {
+      ...profile,
+      [editField.key]: editValue.trim(),
+    };
+
+    console.log('🔥 SENDING UPDATE:', updated);
+
+    const data = await updateFacultyProfile(updated, token!);
+
+    console.log('✅ UPDATED RESPONSE:', data);
+
+    setProfile(data);
+
+    if (editField.key === 'name') {
+      setUser({ ...user, name: data.name });
+    }
+
+    Alert.alert('Success', 'Profile updated successfully.');
+
+  } catch (err) {
+    console.log('❌ UPDATE ERROR:', err);
+    Alert.alert('Error', 'Update failed');
+  }
+
+  setEditModal(false);
+};
+
+  if (loading) {
+    return (
+      <View style={styles.loader}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
 
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Image
-            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            source={
+              isDark
+                ? require('../assets/angle-white.png')
+                : require('../assets/angle.png')
+            }
             style={styles.backIcon}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>My Profile</Text>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          My Profile
+        </Text>
+
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* Avatar + Name Banner */}
+            
+        {/* Banner */}
         <View style={[styles.banner, { backgroundColor: colors.card }]}>
           <View style={[styles.avatarWrapper, { borderColor: colors.primary }]}>
             <Image source={require('../assets/avatar.png')} style={styles.avatar} />
           </View>
-          <Text style={[styles.bannerName, { color: colors.text }]}>{profile.name}</Text>
-          <Text style={[styles.bannerDesignation, { color: colors.subText }]}>{profile.designation}</Text>
+          <Text style={[styles.bannerName, { color: colors.text }]}>
+            {profile.name}
+          </Text>
+
+          <Text style={[styles.bannerDesignation, { color: colors.subText }]}>
+            {profile.designation}
+          </Text>
+
           <View style={[styles.deptBadge, { backgroundColor: colors.primary + '18' }]}>
-            <Text style={[styles.deptBadgeText, { color: colors.primary }]}>{profile.department}</Text>
+            <Text style={[styles.deptBadgeText, { color: colors.primary }]}>
+              {profile.department}
+            </Text>
           </View>
         </View>
+        
 
-        {/* Quick Stats */}
-        <View style={[styles.statsRow, { backgroundColor: colors.card }]}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.primary }]}>2</Text>
-            <Text style={[styles.statLbl, { color: colors.subText }]}>Projects</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.primary }]}>8</Text>
-            <Text style={[styles.statLbl, { color: colors.subText }]}>Students</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: colors.primary }]}>3</Text>
-            <Text style={[styles.statLbl, { color: colors.subText }]}>Requests</Text>
-          </View>
-        </View>
-
-        {/* Personal Info */}
+        {/* Personal */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.cardTitle, { color: colors.text, borderBottomColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
             Personal Information
           </Text>
-          <InfoRow label="Full Name" value={profile.name} editKey="name" />
-          <InfoRow label="Email Address" value={profile.email} editKey="email" />
-          <InfoRow label="Phone Number" value={profile.phone} editKey="phone" />
+
+          <InfoRow label="Full Name" value={profile.name} editKey="name"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Email" value={profile.email} editKey="email"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Phone" value={profile.phone} editKey="phone"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
         </View>
 
-        {/* Academic Info */}
+        {/* Academic */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.cardTitle, { color: colors.text, borderBottomColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
             Academic Information
           </Text>
-          <InfoRow label="Employee ID" value={profile.employeeId} />
-          <InfoRow label="Designation" value={profile.designation} editKey="designation" />
-          <InfoRow label="Department" value={profile.department} editKey="department" />
-          <InfoRow label="Institute" value={profile.institute} editKey="institute" />
-          <InfoRow label="Qualification" value={profile.qualification} editKey="qualification" />
-          <InfoRow label="Specialization" value={profile.specialization} editKey="specialization" />
-          <InfoRow label="Experience" value={profile.experience} editKey="experience" />
-          <InfoRow label="Cabin No." value={profile.cabinNo} editKey="cabinNo" />
+
+          <InfoRow label="Employee ID" value={profile.employeeId}
+            colors={colors} isDark={isDark} />
+
+          <InfoRow label="Designation" value={profile.designation} editKey="designation"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Department" value={profile.department} editKey="department"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Institute" value={profile.institute} editKey="institute"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Qualification" value={profile.qualification} editKey="qualification"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Specialization" value={profile.specialization} editKey="specialization"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Experience" value={profile.experience} editKey="experience"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
+
+          <InfoRow label="Cabin No." value={profile.cabinNo} editKey="cabinNo"
+            onEdit={openEdit} colors={colors} isDark={isDark} />
         </View>
 
       </ScrollView>
 
-      {/* Edit Modal */}
-      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+      {/* Modal */}
+      <Modal visible={editModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalBox, { backgroundColor: colors.card }]}>
-
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               Edit {editField?.label}
             </Text>
 
-            <Text style={[styles.inputLabel, { color: colors.subText }]}>
-              {editField?.label}
-            </Text>
             <TextInput
               value={editValue}
               onChangeText={setEditValue}
-              style={[styles.input, {
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-                color: colors.text,
-              }]}
-              placeholder={`Enter ${editField?.label}`}
-              placeholderTextColor={colors.subText}
+              style={[styles.input, { color: colors.text }]}
               autoFocus
             />
 
             <View style={styles.modalBtns}>
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: colors.border }]}
-                onPress={() => setEditModal(false)}
-              >
-                <Text style={[styles.cancelBtnText, { color: colors.subText }]}>Cancel</Text>
+              <TouchableOpacity onPress={() => setEditModal(false)}>
+                <Text>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-                onPress={saveEdit}
-              >
-                <Text style={styles.saveBtnText}>Save</Text>
+
+              <TouchableOpacity onPress={saveEdit}>
+                <Text>Save</Text>
               </TouchableOpacity>
             </View>
 
@@ -311,4 +379,9 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: '#FFFFFF', fontWeight: '700' },
   editIcon: { width: 15, height: 15, resizeMode: 'contain' },
+  loader:{
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });

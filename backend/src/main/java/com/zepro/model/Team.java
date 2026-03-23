@@ -11,6 +11,7 @@ public class Team {
     private Long teamId;
 
     private String teamName;
+    private String description;
 
     @OneToOne
     private Student teamLead;
@@ -24,6 +25,10 @@ private List<Student> members;
 
     public String getTeamName() {
         return teamName;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public Student getTeamLead() {
@@ -40,6 +45,10 @@ private List<Student> members;
 
     public void setTeamName(String teamName) {
         this.teamName = teamName;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public void setTeamLead(Student teamLead) {

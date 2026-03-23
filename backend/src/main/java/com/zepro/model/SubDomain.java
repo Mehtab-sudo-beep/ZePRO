@@ -12,6 +12,7 @@ public class SubDomain {
 
     @ManyToOne
     @JoinColumn(name = "domain_domain_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Domain domain;
 
     public Long getSubDomainId() {

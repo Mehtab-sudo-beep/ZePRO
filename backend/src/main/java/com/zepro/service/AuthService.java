@@ -113,6 +113,7 @@ public class AuthService {
     String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
     Long studentId = null;
+    Long facultyId = null;
     boolean isInTeam = false;
     boolean isTeamLead = false;
 
@@ -132,6 +133,8 @@ public class AuthService {
         Faculty faculty = facultyRepository
                 .findByUser_Email(user.getEmail())
                 .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+        
+        facultyId = faculty.getFacultyId();
 
         if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
             user.setRole(UserRole.FACULTY_COORDINATOR);
@@ -142,11 +145,13 @@ public class AuthService {
         Faculty faculty = facultyRepository
                 .findByUser_Email(user.getEmail())
                 .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
+        
+        facultyId = faculty.getFacultyId();
 
         if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
             user.setRole(UserRole.FACULTY_COORDINATOR);
         }
-    }               
+    }   
     if(user.getRole() == UserRole.ADMIN){
 
         Admin admin = adminRepository
@@ -158,6 +163,7 @@ public class AuthService {
     return new LoginResponse(
             token,
             user.getRole().name(),
+            facultyId,
             studentId,
             isInTeam,
             isTeamLead

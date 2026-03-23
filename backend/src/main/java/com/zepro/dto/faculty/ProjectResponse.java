@@ -5,7 +5,7 @@ import java.util.List;
 public class ProjectResponse {
 
     private Long projectId;
-    private Long requestId;   // ← ADD THIS
+    private Long requestId;
 
     private String title;
     private String description;
@@ -15,23 +15,49 @@ public class ProjectResponse {
     private String teamName;
     private String teamLead;
 
-    private List<String> teamMembers;
+    // ✅ FIXED NAME
+    private List<String> members;
 
-    public ProjectResponse(){}
+    private String domain;
+    private String subdomain;
 
-    public ProjectResponse(Long projectId, String title, String description, String status) {
+    public ProjectResponse() {}
+
+    // 🔥 Constructor for projects
+    public ProjectResponse(Long projectId, String title, String description,
+                           String status, String domain, String subdomain) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
         this.status = status;
+        this.domain = domain;
+        this.subdomain = subdomain;
     }
 
-    // getters setters
+    // 🔥 Optional full constructor
+    public ProjectResponse(Long projectId, Long requestId, String title, String description,
+                           String status, Long teamId, String teamName,
+                           String teamLead, List<String> members,
+                           String domain, String subdomain) {
+
+        this.projectId = projectId;
+        this.requestId = requestId;
+        this.title = title;
+        this.description = description;
+        this.status = status;
+        this.teamId = teamId;
+        this.teamName = teamName;
+        this.teamLead = teamLead;
+        this.members = members;
+        this.domain = domain;
+        this.subdomain = subdomain;
+    }
+
+    // ---------------- GETTERS & SETTERS ----------------
 
     public Long getProjectId() { return projectId; }
     public void setProjectId(Long projectId) { this.projectId = projectId; }
 
-    // NEW
     public Long getRequestId() { return requestId; }
     public void setRequestId(Long requestId) { this.requestId = requestId; }
 
@@ -53,6 +79,13 @@ public class ProjectResponse {
     public String getTeamLead() { return teamLead; }
     public void setTeamLead(String teamLead) { this.teamLead = teamLead; }
 
-    public List<String> getTeamMembers() { return teamMembers; }
-    public void setTeamMembers(List<String> teamMembers) { this.teamMembers = teamMembers; }
+    // ✅ FIXED (IMPORTANT)
+    public List<String> getMembers() { return members; }
+    public void setMembers(List<String> members) { this.members = members; }
+
+    public String getDomain() { return domain; }
+    public void setDomain(String domain) { this.domain = domain; }
+
+    public String getSubdomain() { return subdomain; }
+    public void setSubdomain(String subdomain) { this.subdomain = subdomain; }
 }

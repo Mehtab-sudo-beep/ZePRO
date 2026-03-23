@@ -79,6 +79,7 @@ export const scheduleMeeting = async (
   requestId: number,
   meetingTime: string,
   meetingLink: string,
+  location: string,
   token: string,
 ) => {
   const res = await axios.post(
@@ -87,6 +88,7 @@ export const scheduleMeeting = async (
       requestId,
       meetingTime,
       meetingLink,
+      location,
     },
     {
       headers: { Authorization: `Bearer ${token}` },
@@ -106,15 +108,7 @@ export const cancelMeeting = async (meetingId: number, token: string) => {
   return res.data;
 };
 
-export const completeMeeting = async (meetingId: number, token: string) => {
-  const res = await axios.put(
-    `${API}/faculty/meetings/${meetingId}/complete`,
-    {},
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
 
-  return res.data;
-};
 export const cancelRequest = async (requestId: number, token: string) => {
   const res = await axios.put(
     `${API}/faculty/requests/${requestId}/cancel`,
@@ -124,3 +118,38 @@ export const cancelRequest = async (requestId: number, token: string) => {
 
   return res.data;
 };
+// ================= FACULTY PROFILE =================
+
+export const getFacultyProfile = async (token: string) => {
+  return axios.get(`${API}/faculty/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`, // ✅ THIS IS REQUIRED
+    },
+  }).then(res => res.data);
+};
+
+export const updateFacultyProfile = async (data: any, token: string) => {
+  return axios.put(`${API}/faculty/profile`, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }).then(res => res.data);
+};
+export const completeMeeting = async (meetingId: number, token: string) => {
+  return axios.put(`${API}/faculty/meetings/${meetingId}/complete`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const acceptProject = async (requestId: number, token: string) => {
+  return axios.put(`${API}/faculty/meetings/request/${requestId}/accept`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const rejectProject = async (requestId: number, token: string) => {
+  return axios.put(`${API}/faculty/meetings/request/${requestId}/reject`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+

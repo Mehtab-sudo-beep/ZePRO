@@ -3,6 +3,9 @@ package com.zepro.model;
 public enum RequestStatus {
 
     PENDING,
-    APPROVED,
+    SCHEDULED,
+    COMPLETED,
+    ACCEPTED,
+    REJECTED,
     CANCELLED
 }

@@ -16,10 +16,11 @@ public class LoginResponse {
     private boolean isInTeam;
     private boolean isTeamLead;
 
-    public LoginResponse(String token, String role, Long studentId,
+    public LoginResponse(String token, String role, Long facultyId, Long studentId,
                          boolean isInTeam, boolean isTeamLead) {
         this.token = token;
         this.role = role;
+        this.facultyId = facultyId;
         this.studentId = studentId;
         this.isInTeam = isInTeam;
         this.isTeamLead = isTeamLead;

@@ -74,4 +74,15 @@ private Department department;
     public void setTeam(Team team) {
         this.team = team;
     }
+    // ----------- GETTER -----------
+
+public Department getDepartment() {
+    return department;
+}
+
+// ----------- SETTER -----------
+
+public void setDepartment(Department department) {
+    this.department = department;
+}
 }

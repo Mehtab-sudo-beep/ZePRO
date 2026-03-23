@@ -1,21 +1,23 @@
-
 package com.zepro.dto.student;
 
 import java.util.List;
-
 
 public class TeamListResponse {
 
     private Long teamId;
     private String teamName;
+    private String description;
     private String teamLead;
     private List<String> members;
     private boolean alreadyRequested;
 
-
-    public TeamListResponse(Long teamId, String teamName, String teamLead, List<String> members, boolean alreadyRequested) {
+    // ✅ Correct constructor (6 params)
+    public TeamListResponse(Long teamId, String teamName, String description,
+            String teamLead, List<String> members,
+            boolean alreadyRequested) {
         this.teamId = teamId;
         this.teamName = teamName;
+        this.description = description;
         this.teamLead = teamLead;
         this.members = members;
         this.alreadyRequested = alreadyRequested;
@@ -29,6 +31,10 @@ public class TeamListResponse {
         return teamName;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
     public String getTeamLead() {
         return teamLead;
     }
@@ -36,7 +42,8 @@ public class TeamListResponse {
     public List<String> getMembers() {
         return members;
     }
+
     public boolean isAlreadyRequested() {
-    return alreadyRequested;
-}
+        return alreadyRequested;
+    }
 }

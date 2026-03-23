@@ -7,7 +7,12 @@ public class CreateMeetingRequest {
     private Long requestId;
     private LocalDateTime meetingTime;
     private String meetingLink;
+    private String location;
+    private String title;
 
+     public String getTitle() {
+        return title;
+    }
     public Long getRequestId() {
         return requestId;
     }
@@ -30,5 +35,13 @@ public class CreateMeetingRequest {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }
