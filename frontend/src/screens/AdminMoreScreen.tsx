@@ -38,7 +38,7 @@ const AdminMoreScreen: React.FC = () => {
     );
   };
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'ADMIN')) return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -83,12 +83,6 @@ const AdminMoreScreen: React.FC = () => {
           <MenuItem
             title="Add Institute"
             onPress={() => navigation.navigate('AddInstitute')}
-            colors={colors}
-          />
-
-          <MenuItem
-            title="Add Department"
-            onPress={() => navigation.navigate('AddDepartment')}
             colors={colors}
           />
 

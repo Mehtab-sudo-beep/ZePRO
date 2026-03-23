@@ -12,10 +12,11 @@ import {
   StatusBar,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomTab } from './InstituteListScreen';
+import { useCallback } from 'react';
+import { getAllUsers } from '../api/departmentApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'AdminHome'>;
 type RouteP = RouteProp<RootStackParamList, 'AdminHome'>;
@@ -25,32 +26,49 @@ interface Props {
   route: RouteP;
 }
 
+type DBUserRole = 'STUDENT' | 'FACULTY' | 'FACULTY_COORDINATOR' | 'ADMIN';
+
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'faculty' | 'student';
-  isFacultyCoordinator?: boolean;
+  role: DBUserRole;
 }
 
-const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { departmentName = '', instituteName = '' } = route.params ?? {};
+const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { departmentId, departmentName, instituteName } = route.params || {};
 
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Dr. Sarah Johnson', email: 'sarah.j@university.edu', role: 'faculty', isFacultyCoordinator: true },
-    { id: '2', name: 'Prof. Michael Chen', email: 'michael.c@university.edu', role: 'faculty' },
-    { id: '3', name: 'Dr. Emily Rodriguez', email: 'emily.r@university.edu', role: 'faculty' },
-    { id: '4', name: 'John Doe', email: 'john.d@student.edu', role: 'student' },
-    { id: '5', name: 'Jane Smith', email: 'jane.s@student.edu', role: 'student' },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filterRole, setFilterRole] = useState<'all' | 'faculty' | 'student'>('all');
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [filterRole, setFilterRole] = useState<'all' | 'faculty' | 'student'>('all');
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    role: 'student' as 'faculty' | 'student',
-  });
+  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'student' });
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await getAllUsers();
+      const fetchedUsers: User[] = (res.data || []).map((u: any) => ({
+        id: u.userId?.toString(),
+        name: u.name,
+        email: u.email,
+        role: u.role,
+      }));
+      setUsers(fetchedUsers);
+    } catch (err) {
+      console.log('Failed to fetch users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUsers();
+    }, [])
+  );
 
   const handleAddUser = () => {
     if (newUser.name && newUser.email) {
@@ -58,8 +76,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
         id: Date.now().toString(),
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
-        isFacultyCoordinator: false,
+        role: newUser.role === 'faculty' ? 'FACULTY' : 'STUDENT', // Map to DBUserRole
       };
       setUsers([...users, user]);
       setNewUser({ name: '', email: '', role: 'student' });
@@ -88,7 +105,7 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
   const toggleFacultyCoordinator = (userId: string, currentStatus: boolean) => {
     setUsers(users.map(user => {
       if (user.id === userId) {
-        return { ...user, isFacultyCoordinator: !currentStatus };
+        return { ...user, role: currentStatus ? 'FACULTY' : 'FACULTY_COORDINATOR' };
       }
       return user;
     }));
@@ -98,13 +115,20 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
-  const filteredUsers = users.filter(user =>
-    filterRole === 'all' ? true : user.role === filterRole
-  );
+  // Stats computation based on fetched users
+  const facultyCount = users.filter(u => u.role === 'FACULTY' || u.role === 'FACULTY_COORDINATOR').length;
+  const studentCount = users.filter(u => u.role === 'STUDENT').length;
 
-  const facultyCount = users.filter(u => u.role === 'faculty').length;
-  const studentCount = users.filter(u => u.role === 'student').length;
-  const coordinatorCount = users.filter(u => u.isFacultyCoordinator).length;
+  const filteredUsers = users.filter(u => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (filterRole === 'all') return matchesSearch;
+    if (filterRole === 'faculty') return matchesSearch && (u.role === 'FACULTY' || u.role === 'FACULTY_COORDINATOR');
+    if (filterRole === 'student') return matchesSearch && u.role === 'STUDENT';
+    return false;
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -113,24 +137,30 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => navigation.replace('Login')} style={styles.backBtn}>
             <Text style={styles.backArrow}>‹</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>{departmentName}</Text>
-            <Text style={styles.headerSubtitle}>{instituteName}</Text>
+            <Text style={styles.headerTitle}>{departmentName || 'Admin Dashboard'}</Text>
+            <Text style={styles.headerSubtitle}>{instituteName || 'All Institute Users'}</Text>
           </View>
         </View>
 
         <ScrollView style={styles.content}>
-          {/* Stats Cards */}
+          {/* Institute List Button at Top */}
+          <View style={{ marginBottom: 16 }}>
+            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('InstituteList')}>
+              <Text style={styles.addButtonText}>Institute List</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Stats Cards - Only Faculty and Students */}
           <View style={styles.statsGrid}>
             {[
               { label: 'Faculty', value: facultyCount, color: '#1F2937' },
               { label: 'Students', value: studentCount, color: '#059669' },
-              { label: 'Coordinators', value: coordinatorCount, color: '#4F46E5' },
             ].map((stat, idx) => (
-              <View key={idx} style={styles.statCard}>
+              <View key={idx} style={[styles.statCard, { flex: 1, marginHorizontal: 4 }]}>
                 <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
@@ -152,10 +182,20 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
             ))}
           </View>
 
-          {/* Add User Button */}
-          <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-            <Text style={styles.addButtonText}>+ Add User</Text>
-          </TouchableOpacity>
+          {/* User List Heading */}
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginBottom: 10 }}>User List</Text>
+
+          {/* Search Bar */}
+          <View style={styles.listSearchContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.listSearchInput}
+              placeholder="Search users by name or email..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
 
           {/* Users List */}
           <View style={styles.usersList}>
@@ -180,10 +220,10 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
                     <View style={styles.badges}>
                       <View style={[styles.badge, styles.badgeRole]}>
                         <Text style={[styles.badgeText, styles.badgeTextRole]}>
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          {user.role === 'STUDENT' ? 'Student' : (user.role === 'FACULTY_COORDINATOR' ? 'Coordinator' : 'Faculty')}
                         </Text>
                       </View>
-                      {user.isFacultyCoordinator && (
+                      {user.role === 'FACULTY_COORDINATOR' && (
                         <View style={[styles.badge, styles.badgeCoordinator]}>
                           <Text style={[styles.badgeText, styles.badgeTextCoordinator]}>★ Coordinator</Text>
                         </View>
@@ -192,13 +232,13 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
                   </View>
 
                   <View style={styles.userActions}>
-                    {user.role === 'faculty' && (
+                    {(user.role === 'FACULTY' || user.role === 'FACULTY_COORDINATOR') && (
                       <TouchableOpacity
                         style={[styles.button, styles.buttonOverride]}
-                        onPress={() => toggleFacultyCoordinator(user.id, user.isFacultyCoordinator || false)}
+                        onPress={() => toggleFacultyCoordinator(user.id, user.role === 'FACULTY_COORDINATOR')}
                       >
                         <Text style={styles.buttonText}>
-                          {user.isFacultyCoordinator ? 'Remove Coordinator' : 'Make Coordinator'}
+                          {user.role === 'FACULTY_COORDINATOR' ? 'Remove Coordinator' : 'Make Coordinator'}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -282,13 +322,20 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation, route }) => {
         </Modal>
 
         {/* Bottom Tab */}
-        <BottomTab navigation={navigation} active="home" />
+        <View style={styles.bottomTab}>
+          <TouchableOpacity onPress={() => navigation.navigate('InstituteList')}>
+            <Text style={styles.tabText}>🏠 Home</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('AdminMore')}>
+            <Text style={styles.tabText}>⋯ More</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
 };
 
-export default AdminDashboardScreen;
+export default AdminHomeScreen;
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
@@ -310,9 +357,40 @@ const styles = StyleSheet.create({
 
   content: { flex: 1, padding: 16 },
 
+  listSearchContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#6B7280',
+  },
+  listSearchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 14,
+    color: '#1F2937',
+  },
+
   // Stats
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
-  statCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, flex: 1, minWidth: '28%', elevation: 2 },
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  statCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
   statValue: { fontSize: 28, fontWeight: 'bold' },
   statLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
 
@@ -378,4 +456,7 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#374151' },
   submitButton: { flex: 1, backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
   submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+
+  bottomTab: { flexDirection: 'row', justifyContent: 'space-around', padding: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  tabText: { fontSize: 14, color: '#4F46E5', fontWeight: '600' },
 });

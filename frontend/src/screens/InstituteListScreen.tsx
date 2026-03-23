@@ -1,20 +1,23 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
   Alert,
   StyleSheet,
   StatusBar,
-  Image,
 } from 'react-native';
+
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
+
+// API
+import { getInstitutes, deleteInstitute } from '../api/instituteApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'InstituteList'>;
 
@@ -26,52 +29,76 @@ interface Institute {
   id: string;
   name: string;
   location: string;
-  totalDepartments: number;
-  totalStudents: number;
-  totalFaculty: number;
+  totalDepartments?: number;
+  totalStudents?: number;
+  totalFaculty?: number;
 }
 
 const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
-  const [institutes, setInstitutes] = useState<Institute[]>([
-    { id: 'I001', name: 'College of Engineering', location: 'Main Campus', totalDepartments: 6, totalStudents: 1200, totalFaculty: 80 },
-    { id: 'I002', name: 'College of Science', location: 'North Campus', totalDepartments: 4, totalStudents: 800, totalFaculty: 50 },
-    { id: 'I003', name: 'College of Arts & Humanities', location: 'East Campus', totalDepartments: 5, totalStudents: 600, totalFaculty: 40 },
-  ]);
+  const { colors } = useContext(ThemeContext);
 
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newInstitute, setNewInstitute] = useState({ name: '', location: '' });
 
-  const filtered = institutes.filter(i =>
-    i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const fetchInstitutes = async () => {
+    try {
+      console.log("🚀 Fetching institutes...");
 
-  const handleAdd = () => {
-    if (!newInstitute.name || !newInstitute.location) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+      const res = await getInstitutes();
+
+      const data = res.data?.data || res.data || [];
+
+      if (!Array.isArray(data)) {
+        setInstitutes([]);
+        return;
+      }
+
+      const formatted = data.map((item: any, index: number) => ({
+        id: item.instituteId?.toString() || index.toString(),
+        name: item.instituteName || "Unnamed Institute",
+        location: item.city || item.address || "N/A",
+        totalDepartments: item.totalDepartments || 0,
+        totalStudents: item.totalStudents || 0,
+        totalFaculty: item.totalFaculty || 0,
+      }));
+
+      setInstitutes(formatted);
+
+    } catch (err: any) {
+      console.log("❌ FETCH ERROR:", err?.response || err);
+      Alert.alert("Error", "Failed to load institutes");
     }
-    const inst: Institute = {
-      id: `I${Date.now()}`,
-      name: newInstitute.name,
-      location: newInstitute.location,
-      totalDepartments: 0,
-      totalStudents: 0,
-      totalFaculty: 0,
-    };
-    setInstitutes([...institutes, inst]);
-    setNewInstitute({ name: '', location: '' });
-    setShowAddModal(false);
-    Alert.alert('Success', 'Institute added successfully!');
   };
 
+  // AUTO REFRESH
+  useFocusEffect(
+    useCallback(() => {
+      fetchInstitutes();
+    }, [])
+  );
+
+  // FILTER
+  const filtered = institutes.filter(i =>
+    (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (i.location || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // DELETE
   const handleDelete = (id: string, name: string) => {
     Alert.alert('Confirm Delete', `Delete "${name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
-        onPress: () => setInstitutes(institutes.filter(i => i.id !== id)),
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteInstitute(id);
+            fetchInstitutes();
+          } catch (err) {
+            console.log("❌ DELETE ERROR:", err);
+            Alert.alert("Error", "Delete failed");
+          }
+        },
       },
     ]);
   };
@@ -79,30 +106,33 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+
         <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Select an Institute</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Text style={styles.backArrow}>‹</Text>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Institute List</Text>
+            <Text style={styles.headerSubtitle}>Select an Institute</Text>
+          </View>
         </View>
 
         {/* Stats */}
         <View style={styles.statsGrid}>
-          {[
-            { label: 'Institutes', value: institutes.length, color: '#4F46E5' },
-            { label: 'Departments', value: institutes.reduce((s, i) => s + i.totalDepartments, 0), color: '#059669' },
-            { label: 'Students', value: institutes.reduce((s, i) => s + i.totalStudents, 0), color: '#D97706' },
-          ].map((stat, idx) => (
-            <View key={idx} style={styles.statCard}>
-              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: '#4F46E5' }]}>
+              {institutes.length}
+            </Text>
+            <Text style={styles.statLabel}>Institutes</Text>
+          </View>
         </View>
 
         {/* Search */}
         <View style={styles.searchWrapper}>
+          <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Search institutes..."
@@ -112,10 +142,19 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
           />
         </View>
 
-        
+        {/* Add Institute */}
+        <View style={styles.addWrapper}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddInstitute')}
+          >
+            <Text style={styles.addButtonText}>+ Add Institute</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* List */}
         <ScrollView style={styles.content}>
+
           {filtered.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No institutes found</Text>
@@ -125,32 +164,18 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
               <TouchableOpacity
                 key={inst.id}
                 style={styles.card}
-                onPress={() => navigation.navigate('DepartmentList', {
-                  instituteId: inst.id,
-                  instituteName: inst.name,
-                })}
-                activeOpacity={0.85}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate('DepartmentList', {
+                    instituteId: inst.id,
+                    instituteName: inst.name,
+                  })
+                }
               >
-                {/* Card Header */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.instituteIcon}>
-                    <Text style={styles.instituteIconText}>{inst.name.charAt(0)}</Text>
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.cardTitle}>{inst.name}</Text>
-                    <Text style={styles.cardText}> {inst.location}</Text>
-                  </View>
-                  <Text style={styles.chevron}>›</Text>
-                </View>
+                <Text style={styles.cardTitle}>{inst.name}</Text>
+                <Text style={styles.cardText}>{inst.location}</Text>
 
-                {/* Stats Row */}
-                <View style={styles.cardStatsRow}>
-                  <StatPill label="Dept" value={inst.totalDepartments} color="#4F46E5" />
-                  <StatPill label="Students" value={inst.totalStudents} color="#059669" />
-                  <StatPill label="Faculty" value={inst.totalFaculty} color="#D97706" />
-                </View>
-
-                {/* Delete */}
+                {/* Delete Button */}
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDelete(inst.id, inst.name)}
@@ -160,148 +185,90 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             ))
           )}
+
         </ScrollView>
 
-        {/* Add Modal */}
-        <Modal visible={showAddModal} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Institute</Text>
-                <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                  <Text style={styles.closeButton}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Institute Name"
-                placeholderTextColor="#9CA3AF"
-                value={newInstitute.name}
-                onChangeText={t => setNewInstitute({ ...newInstitute, name: t })}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Location"
-                placeholderTextColor="#9CA3AF"
-                value={newInstitute.location}
-                onChangeText={t => setNewInstitute({ ...newInstitute, location: t })}
-              />
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowAddModal(false)}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.submitButton} onPress={handleAdd}>
-                  <Text style={styles.submitButtonText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Bottom Tab */}
-        <BottomTab navigation={navigation} active="home" />
       </View>
     </SafeAreaView>
   );
 };
 
-/* ── Shared Bottom Tab ─────────────────────────────────── */
-export const BottomTab = ({ navigation, active }: { navigation: any; active: string }) => {
-  const { colors } = useContext(ThemeContext);
-  return (
-    <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => navigation.navigate('InstituteList')}
-      >
-        <Image
-          source={active === 'home' ? require('../assets/home-color.png') : require('../assets/home.png')}
-          style={styles.tabIcon}
-        />
-        <Text style={[styles.tabText, active === 'home' && { color: colors.primary, fontWeight: '700' }]}>Home</Text>
-      </TouchableOpacity>
-
-      
-
-      <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminMore')}>
-        <Image
-          source={active === 'more' ? require('../assets/more-color.png') : require('../assets/more.png')}
-          style={styles.tabIcon}
-        />
-        <Text style={[styles.tabText, active === 'more' ? { color: colors.primary, fontWeight: '700' } : { color: colors.subText }]}>More</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-/* ── Stat Pill ─────────────────────────────────────────── */
-const StatPill = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <View style={[styles.statPill, { backgroundColor: color + '18' }]}>
-    <Text style={[styles.statPillValue, { color }]}>{value}</Text>
-    <Text style={[styles.statPillLabel, { color }]}>{label}</Text>
-  </View>
-);
-
 export default InstituteListScreen;
 
+/* STYLES */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
   container: { flex: 1, backgroundColor: '#F3F4F6' },
 
-  header: { backgroundColor: '#ffffff', paddingTop: 15, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#000000' },
+  header: { 
+    backgroundColor: '#ffffff',
+    paddingTop: 15,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backBtn: { marginRight: 12 },
+  backArrow: { fontSize: 36, color: '#1F2937', lineHeight: 40 },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#000000' },
   headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
 
-  statsGrid: { flexDirection: 'row', gap: 12, padding: 16, paddingBottom: 0 },
-  statCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, flex: 1, elevation: 2 },
-  statValue: { fontSize: 24, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  statsGrid: { flexDirection: 'row', padding: 16 },
+  statCard: { backgroundColor: '#fff', padding: 16, borderRadius: 10 },
 
-  searchWrapper: { paddingHorizontal: 16, paddingTop: 16 },
-  searchInput: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, borderWidth: 1, borderColor: '#E5E7EB' },
+  statValue: { fontSize: 20, fontWeight: 'bold' },
+  statLabel: { fontSize: 12 },
 
-  addWrapper: { paddingHorizontal: 16, paddingTop: 12 },
-  addButton: { backgroundColor: '#4F46E5', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  addButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  searchWrapper: { 
+    paddingHorizontal: 16, 
+    marginTop: 16, 
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginHorizontal: 16,
+    paddingVertical: 4,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#6B7280',
+    marginLeft: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 14,
+    color: '#1F2937',
+  },
 
-  content: { flex: 1, padding: 16 },
+  addWrapper: { padding: 16 },
+  addButton: {
+    backgroundColor: '#4F46E5',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  addButtonText: { color: '#fff' },
 
-  emptyState: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 40, alignItems: 'center', marginTop: 8 },
-  emptyText: { fontSize: 16, color: '#6B7280' },
+  content: { padding: 16 },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#121416' },
-  cardText: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  chevron: { fontSize: 28, color: '#9CA3AF' },
+  emptyState: { alignItems: 'center' },
+  emptyText: { color: '#6B7280' },
 
-  instituteIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center' },
-  instituteIconText: { fontSize: 22, fontWeight: 'bold', color: '#101012' },
+  card: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 10
+  },
 
-  cardStatsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  statPill: { flex: 1, borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
-  statPillValue: { fontSize: 16, fontWeight: 'bold' },
-  statPillLabel: { fontSize: 11, marginTop: 2 },
+  cardTitle: { fontWeight: 'bold' },
+  cardText: { color: '#6B7280' },
 
-  deleteButton: { borderWidth: 1, borderColor: '#DC2626', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  deleteButtonText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
-
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', color: '#1F2937' },
-  closeButton: { fontSize: 24, color: '#6B7280' },
-  input: { backgroundColor: '#F9FAFB', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 14 },
-  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  cancelButton: { flex: 1, paddingVertical: 14, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center' },
-  cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  submitButton: { flex: 1, backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
-  submitButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-
-  bottomTab: { height: 60, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-  tabItem: { alignItems: 'center', justifyContent: 'center' },
-  tabIcon: { width: 22, height: 22, marginBottom: 4, resizeMode: 'contain' },
-  tabText: { fontSize: 12, color: '#6B7280' },
+  deleteButton: { marginTop: 10 },
+  deleteButtonText: { color: 'red' },
 });

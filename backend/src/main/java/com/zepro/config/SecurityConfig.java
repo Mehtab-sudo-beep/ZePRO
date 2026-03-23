@@ -1,7 +1,6 @@
 package com.zepro.config;
 
 import com.zepro.security.JwtFilter;
-import com.zepro.security.CustomUserDetailsService;
 
 import org.springframework.context.annotation.*;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,12 +14,12 @@ public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter){
+    public SecurityConfig(JwtFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
@@ -28,33 +27,37 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())
 
-            .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> auth
 
-                // public APIs
-                .requestMatchers("/auth/**").permitAll()
+                        // ✅ PUBLIC APIs
+                        .requestMatchers("/auth/**").permitAll()
 
-                // admin APIs
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // 🔥 ALLOW INSTITUTE + DEPARTMENT ENDPOINTS (no auth needed)
+                        .requestMatchers("/admin/institute", "/admin/institutes").permitAll()
+                        .requestMatchers("/admin/department", "/admin/department/**", "/admin/departments/**").permitAll()
 
-                // faculty APIs
-                .requestMatchers("/faculty/**").hasAnyRole("FACULTY","FACULTY_COORDINATOR")
+                        // admin APIs (protected)
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                // coordinator APIs
-                .requestMatchers("/coordinator/**").hasRole("FACULTY_COORDINATOR")
+                        // faculty APIs
+                        .requestMatchers("/faculty/**").hasAnyRole("FACULTY", "FACULTY_COORDINATOR")
 
-                // student APIs
-                .requestMatchers("/student/**").hasRole("STUDENT")
+                        // coordinator APIs
+                        .requestMatchers("/coordinator/**").hasRole("FACULTY_COORDINATOR")
 
-                // project viewing allowed for all logged users
-                .requestMatchers("/projects/**").hasAnyRole("STUDENT","FACULTY","ADMIN")
+                        // student APIs
+                        .requestMatchers("/student/**").hasRole("STUDENT")
 
-                // everything else requires login
-                .anyRequest().authenticated()
-            )
+                        // project viewing
+                        .requestMatchers("/projects/**").hasAnyRole("STUDENT", "FACULTY", "ADMIN")
 
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                        // everything else requires login
+                        .anyRequest().authenticated())
+
+                // ✅ JWT filter
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

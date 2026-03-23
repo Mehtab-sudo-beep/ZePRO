@@ -30,44 +30,110 @@ const AddInstituteScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ✅ VALIDATION
   const validate = () => {
     const newErrors: Record<string, string> = {};
+
     if (!form.name.trim()) newErrors.name = 'Institute name is required';
     if (!form.code.trim()) newErrors.code = 'Institute code is required';
     if (!form.address.trim()) newErrors.address = 'Address is required';
-    if (!form.city.trim()) newErrors.city = 'City is required';
+    if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!form.email.trim()) newErrors.email = 'Email is required';
+    if (!form.website.trim()) newErrors.website = 'Website is required';
+
     if (form.email && !/\S+@\S+\.\S+/.test(form.email))
       newErrors.email = 'Enter a valid email address';
+
+    if (form.phone && !/^(\+91)?[6-9]\d{9}$/.test(form.phone))
+      newErrors.phone = 'Enter a valid phone number';
+
     return newErrors;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    console.log('====================');
+    console.log('[AddInstitute] 🚀 Submit started');
+
     const validationErrors = validate();
+
     if (Object.keys(validationErrors).length > 0) {
+      console.log('[AddInstitute] ❌ Validation failed');
+      console.log(validationErrors);
       setErrors(validationErrors);
       return;
     }
 
+    console.log('[AddInstitute] ✅ Validation passed');
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const payload = {
+        instituteName: form.name,
+        instituteCode: form.code,
+        address: form.address,
+        city: form.city,
+        state: form.state,
+        phoneNumber: form.phone,
+        email: form.email,
+        website: form.website,
+      };
+
+      console.log('[AddInstitute] 📤 Payload:');
+      console.log(JSON.stringify(payload, null, 2));
+
+      // 🔥 IMPORTANT: Replace with your system IP
+      const API_URL = 'http://localhost:8080/admin/institute';
+
+      console.log('[AddInstitute] 🌐 Calling API:', API_URL);
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('[AddInstitute] 📥 Response received');
+      console.log('[AddInstitute] Status:', response.status);
+
+      const responseText = await response.text();
+      console.log('[AddInstitute] Raw response:', responseText);
+
+      if (!response.ok) {
+        console.log('[AddInstitute] ❌ Request failed');
+        throw new Error(`Status ${response.status}`);
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('[AddInstitute] ✅ Parsed response:', data);
+      } catch (e) {
+        console.log('[AddInstitute] ⚠️ Not JSON response');
+      }
+
       Alert.alert(
-        'Institute Created',
-        `"${form.name}" has been successfully added.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
+        'Success',
+        `${data?.instituteName || form.name} added successfully`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 1200);
+
+    } catch (error: any) {
+      console.log('[AddInstitute] 💥 ERROR:', error.message);
+      console.log(error);
+
+      Alert.alert('Error', 'Failed to create institute');
+    } finally {
+      setLoading(false);
+      console.log('[AddInstitute] 🏁 Finished');
+      console.log('====================');
+    }
   };
 
   const handleChange = (field: string, value: string) => {
+    console.log(`[AddInstitute] ✏️ ${field}:`, value);
+
     setForm(prev => ({ ...prev, [field]: value }));
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -75,38 +141,33 @@ const AddInstituteScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Image
-            source={require('../assets/angle.png')}
-            style={styles.backIcon}
-          />
+          <Image source={require('../assets/angle.png')} style={styles.backIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Institute</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
 
           <Field
             label="Institute Name *"
-            placeholder="e.g. National Institute of Technology"
+            placeholder="e.g. NIT Calicut"
             value={form.name}
-            onChangeText={v => handleChange('name', v)}
+            onChangeText={(t: string) => handleChange('name', t)}
             error={errors.name}
           />
 
           <Field
             label="Institute Code *"
-            placeholder="e.g. NIT001"
+            placeholder="e.g. NITC"
             value={form.code}
-            onChangeText={v => handleChange('code', v.toUpperCase())}
+            onChangeText={(t: string) => handleChange('code', t.toUpperCase())}
             error={errors.code}
-            autoCapitalize="characters"
           />
         </View>
 
@@ -117,7 +178,7 @@ const AddInstituteScreen: React.FC = () => {
             label="Address *"
             placeholder="Street address"
             value={form.address}
-            onChangeText={v => handleChange('address', v)}
+            onChangeText={(t: string) => handleChange('address', t)}
             error={errors.address}
             multiline
           />
@@ -125,19 +186,19 @@ const AddInstituteScreen: React.FC = () => {
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <Field
-                label="City *"
+                label="City"
                 placeholder="City"
                 value={form.city}
-                onChangeText={v => handleChange('city', v)}
-                error={errors.city}
+                onChangeText={(t: string) => handleChange('city', t)}
               />
             </View>
+
             <View style={{ flex: 1, marginLeft: 8 }}>
               <Field
                 label="State"
                 placeholder="State"
                 value={form.state}
-                onChangeText={v => handleChange('state', v)}
+                onChangeText={(t: string) => handleChange('state', t)}
               />
             </View>
           </View>
@@ -147,30 +208,27 @@ const AddInstituteScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Contact Details</Text>
 
           <Field
-            label="Phone Number"
+            label="Phone *"
             placeholder="+91 XXXXX XXXXX"
             value={form.phone}
-            onChangeText={v => handleChange('phone', v)}
-            keyboardType="phone-pad"
+            onChangeText={(t: string) => handleChange('phone', t)}
+            error={errors.phone}
           />
 
           <Field
-            label="Email Address"
-            placeholder="admin@institute.edu"
+            label="Email *"
+            placeholder="admin@inst.edu"
             value={form.email}
-            onChangeText={v => handleChange('email', v)}
+            onChangeText={(t: string) => handleChange('email', t)}
             error={errors.email}
-            keyboardType="email-address"
-            autoCapitalize="none"
           />
 
           <Field
-            label="Website"
-            placeholder="https://www.institute.edu"
+            label="Website *"
+            placeholder="https://example.com"
             value={form.website}
-            onChangeText={v => handleChange('website', v)}
-            keyboardType="url"
-            autoCapitalize="none"
+            onChangeText={(t: string) => handleChange('website', t)}
+            error={errors.website}
           />
         </View>
 
@@ -178,24 +236,18 @@ const AddInstituteScreen: React.FC = () => {
           style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={loading}
-          activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#FFF" />
           ) : (
             <Text style={styles.submitText}>Create Institute</Text>
           )}
         </TouchableOpacity>
 
-        <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-/* =======================
-   FIELD COMPONENT
-   ======================= */
 
 const Field = ({
   label,
@@ -204,150 +256,65 @@ const Field = ({
   onChangeText,
   error,
   multiline = false,
-  keyboardType = 'default',
-  autoCapitalize = 'words',
-}: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  error?: string;
-  multiline?: boolean;
-  keyboardType?: any;
-  autoCapitalize?: any;
-}) => (
-  <View style={fieldStyles.wrapper}>
-    <Text style={fieldStyles.label}>{label}</Text>
+}: any) => (
+  <View style={{ marginBottom: 12 }}>
+    <Text style={{ fontWeight: '600' }}>{label}</Text>
+
     <TextInput
-      style={[
-        fieldStyles.input,
-        multiline && fieldStyles.multiline,
-        error ? fieldStyles.inputError : null,
-      ]}
+      style={{
+        borderWidth: 1,
+        borderColor: error ? 'red' : '#ddd',
+        padding: 10,
+        borderRadius: 8,
+        marginTop: 5,
+      }}
       placeholder={placeholder}
-      placeholderTextColor="#9CA3AF"
       value={value}
       onChangeText={onChangeText}
       multiline={multiline}
-      numberOfLines={multiline ? 3 : 1}
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
     />
-    {error ? <Text style={fieldStyles.errorText}>{error}</Text> : null}
+
+    {error && <Text style={{ color: 'red' }}>{error}</Text>}
   </View>
 );
 
-/* =======================
-   STYLES
-   ======================= */
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
+  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
+
   header: {
-    backgroundColor: '#ffffff',
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
-  backArrow: {
-    fontSize: 22,
-    color: '#FFFFFF',
-  },
-  headerTitle: {
-    
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#090909',
-  },
-  scrollContent: {
     padding: 16,
   },
+
+  backBtn: { width: 40 },
+  backIcon: { width: 22, height: 22 },
+
+  headerTitle: { fontSize: 18, fontWeight: 'bold' },
+
+  scrollContent: { padding: 16 },
+
   section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: '#fff',
     padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: 'row',
-  },
+
+  sectionTitle: { fontWeight: 'bold', marginBottom: 10 },
+
+  row: { flexDirection: 'row' },
+
   submitBtn: {
     backgroundColor: '#2563EB',
-    borderRadius: 12,
-    paddingVertical: 16,
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#2563EB',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
   },
-  submitBtnDisabled: {
-    backgroundColor: '#93C5FD',
-    shadowOpacity: 0,
-  },
-  submitText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
 
-const fieldStyles = StyleSheet.create({
-  wrapper: {
-    marginBottom: 14,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  multiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  inputError: {
-    borderColor: '#DC2626',
-    backgroundColor: '#FEF2F2',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#DC2626',
-    marginTop: 4,
-  },
+  submitBtnDisabled: { backgroundColor: '#93C5FD' },
+
+  submitText: { color: '#fff', fontWeight: 'bold' },
 });
 
 export default AddInstituteScreen;

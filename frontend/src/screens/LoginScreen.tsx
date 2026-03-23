@@ -58,13 +58,16 @@ const { token, role, studentId, isInTeam, isTeamLead } = res.data;
       navigation.replace('StudentHome');
     } 
     else if (role === 'FACULTY') {
+      setUser({ token, role, email });
       navigation.navigate('FacultyHome');
     }
     else if (role === 'FACULTY_COORDINATOR') {
+      setUser({ token, role, email });
       navigation.navigate('FacultyCoordinatorDashboard');
     }
     else if (role === 'ADMIN') {
-      navigation.replace('AddInstitute');
+      setUser({ token, role: 'ADMIN', name: 'Administrator', email });
+      navigation.replace('AdminHome');
     }
 
   } catch (error: any) {
