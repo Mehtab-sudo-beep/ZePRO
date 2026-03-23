@@ -53,11 +53,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
       Alert.alert('Success', `Registered as ${role}`);
       navigation.navigate('Login');
-    } catch (error) {
-      Alert.alert(
-        'Registration Failed',
-        'Unable to create account. Please try again.',
-      );
+    } catch (error: any) {
+      const message =
+        error?.response?.data ||
+        error?.message ||
+        'Unable to create account. Please try again.';
+      Alert.alert('Registration Failed', message);
     }
   };
   return (

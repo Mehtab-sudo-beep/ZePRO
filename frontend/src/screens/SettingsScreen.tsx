@@ -15,7 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const BASE_URL = 'http://localhost:8080';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -43,33 +45,69 @@ const SettingsScreen: React.FC = () => {
 
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [emailNotif, setEmailNotif] = useState(true);
-
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  const saveName = () => {
+  // ── Change Name ──────────────────────────────────────────────────────────
+  const saveName = async () => {
     if (!user) return;
     if (!newName.trim()) {
       Alert.alert('Error', 'Name cannot be empty.');
       return;
     }
-    setUser({ ...user, name: newName.trim() });
-    setEditNameVisible(false);
-    Alert.alert('Success', 'Name updated successfully.');
+    try {
+      const res = await fetch(`${BASE_URL}/auth/update-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token ?? ''}`,
+        },
+        body: JSON.stringify({ name: newName.trim() }),
+      });
+      const text = await res.text();
+      if (!res.ok) { Alert.alert('Error', text || 'Failed to update name.'); return; }
+      const updatedUser = { ...user, name: newName.trim() };
+      setUser(updatedUser);
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setEditNameVisible(false);
+      Alert.alert('Success', 'Name updated successfully.');
+    } catch (e) {
+      console.log('saveName error:', e);
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
   };
 
-  const saveEmail = () => {
+  // ── Change Email ─────────────────────────────────────────────────────────
+  const saveEmail = async () => {
     if (!user) return;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!emailRegex.test(newEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address.');
+      Alert.alert('Error', 'Please enter a valid Gmail address (@gmail.com).');
       return;
     }
-    setUser({ ...user, email: newEmail.trim() });
-    setEditEmailVisible(false);
-    Alert.alert('Success', 'Email updated successfully.');
+    try {
+      const res = await fetch(`${BASE_URL}/auth/update-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token ?? ''}`,
+        },
+        body: JSON.stringify({ email: newEmail.trim() }),
+      });
+      const text = await res.text();
+      if (!res.ok) { Alert.alert('Error', text || 'Failed to update email.'); return; }
+      const updatedUser = { ...user, email: newEmail.trim() };
+      setUser(updatedUser);
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setEditEmailVisible(false);
+      Alert.alert('Success', 'Email updated successfully.');
+    } catch (e) {
+      console.log('saveEmail error:', e);
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
   };
 
-  const savePassword = () => {
+  // ── Change Password ──────────────────────────────────────────────────────
+  const savePassword = async () => {
     if (!currentPassword) {
       Alert.alert('Error', 'Please enter your current password.');
       return;
@@ -86,13 +124,32 @@ const SettingsScreen: React.FC = () => {
       Alert.alert('Error', 'New password must be different from current password.');
       return;
     }
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setEditPasswordVisible(false);
-    Alert.alert('Success', 'Password updated successfully.');
+    try {
+      const res = await fetch(`${BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token ?? ''}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        Alert.alert('Error', text || 'Failed to change password.');
+        return;
+      }
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setEditPasswordVisible(false);
+      Alert.alert('Success', 'Password updated successfully.');
+    } catch (e) {
+      console.log('savePassword error:', e);
+      Alert.alert('Error', 'Network error. Please try again.');
+    }
   };
 
+  // ── Delete Account ───────────────────────────────────────────────────────
   const handleDeleteAccount = () => {
     if (deleteConfirmText !== 'DELETE') {
       Alert.alert('Error', 'Please type DELETE to confirm.');
@@ -116,9 +173,9 @@ const SettingsScreen: React.FC = () => {
         <View style={[styles.header, isDark && styles.darkCard]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Image
-            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
-            style={styles.backIcon}
-          />
+              source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, isDark && styles.darkText]}>Settings</Text>
         </View>
@@ -172,23 +229,17 @@ const SettingsScreen: React.FC = () => {
           {/* ── SUPPORT ── */}
           <Text style={[styles.sectionTitle, isDark && styles.darkSubText]}>Support</Text>
 
-          <TouchableOpacity style={card} onPress={() => Alert.alert('User Manual for Faculty', 'Opens after complteion of project')}>
+          <TouchableOpacity style={card} onPress={() => Alert.alert('User Manual for Faculty', 'Opens after completion of project')}>
             <Text style={txt}>User Manual</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={card}
-            onPress={() => Alert.alert('Privacy Policy', 'Opens privacy policy page.')}
-          >
+          <TouchableOpacity style={card} onPress={() => Alert.alert('Privacy Policy', 'Opens privacy policy page.')}>
             <Text style={txt}>Privacy Policy</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={card}
-            onPress={() => Alert.alert('Version', 'App Version: 1.0.0')}
-          >
+          <TouchableOpacity style={card} onPress={() => Alert.alert('Version', 'App Version: 1.0.0')}>
             <Text style={txt}>About / Version</Text>
             <Text style={[styles.arrow, { fontSize: 13 }]}>1.0.0</Text>
           </TouchableOpacity>
@@ -243,7 +294,7 @@ const SettingsScreen: React.FC = () => {
                 style={inputStyle}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                placeholder="Enter new email"
+                placeholder="Enter new Gmail address"
                 placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
               />
               <View style={styles.modalBtns}>
@@ -420,7 +471,6 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
   container: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
-
   header: {
     height: 60,
     backgroundColor: '#FFFFFF',
@@ -440,7 +490,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 4,
   },
-
   row: {
     backgroundColor: '#FFFFFF',
     padding: 16,
@@ -451,24 +500,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 1,
   },
-
   rowText: { fontSize: 15 },
   arrow: { fontSize: 18, color: '#9CA3AF' },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     padding: 20,
   },
-  modalBox: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 14,
-  },
+  modalBox: { backgroundColor: '#FFFFFF', padding: 24, borderRadius: 14 },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   inputLabel: { fontSize: 13, color: '#6B7280', marginBottom: 6, marginTop: 4 },
-
   input: {
     backgroundColor: '#F3F4F6',
     padding: 12,
@@ -477,19 +519,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
   },
-
-  passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   eyeBtn: { paddingHorizontal: 10 },
   eyeText: { fontSize: 13, color: '#2563EB', fontWeight: '600' },
-
   strengthText: { fontSize: 12, marginBottom: 12, fontWeight: '600' },
-
   modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 4 },
-
   cancelBtn: {
     paddingVertical: 10,
     paddingHorizontal: 18,
@@ -498,7 +532,6 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   cancelText: { color: '#6B7280', fontWeight: '600' },
-
   saveBtn: {
     backgroundColor: '#2563EB',
     paddingVertical: 10,
@@ -507,7 +540,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveText: { color: '#FFFFFF', fontWeight: '600' },
-
   darkBg: { backgroundColor: '#111827' },
   darkCard: { backgroundColor: '#1F2937' },
   darkText: { color: '#FFFFFF' },

@@ -12,12 +12,19 @@ public class Team {
 
     private String teamName;
 
+    private String status = "pending";
+
     @OneToOne
     private Student teamLead;
+
+    @ManyToOne(fetch = FetchType.EAGER) // ✅ FIXED
+    @JoinColumn(name = "faculty_id")
+    private Faculty faculty;
 
     @OneToMany(mappedBy = "team")
     private List<Student> members;
 
+    // ── Getters ──────────────────────────────────────────────────────────────
     public Long getTeamId() {
         return teamId;
     }
@@ -26,14 +33,23 @@ public class Team {
         return teamName;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
     public Student getTeamLead() {
         return teamLead;
+    }
+
+    public Faculty getFaculty() {
+        return faculty;
     }
 
     public List<Student> getMembers() {
         return members;
     }
 
+    // ── Setters ──────────────────────────────────────────────────────────────
     public void setTeamId(Long teamId) {
         this.teamId = teamId;
     }
@@ -42,8 +58,16 @@ public class Team {
         this.teamName = teamName;
     }
 
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public void setTeamLead(Student teamLead) {
         this.teamLead = teamLead;
+    }
+
+    public void setFaculty(Faculty faculty) {
+        this.faculty = faculty;
     }
 
     public void setMembers(List<Student> members) {

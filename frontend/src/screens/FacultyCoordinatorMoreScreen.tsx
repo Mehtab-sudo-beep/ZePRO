@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -7,18 +7,61 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 
 const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser, loading } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
 
+  // ── Refresh user from AsyncStorage on every screen focus ─────────────────
+  useFocusEffect(
+    useCallback(() => {
+      const refreshUser = async () => {
+        try {
+          const stored = await AsyncStorage.getItem('user');
+          if (stored) {
+            setUser(JSON.parse(stored));
+          }
+        } catch (e) {
+          console.log('refresh user error:', e);
+        }
+      };
+      refreshUser();
+    }, [])
+  );
+
+  // ── Wait for AsyncStorage to restore user before rendering ────────────────
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Not logged in ─────────────────────────────────────────────────────────
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.text, fontSize: 16 }}>Not signed in</Text>
+        <TouchableOpacity
+          style={{ marginTop: 20, padding: 12, backgroundColor: colors.primary, borderRadius: 8 }}
+          onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go to Login</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
     Alert.alert(
       'Confirm Logout',
@@ -30,15 +73,13 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             setUser(null);
-            navigation.replace('Login');
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
       ],
       { cancelable: true },
     );
   };
-
-  if (!user) return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -53,15 +94,22 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
             source={require('../assets/avatar.png')}
-            style={[styles.profileImage, { borderColor: colors.card, backgroundColor: colors.card }]}
+            style={[styles.profileImage, { borderColor: colors.border, backgroundColor: colors.card }]}
           />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.text }]}>{user.name}</Text>
-            <Text style={[styles.profileEmail, { color: colors.subText }]}>{user.email}</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>
+              {user.name ?? 'Faculty Coordinator'}
+            </Text>
+            <Text style={[styles.profileEmail, { color: colors.subText }]}>
+              {user.email ?? ''}
+            </Text>
+            <Text style={[styles.profileRole, { color: colors.primary }]}>
+              Faculty Coordinator
+            </Text>
           </View>
         </View>
 
-        {/* Menu */}
+        {/* Menu Items */}
         <ScrollView
           style={[styles.list, { backgroundColor: colors.card }]}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -96,7 +144,6 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
 
         {/* Bottom Tab */}
         <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
-
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
@@ -105,14 +152,12 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
-          
-
           <View style={styles.tabItem}>
             <Image source={require('../assets/more-color.png')} style={styles.tabIcon} />
             <Text style={[styles.tabActive, { color: colors.primary }]}>More</Text>
           </View>
-
         </View>
+
       </View>
     </SafeAreaView>
   );
@@ -120,7 +165,7 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
 
 export default FacultyCoordinatorMoreScreen;
 
-/* ================= MENU ITEM ================= */
+/* ─── MenuItem ─────────────────────────────────────────────────────────────── */
 
 const MenuItem = ({
   title,
@@ -144,39 +189,24 @@ const MenuItem = ({
   </TouchableOpacity>
 );
 
-/* ================= STYLES ================= */
+/* ─── Styles ───────────────────────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
-  header: {
-    height: 60,
-    paddingHorizontal: 18,
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-
+  header: { height: 60, paddingHorizontal: 18, justifyContent: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '600' },
   profileHeader: {
     paddingVertical: 24,
     paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  profileImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-  },
+  profileImage: { width: 64, height: 64, borderRadius: 32, borderWidth: 2 },
   profileInfo: { marginLeft: 16 },
-  profileName: { fontSize: 16, fontWeight: '600' },
-  profileEmail: { fontSize: 13, marginTop: 4 },
-
+  profileName:  { fontSize: 16, fontWeight: '600' },
+  profileEmail: { fontSize: 13, marginTop: 2 },
+  profileRole:  { fontSize: 12, marginTop: 4, fontWeight: '500' },
   list: { flex: 1, marginTop: 10 },
-
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -187,7 +217,6 @@ const styles = StyleSheet.create({
   },
   itemText: { fontSize: 15 },
   arrow: { fontSize: 22 },
-
   bottomTab: {
     height: 60,
     borderTopWidth: 1,
@@ -195,8 +224,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
   },
-  tabItem: { alignItems: 'center', justifyContent: 'center' },
-  tabIcon: { width: 22, height: 22, marginBottom: 4, resizeMode: 'contain' },
-  tab: { fontSize: 12 },
+  tabItem:   { alignItems: 'center', justifyContent: 'center' },
+  tabIcon:   { width: 22, height: 22, marginBottom: 4, resizeMode: 'contain' },
+  tab:       { fontSize: 12 },
   tabActive: { fontSize: 12, fontWeight: '700' },
 });

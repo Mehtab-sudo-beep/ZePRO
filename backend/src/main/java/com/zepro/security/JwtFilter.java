@@ -18,46 +18,44 @@ public class JwtFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     public JwtFilter(JwtUtil jwtUtil,
-                     CustomUserDetailsService userDetailsService){
+            CustomUserDetailsService userDetailsService) {
 
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
     }
 
     @Override
-protected void doFilterInternal(HttpServletRequest request,
-                                HttpServletResponse response,
-                                FilterChain filterChain)
-        throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
+            throws ServletException, IOException {
 
-    String path = request.getRequestURI();
+        String path = request.getRequestURI();
 
-    // Skip authentication endpoints
-    if (path.startsWith("/auth")) {
-        filterChain.doFilter(request, response);
-        return;
-    }
-
-    String header = request.getHeader("Authorization");
-
-    if (header != null && header.startsWith("Bearer ")) {
-
-        String token = header.substring(7);
-        String email = jwtUtil.extractEmail(token);
-
-        UserDetails userDetails =
-                userDetailsService.loadUserByUsername(email);
-
-        if (jwtUtil.validateToken(token, email)) {
-
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+        // Skip authentication endpoints
+        if (path.startsWith("/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
         }
-    }
 
-    filterChain.doFilter(request, response);
-}
+        String header = request.getHeader("Authorization");
+
+        if (header != null && header.startsWith("Bearer ")) {
+
+            String token = header.substring(7);
+            String email = jwtUtil.extractEmail(token);
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+            if (jwtUtil.validateToken(token, email)) {
+
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
 }
