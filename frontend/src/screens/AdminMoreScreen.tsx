@@ -124,7 +124,7 @@ const AdminMoreScreen: React.FC = () => {
         >
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate('InstituteList')}
+            onPress={() => navigation.navigate('AdminHome')}
           >
             <Image
               source={require('../assets/home.png')}

@@ -122,6 +122,16 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </View>
 
+        {/* Stats */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: '#4F46E5' }]}>
+              {departments.length}
+            </Text>
+            <Text style={styles.statLabel}>Total Departments</Text>
+          </View>
+        </View>
+
         {/* SEARCH */}
         <View style={styles.searchWrapper}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -195,21 +205,6 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
 
                     <View style={styles.actionRow}>
                       <TouchableOpacity
-                        style={styles.manageButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          navigation.navigate('AdminHome', {
-                            departmentId: dept.id,
-                            departmentName: dept.name,
-                            instituteId,
-                            instituteName,
-                          });
-                        }}
-                      >
-                        <Text style={styles.manageButtonText}>Manage Users</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={(e) => {
                           e.stopPropagation();
@@ -250,6 +245,12 @@ const styles = StyleSheet.create({
   backArrow: { fontSize: 36, color: '#1F2937', lineHeight: 40 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#000000' },
   headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+
+  statsGrid: { paddingHorizontal: 16, marginTop: 16 },
+  statCard: { backgroundColor: '#fff', padding: 20, borderRadius: 10, alignItems: 'center', width: '100%', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+
+  statValue: { fontSize: 28, fontWeight: 'bold' },
+  statLabel: { fontSize: 14, color: '#6B7280', marginTop: 4 },
 
   searchWrapper: { 
     paddingHorizontal: 16, 

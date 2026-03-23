@@ -29,6 +29,13 @@ interface Institute {
   id: string;
   name: string;
   location: string;
+  code: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  website: string;
   totalDepartments?: number;
   totalStudents?: number;
   totalFaculty?: number;
@@ -39,6 +46,7 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
 
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchInstitutes = async () => {
     try {
@@ -57,6 +65,13 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
         id: item.instituteId?.toString() || index.toString(),
         name: item.instituteName || "Unnamed Institute",
         location: item.city || item.address || "N/A",
+        code: item.instituteCode || "N/A",
+        email: item.email || "N/A",
+        phone: item.phoneNumber || "N/A",
+        address: item.address || "N/A",
+        city: item.city || "N/A",
+        state: item.state || "N/A",
+        website: item.website || "N/A",
         totalDepartments: item.totalDepartments || 0,
         totalStudents: item.totalStudents || 0,
         totalFaculty: item.totalFaculty || 0,
@@ -126,7 +141,7 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.statValue, { color: '#4F46E5' }]}>
               {institutes.length}
             </Text>
-            <Text style={styles.statLabel}>Institutes</Text>
+            <Text style={styles.statLabel}>Total Institutes</Text>
           </View>
         </View>
 
@@ -161,28 +176,71 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           ) : (
             filtered.map(inst => (
-              <TouchableOpacity
-                key={inst.id}
-                style={styles.card}
-                activeOpacity={0.8}
-                onPress={() =>
-                  navigation.navigate('DepartmentList', {
-                    instituteId: inst.id,
-                    instituteName: inst.name,
-                  })
-                }
-              >
+              <View key={inst.id} style={styles.card}>
                 <Text style={styles.cardTitle}>{inst.name}</Text>
-                <Text style={styles.cardText}>{inst.location}</Text>
+                
+                <View style={styles.detailsContainer}>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableLabel}>Location</Text>
+                    <Text style={styles.tableValue}>{inst.location}</Text>
+                  </View>
+                </View>
 
-                {/* Delete Button */}
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDelete(inst.id, inst.name)}
-                >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.detailsButton}
+                    onPress={() => setExpandedId(expandedId === inst.id ? null : inst.id)}
+                  >
+                    <Text style={styles.detailsButtonText}>
+                      Institute Details
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.departmentListButton}
+                    onPress={() =>
+                      navigation.navigate('DepartmentList', {
+                        instituteId: inst.id,
+                        instituteName: inst.name,
+                      })
+                    }
+                  >
+                    <Text style={styles.departmentListButtonText}>Department List</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDelete(inst.id, inst.name)}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {expandedId === inst.id && (
+                  <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 }}>
+                    <View style={styles.tableRow}>
+                      <Text style={styles.tableLabel}>Code</Text>
+                      <Text style={styles.tableValue}>{inst.code}</Text>
+                    </View>
+                    <View style={styles.tableRow}>
+                      <Text style={styles.tableLabel}>Email</Text>
+                      <Text style={styles.tableValue}>{inst.email}</Text>
+                    </View>
+                    <View style={styles.tableRow}>
+                      <Text style={styles.tableLabel}>Phone</Text>
+                      <Text style={styles.tableValue}>{inst.phone}</Text>
+                    </View>
+                    <View style={styles.tableRow}>
+                      <Text style={styles.tableLabel}>Address</Text>
+                      <Text style={styles.tableValue}>{inst.address}, {inst.city}, {inst.state}</Text>
+                    </View>
+                    <View style={styles.tableRow}>
+                      <Text style={styles.tableLabel}>Website</Text>
+                      <Text style={styles.tableValue}>{inst.website}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
             ))
           )}
 
@@ -213,11 +271,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#000000' },
   headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
 
-  statsGrid: { flexDirection: 'row', padding: 16 },
-  statCard: { backgroundColor: '#fff', padding: 16, borderRadius: 10 },
+  statsGrid: { paddingHorizontal: 16, marginTop: 16 },
+  statCard: { backgroundColor: '#fff', padding: 20, borderRadius: 10, alignItems: 'center', width: '100%', elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
 
-  statValue: { fontSize: 20, fontWeight: 'bold' },
-  statLabel: { fontSize: 12 },
+  statValue: { fontSize: 28, fontWeight: 'bold' },
+  statLabel: { fontSize: 14, color: '#6B7280', marginTop: 4 },
 
   searchWrapper: { 
     paddingHorizontal: 16, 
@@ -266,9 +324,18 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
 
-  cardTitle: { fontWeight: 'bold' },
-  cardText: { color: '#6B7280' },
+  cardTitle: { fontWeight: 'bold', fontSize: 18, marginBottom: 8 },
+  cardText: { color: '#6B7280', fontSize: 14, marginTop: 4 },
+  detailsContainer: { marginTop: 4, backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8 },
+  tableRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  tableLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  tableValue: { fontSize: 13, color: '#1F2937', fontWeight: '600', flex: 1, textAlign: 'right' },
 
-  deleteButton: { marginTop: 10 },
-  deleteButtonText: { color: 'red' },
+  actionRow: { flexDirection: 'row', gap: 6, marginTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  detailsButton: { flex: 1, backgroundColor: '#E5E7EB', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  detailsButtonText: { color: '#1F2937', fontWeight: '600', fontSize: 12 },
+  departmentListButton: { flex: 1, backgroundColor: '#4F46E5', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  departmentListButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 12 },
+  deleteButton: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#DC2626' },
+  deleteButtonText: { color: '#DC2626', fontWeight: '600', fontSize: 12 },
 });
