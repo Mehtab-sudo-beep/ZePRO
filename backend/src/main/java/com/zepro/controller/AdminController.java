@@ -62,4 +62,9 @@ public class AdminController {
     public List<UserResponse> getAllUsers() {
         return adminService.getAllUsers();
     }
+
+    @PatchMapping("/users/{id}/role")
+    public UserResponse updateUserRole(@PathVariable Long id, @RequestParam String role) {
+        return adminService.updateUserRole(id, role);
+    }
 }

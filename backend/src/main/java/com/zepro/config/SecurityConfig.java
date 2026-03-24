@@ -35,7 +35,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
 
                         // 🔥 ALLOW INSTITUTE + DEPARTMENT ENDPOINTS (no auth needed)
-                        .requestMatchers("/admin/institute", "/admin/institutes").permitAll()
+                        .requestMatchers("/admin/institute", "/admin/institutes", "/admin/institute/**").permitAll()
                         .requestMatchers("/admin/department", "/admin/department/**", "/admin/departments/**").permitAll()
 
                         // admin APIs (protected)

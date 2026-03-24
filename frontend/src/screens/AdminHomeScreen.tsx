@@ -16,7 +16,7 @@ import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback } from 'react';
-import { getAllUsers } from '../api/departmentApi';
+import { getAllUsers, updateUserRole } from '../api/departmentApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'AdminHome'>;
 type RouteP = RouteProp<RootStackParamList, 'AdminHome'>;
@@ -40,7 +40,7 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterRole, setFilterRole] = useState<'all' | 'faculty' | 'student'>('all');
+  const [filterRole, setFilterRole] = useState<'all' | 'faculty' | 'student' | 'coordinator'>('all');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'student' });
@@ -102,22 +102,24 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
-  const toggleFacultyCoordinator = (userId: string, currentStatus: boolean) => {
-    setUsers(users.map(user => {
-      if (user.id === userId) {
-        return { ...user, role: currentStatus ? 'FACULTY' : 'FACULTY_COORDINATOR' };
-      }
-      return user;
-    }));
-    Alert.alert(
-      'Success',
-      currentStatus ? 'Faculty coordinator removed' : 'Faculty coordinator assigned'
-    );
+  const toggleFacultyCoordinator = async (userId: string, currentRole: DBUserRole) => {
+    const newRole = currentRole === 'FACULTY_COORDINATOR' ? 'FACULTY' : 'FACULTY_COORDINATOR';
+    try {
+      await updateUserRole(userId, newRole);
+      setUsers(users.map(user =>
+        user.id === userId ? { ...user, role: newRole } : user
+      ));
+      Alert.alert('Success', newRole === 'FACULTY_COORDINATOR' ? 'Made Faculty Coordinator' : 'Reverted to Faculty');
+    } catch (err) {
+      console.log('Role update failed:', err);
+      Alert.alert('Error', 'Failed to update role');
+    }
   };
 
   // Stats computation based on fetched users
   const facultyCount = users.filter(u => u.role === 'FACULTY' || u.role === 'FACULTY_COORDINATOR').length;
   const studentCount = users.filter(u => u.role === 'STUDENT').length;
+  const coordinatorCount = users.filter(u => u.role === 'FACULTY_COORDINATOR').length;
 
   const filteredUsers = users.filter(u => {
     const matchesSearch =
@@ -127,6 +129,7 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
     if (filterRole === 'all') return matchesSearch;
     if (filterRole === 'faculty') return matchesSearch && (u.role === 'FACULTY' || u.role === 'FACULTY_COORDINATOR');
     if (filterRole === 'student') return matchesSearch && u.role === 'STUDENT';
+    if (filterRole === 'coordinator') return matchesSearch && u.role === 'FACULTY_COORDINATOR';
     return false;
   });
 
@@ -154,11 +157,12 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Stats Cards - Only Faculty and Students */}
+          {/* Stats Cards */}
           <View style={styles.statsGrid}>
             {[
               { label: 'Faculty', value: facultyCount, color: '#1F2937' },
               { label: 'Students', value: studentCount, color: '#059669' },
+              { label: 'Coordinators', value: coordinatorCount, color: '#7C3AED' },
             ].map((stat, idx) => (
               <View key={idx} style={[styles.statCard, { flex: 1, marginHorizontal: 4 }]}>
                 <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
@@ -169,14 +173,14 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
 
           {/* Filter Buttons */}
           <View style={styles.filterContainer}>
-            {(['all', 'faculty', 'student'] as const).map(role => (
+            {([['all', 'All Users'], ['faculty', 'Faculty'], ['student', 'Student'], ['coordinator', 'Coordinator']] as const).map(([role, label]) => (
               <TouchableOpacity
                 key={role}
                 style={[styles.filterButton, filterRole === role && styles.filterButtonActive]}
-                onPress={() => setFilterRole(role)}
+                onPress={() => setFilterRole(role as any)}
               >
                 <Text style={[styles.filterText, filterRole === role && styles.filterTextActive]}>
-                  {role === 'all' ? 'All Users' : role.charAt(0).toUpperCase() + role.slice(1)}
+                  {label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -234,11 +238,15 @@ const AdminHomeScreen: React.FC<Props> = ({ navigation, route }) => {
                   <View style={styles.userActions}>
                     {(user.role === 'FACULTY' || user.role === 'FACULTY_COORDINATOR') && (
                       <TouchableOpacity
-                        style={[styles.button, styles.buttonOverride]}
-                        onPress={() => toggleFacultyCoordinator(user.id, user.role === 'FACULTY_COORDINATOR')}
+                        style={[
+                          styles.button,
+                          styles.buttonOverride,
+                          user.role === 'FACULTY_COORDINATOR' && { backgroundColor: '#DC2626' },
+                        ]}
+                        onPress={() => toggleFacultyCoordinator(user.id, user.role)}
                       >
                         <Text style={styles.buttonText}>
-                          {user.role === 'FACULTY_COORDINATOR' ? 'Remove Coordinator' : 'Make Coordinator'}
+                          {user.role === 'FACULTY_COORDINATOR' ? 'Make Faculty' : 'Make Coordinator'}
                         </Text>
                       </TouchableOpacity>
                     )}

@@ -47,3 +47,9 @@ export const getAllUsers = () => {
   console.log('📡 GET /admin/users');
   return api.get('/admin/users');
 };
+
+// PATCH update user role
+export const updateUserRole = (userId: string, role: string) => {
+  console.log('📝 PATCH /admin/users/' + userId + '/role?role=' + role);
+  return api.patch(`/admin/users/${userId}/role?role=${role}`);
+};

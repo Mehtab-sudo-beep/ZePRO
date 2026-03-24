@@ -88,7 +88,12 @@ public class AdminService {
     }
 
     // ✅ DELETE INSTITUTE
+    @org.springframework.transaction.annotation.Transactional
     public void deleteInstitute(Long id) {
+        List<com.zepro.model.Department> departments = departmentRepository.findByInstitute_InstituteId(id);
+        for (com.zepro.model.Department dept : departments) {
+            deleteDepartment(dept.getDepartmentId());
+        }
         instituteRepository.deleteById(id);
     }
 
@@ -111,7 +116,24 @@ public class AdminService {
     }
 
     // ✅ DELETE DEPARTMENT
+    @org.springframework.transaction.annotation.Transactional
     public void deleteDepartment(Long id) {
+        // Delete Students and their Users
+        List<com.zepro.model.Student> students = studentRepository.findByDepartment_DepartmentId(id);
+        for (com.zepro.model.Student student : students) {
+            Long userId = student.getUser().getUserId();
+            studentRepository.delete(student);
+            usersRepository.deleteById(userId);
+        }
+
+        // Delete Faculties and their Users
+        List<com.zepro.model.Faculty> faculties = facultyRepository.findByDepartment_DepartmentId(id);
+        for (com.zepro.model.Faculty faculty : faculties) {
+            Long userId = faculty.getUser().getUserId();
+            facultyRepository.delete(faculty);
+            usersRepository.deleteById(userId);
+        }
+
         departmentRepository.deleteById(id);
     }
 
@@ -202,5 +224,13 @@ public class AdminService {
         });
 
         return users;
+    }
+
+    public UserResponse updateUserRole(Long userId, String newRole) {
+        Users user = usersRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(com.zepro.model.UserRole.valueOf(newRole));
+        Users saved = usersRepository.save(user);
+        return new UserResponse(saved.getUserId(), saved.getName(), saved.getEmail(), saved.getRole());
     }
 }
