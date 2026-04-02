@@ -47,6 +47,7 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
 
     project.setTitle(request.getTitle());
     project.setDescription(request.getDescription());
+    project.setStudentSlots(request.getStudentSlots());
     project.setFaculty(faculty);
     project.setStatus("OPEN");
 
@@ -81,6 +82,56 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
             subDomain.getName()
     );
 }
+
+    public ProjectResponse updateProject(Long projectId, CreateProjectRequest request) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        
+        project.setTitle(request.getTitle());
+        project.setDescription(request.getDescription());
+        
+        if (request.getStudentSlots() != null) {
+            project.setStudentSlots(request.getStudentSlots());
+        }
+        Project saved = projectRepository.save(project);
+
+        if (request.getDomainId() != null) {
+            var existingDomains = projectDomainRepository.findByProjectProjectId(projectId);
+            if (!existingDomains.isEmpty()) {
+                ProjectDomain pd = existingDomains.get(0);
+                pd.setDomain(domainRepository.findById(request.getDomainId()).orElseThrow());
+                projectDomainRepository.save(pd);
+            } else {
+                ProjectDomain pd = new ProjectDomain();
+                pd.setProject(saved);
+                pd.setDomain(domainRepository.findById(request.getDomainId()).orElseThrow());
+                projectDomainRepository.save(pd);
+            }
+        }
+
+        if (request.getSubDomainId() != null) {
+            var existingSubDomains = projectSubDomainRepository.findByProjectProjectId(projectId);
+            if (!existingSubDomains.isEmpty()) {
+                ProjectSubDomain psd = existingSubDomains.get(0);
+                psd.setSubDomain(subDomainRepository.findById(request.getSubDomainId()).orElseThrow());
+                projectSubDomainRepository.save(psd);
+            } else {
+                ProjectSubDomain psd = new ProjectSubDomain();
+                psd.setProject(saved);
+                psd.setSubDomain(subDomainRepository.findById(request.getSubDomainId()).orElseThrow());
+                projectSubDomainRepository.save(psd);
+            }
+        }
+
+        return new ProjectResponse(
+                saved.getProjectId(),
+                saved.getTitle(),
+                saved.getDescription(),
+                saved.getStatus(),
+                "", ""
+        );
+    }
+
     public List<ProjectResponse> getProjects(Long facultyId) {
 
         return projectRepository.findByFacultyFacultyId(facultyId)

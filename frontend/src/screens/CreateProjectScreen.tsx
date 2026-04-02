@@ -22,6 +22,7 @@ const CreateProjectScreen = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [slots, setSlots] = useState('');
 
   const [domains, setDomains] = useState<any[]>([]);
   const [subDomains, setSubDomains] = useState<any[]>([]);
@@ -93,6 +94,12 @@ const CreateProjectScreen = () => {
       return;
     }
 
+    const slotCount = parseInt(slots);
+    if (isNaN(slotCount) || slotCount < 1 || slotCount > 3) {
+      Alert.alert('Invalid Slots', 'Slots must be between 1 and 3');
+      return;
+    }
+
     try {
       await createProject(
         {
@@ -100,14 +107,16 @@ const CreateProjectScreen = () => {
           description,
           domainId,
           subDomainId,
+          studentSlots: slotCount,
         },
-        user.token,
+        user!.token,
       );
 
       setSuccess(true);
 
       setTitle('');
       setDescription('');
+      setSlots('');
       setDomainName('');
       setSubDomainName('');
       setDomainId(null);
@@ -153,6 +162,17 @@ const CreateProjectScreen = () => {
           placeholderTextColor="#9CA3AF"
           value={description}
           onChangeText={setDescription}
+        />
+
+        {/* SLOTS */}
+        <Text style={styles.label}>Student Slots (Max 3)</Text>
+        <TextInput
+          style={[styles.input, { borderColor: colors.border }]}
+          placeholder="Number of slots (1-3)"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numeric"
+          value={slots}
+          onChangeText={setSlots}
         />
 
         {/* DOMAIN */}

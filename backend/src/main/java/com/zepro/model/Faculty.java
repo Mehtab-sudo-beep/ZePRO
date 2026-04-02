@@ -27,6 +27,9 @@ private String qualification;
 private String cabinNo;
 private String institute;
 private String phone;
+private String problemStatementLink;
+private String domains;
+private String subDomains;
 
     // faculty can create many projects
     @OneToMany(mappedBy = "faculty")
@@ -64,6 +67,11 @@ public String getCabinNo() { return cabinNo; }
 
 public String getInstitute() { return institute; }
 
+public String getProblemStatementLink() { return problemStatementLink; }
+
+public String getDomains() { return domains; }
+
+public String getSubDomains() { return subDomains; }
 
 // ================= NEW SETTERS =================
 
@@ -82,4 +90,10 @@ public void setQualification(String qualification) { this.qualification = qualif
 public void setCabinNo(String cabinNo) { this.cabinNo = cabinNo; }
 
 public void setInstitute(String institute) { this.institute = institute; }
+
+public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
+
+public void setDomains(String domains) { this.domains = domains; }
+
+public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
 }

@@ -26,7 +26,11 @@ public class Student {
 
 
     @ManyToOne
-private Department department;
+    private Department department;
+
+    private String resumeLink;
+
+    private String marksheetLink;
     // ----------- GETTERS -----------
 
     public Long getStudentId() {
@@ -53,6 +57,14 @@ private Department department;
         return team;
     }
 
+    public String getResumeLink() {
+        return resumeLink;
+    }
+
+    public String getMarksheetLink() {
+        return marksheetLink;
+    }
+
     // ----------- SETTERS -----------
 
     public void setStudentId(Long studentId) {
@@ -73,6 +85,14 @@ private Department department;
 
     public void setTeam(Team team) {
         this.team = team;
+    }
+
+    public void setResumeLink(String resumeLink) {
+        this.resumeLink = resumeLink;
+    }
+
+    public void setMarksheetLink(String marksheetLink) {
+        this.marksheetLink = marksheetLink;
     }
     // ----------- GETTER -----------
 

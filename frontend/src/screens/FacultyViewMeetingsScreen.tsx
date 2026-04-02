@@ -45,6 +45,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [editForm, setEditForm] = useState<Partial<any>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
 
@@ -57,7 +59,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   const loadMeetings = async () => {
     try {
       setLoading(true);
-      const data = await getAllMeetings(user.token);
+      if (!user?.token) return;
+      const data = await getAllMeetings(user!.token);
       setMeetings(data || []);
     } catch (err) {
       console.log('Error loading meetings:', err);
@@ -106,6 +109,11 @@ const FacultyViewMeetingsScreen: React.FC = () => {
       showAlert('Error', 'Please fill in all required fields');
       return;
     }
+    const timeRegex = /^([01]?\d|2[0-3]):?([0-5]\d)$/;
+    if (!timeRegex.test(editForm.time)) {
+      showAlert('Error', 'Time must be in 24-hour format (e.g. 14:30).');
+      return;
+    }
     setMeetings(meetings.map(m =>
       m.id === selectedMeeting?.id ? { ...m, ...editForm } : m
     ));
@@ -125,7 +133,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await cancelMeeting(meeting.meetingId, user.token);
+              if (!user?.token) return;
+              await cancelMeeting(meeting.meetingId, user!.token);
               loadMeetings();
               setShowDetailModal(false);
               showAlert('Done', 'Meeting has been cancelled.');
@@ -178,6 +187,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                 {selectedMeeting.title}
               </Text>
 
+              <DetailRow label="Team" value={selectedMeeting.teamName || 'N/A'} colors={colors} />
               <DetailRow label="Project" value={selectedMeeting.projectTitle || 'N/A'} colors={colors} />
               <DetailRow label="Domain" value={selectedMeeting.domain || 'N/A'} colors={colors} />
               <DetailRow label="SubDomain" value={selectedMeeting.subDomain || 'N/A'} colors={colors} />
@@ -200,7 +210,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                     style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
                     onPress={async () => {
                       try {
-                        await completeMeeting(selectedMeeting.meetingId, user.token);
+                        if (!user?.token) return;
+                        await completeMeeting(selectedMeeting.meetingId, user!.token);
                         loadMeetings();
                         setShowDetailModal(false);
                         showAlert('Success', 'Meeting marked as completed');
@@ -229,7 +240,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                       style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
                       onPress={async () => {
                         try {
-                          await acceptProject(selectedMeeting.requestId, user.token);
+                          if (!user?.token) return;
+                          await acceptProject(selectedMeeting.requestId, user!.token);
                           loadMeetings();
                           setShowDetailModal(false);
                           showAlert('Success', 'Project Assigned');
@@ -243,15 +255,9 @@ const FacultyViewMeetingsScreen: React.FC = () => {
 
                     <TouchableOpacity
                       style={[styles.actionBtnOutline, { borderColor: '#EF4444' }]}
-                      onPress={async () => {
-                        try {
-                          await rejectProject(selectedMeeting.requestId, user.token);
-                          loadMeetings();
-                          setShowDetailModal(false);
-                          showAlert('Done', 'Project Rejected');
-                        } catch (err) {
-                          showAlert('Error', 'Reject failed');
-                        }
+                      onPress={() => {
+                        setRejectReason('');
+                        setShowRejectModal(true);
                       }}
                     >
                       <Text style={[styles.actionBtnOutlineText, { color: '#EF4444' }]}>Reject Project</Text>
@@ -278,6 +284,11 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                         ? '✅ Project has been Accepted'
                         : '❌ Project has been Rejected'}
                     </Text>
+                    {selectedMeeting.requestStatus === 'REJECTED' && (selectedMeeting.rejectionReason || selectedMeeting.reason) && (
+                      <Text style={{ marginTop: 8, fontSize: 13, color: '#D97706', textAlign: 'center' }}>
+                        Reason: {selectedMeeting.rejectionReason || selectedMeeting.reason}
+                      </Text>
+                    )}
                   </View>
                 )}
             </ScrollView>
@@ -334,7 +345,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                 value={editForm.time || ''}
                 onChangeText={v => setEditForm({ ...editForm, time: v })}
                 colors={colors}
-                placeholder="e.g. 02:30 PM"
+                placeholder="e.g. 14:30"
               />
             </View>
 
@@ -366,6 +377,48 @@ const FacultyViewMeetingsScreen: React.FC = () => {
               <Text style={[styles.discardBtnText, { color: colors.subText }]}>Discard</Text>
             </TouchableOpacity>
           </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  /* ── Reject Modal ──────────────────────────────────────── */
+  const renderRejectModal = () => (
+    <Modal visible={showRejectModal} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 12 }]}>Reject Project Request</Text>
+          <TextInput
+            style={[styles.fieldInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border, height: 80, textAlignVertical: 'top' }]}
+            placeholder="Reason for rejection (required)"
+            placeholderTextColor={colors.subText}
+            multiline
+            value={rejectReason}
+            onChangeText={setRejectReason}
+          />
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+            <TouchableOpacity style={[styles.actionBtnOutline, { flex: 1, borderColor: colors.border }]} onPress={() => setShowRejectModal(false)}>
+              <Text style={[styles.actionBtnOutlineText, { color: colors.subText }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: '#EF4444' }]} onPress={async () => {
+              if (!rejectReason.trim()) {
+                showAlert('Error', 'Please provide a reason for rejection.');
+                return;
+              }
+              try {
+                if (!user?.token) return;
+                await rejectProject(selectedMeeting.requestId, user!.token, rejectReason);
+                setShowRejectModal(false);
+                setShowDetailModal(false);
+                loadMeetings();
+                showAlert('Done', 'Project rejected with reason.');
+              } catch (err) {
+                showAlert('Error', 'Reject failed');
+              }
+            }}>
+              <Text style={styles.actionBtnText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -434,6 +487,9 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   </View>
 
                   <Text style={[styles.cardProject, { color: colors.subText }]}>
+                    Team: {meeting.teamName || 'N/A'}
+                  </Text>
+                  <Text style={[styles.cardProject, { color: colors.subText }]}>
                     Project: {meeting.projectTitle || 'N/A'}
                   </Text>
                   <Text style={[styles.cardProject, { color: colors.subText }]}>
@@ -475,6 +531,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
 
         {renderDetailModal()}
         {renderEditModal()}
+        {renderRejectModal()}
       </View>
     </SafeAreaView>
   );

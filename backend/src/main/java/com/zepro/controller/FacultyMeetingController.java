@@ -63,7 +63,8 @@ public void acceptProject(@PathVariable("requestId") Long requestId) {
 }
 
 @PutMapping("/request/{requestId}/reject")
-public void rejectProject(@PathVariable("requestId") Long requestId) {
-    meetingService.rejectProject(requestId);
+public void rejectProject(@PathVariable("requestId") Long requestId, @RequestBody(required = false) java.util.Map<String, String> body) {
+    String reason = (body != null && body.containsKey("reason")) ? body.get("reason") : "";
+    meetingService.rejectProject(requestId, reason);
 }
 }

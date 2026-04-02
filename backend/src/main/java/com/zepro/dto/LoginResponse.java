@@ -16,15 +16,26 @@ public class LoginResponse {
     private boolean isInTeam;
     private boolean isTeamLead;
 
+    private String email;
+    private String name;
+    private String phone;
+
     public LoginResponse(String token, String role, Long facultyId, Long studentId,
-                         boolean isInTeam, boolean isTeamLead) {
+                         boolean isInTeam, boolean isTeamLead, String email, String name, String phone) {
         this.token = token;
         this.role = role;
         this.facultyId = facultyId;
         this.studentId = studentId;
         this.isInTeam = isInTeam;
         this.isTeamLead = isTeamLead;
+        this.email = email;
+        this.name = name;
+        this.phone = phone;
     }
+
+    public String getEmail() { return email; }
+    public String getName() { return name; }
+    public String getPhone() { return phone; }
 
     public String getToken() {
         return token;

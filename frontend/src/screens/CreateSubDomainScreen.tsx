@@ -94,7 +94,7 @@ const CreateSubDomainScreen = () => {
     }
 
     try {
-      await createSubDomain(subDomainName, domainId, user.token);
+      await createSubDomain(subDomainName, domainId, user!.token);
 
       setSuccess(true);
       setName('');

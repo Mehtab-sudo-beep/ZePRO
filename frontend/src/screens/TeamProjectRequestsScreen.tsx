@@ -27,7 +27,7 @@ const TeamProjectRequestsScreen: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-          const res = await getTeamProjectRequests(user.studentId);
+          const res = await getTeamProjectRequests(Number(user!.studentId));
           setRequests(res.data);
         } catch (err: any) {
           setError(err?.response?.data?.message || 'Failed to fetch team project requests. Ensure you are in a team.');
@@ -50,30 +50,47 @@ const TeamProjectRequestsScreen: React.FC = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.text }]}>{item.projectTitle}</Text>
-      <View style={styles.detailRow}>
-        <Text style={[styles.label, { color: colors.subText }]}>Faculty:</Text>
-        <Text style={[styles.value, { color: colors.text }]}>{item.facultyName}</Text>
+  const divider = isDark ? '#374151' : '#E5E7EB';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+
+  const renderItem = ({ item }: { item: any }) => {
+    const sColor = getStatusColor(item.status);
+    return (
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={[styles.title, { color: colors.text }]}>{item.projectTitle}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              <Image source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} style={{width: 12, height: 12, marginRight: 6, tintColor: colors.subText}} />
+              <Text style={[styles.value, { color: colors.subText }]}>{item.facultyName}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusContainer, { backgroundColor: sColor + '1A' }]}>
+            <Text style={[styles.statusValue, { color: sColor }]}>{item.status?.toUpperCase()}</Text>
+          </View>
+        </View>
+        
+        {item.status?.toUpperCase() === 'REJECTED' && (item.rejectionReason || item.reason) && (
+          <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: divider }}>
+            <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700', letterSpacing: 0.5 }}>REASON FOR REJECTION</Text>
+            <Text style={{ fontSize: 13, color: colors.text, marginTop: 4 }}>{item.rejectionReason || item.reason}</Text>
+          </View>
+        )}
       </View>
-      <View style={[styles.statusContainer, { backgroundColor: getStatusColor(item.status) + '1A' }]}>
-        <Text style={[styles.statusLabel, { color: colors.text }]}>Status: </Text>
-        <Text style={[styles.statusValue, { color: getStatusColor(item.status) }]}>{item.status}</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Image
             source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
             style={styles.backIcon}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Team Project Requests</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Project Requests</Text>
+        <View style={{ width: 30 }} />
       </View>
 
       {loading ? (
@@ -110,80 +127,63 @@ const TeamProjectRequestsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   header: {
-    height: 60,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    elevation: 2,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    marginLeft: -8,
+    padding: 4,
   },
   backIcon: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     resizeMode: 'contain',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   listContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
   card: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 14,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   title: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 13,
-    width: 60,
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 22,
   },
   value: {
     fontSize: 13,
-    flex: 1,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
   },
   statusLabel: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   statusValue: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   center: {
     flex: 1,

@@ -34,6 +34,9 @@ public class StudentProfileService {
             dto.setTeamName(student.getTeam().getTeamName());
         }
 
+        dto.setResumeLink(student.getResumeLink());
+        dto.setMarksheetLink(student.getMarksheetLink());
+
         return dto;
     }
 
@@ -46,6 +49,9 @@ public class StudentProfileService {
         // update user fields
         student.getUser().setName(dto.getName());
         student.getUser().setEmail(dto.getEmail());
+
+        student.setResumeLink(dto.getResumeLink());
+        student.setMarksheetLink(dto.getMarksheetLink());
 
         studentRepository.save(student);
 

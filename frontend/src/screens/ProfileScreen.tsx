@@ -142,6 +142,22 @@ const ProfileScreen: React.FC = () => {
             onEdit={openEdit}
             colors={colors}
           />
+
+          <InfoItem
+            label="Resume Link (Drive)"
+            value={profile.resumeLink}
+            editKey="resumeLink"
+            onEdit={openEdit}
+            colors={colors}
+          />
+
+          <InfoItem
+            label="Marksheet Link (Drive)"
+            value={profile.marksheetLink}
+            editKey="marksheetLink"
+            onEdit={openEdit}
+            colors={colors}
+          />
         </ScrollView>
 
       </View>

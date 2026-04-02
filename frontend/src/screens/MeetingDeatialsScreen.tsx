@@ -32,7 +32,8 @@ const MeetingDetailsScreen: React.FC<Props> = ({ route }) => {
   useEffect(() => {
     const fetchMeeting = async () => {
   try {
-    const res = await getMeetingDetails(requestId);
+    if (!requestId) return;
+    const res = await getMeetingDetails(Number(requestId));
 
     console.log("Meeting API response:", res.data);
 

@@ -205,18 +205,41 @@ public class MeetingService {
         request.setStatus(RequestStatus.ACCEPTED);
         requestRepository.save(request);
 
+        // DROP OFF ALL OTHER PENDING/SCHEDULED REQUESTS FOR THIS PROJECT
+        List<ProjectRequest> otherRequests = requestRepository.findByProjectProjectId(project.getProjectId());
+        for (ProjectRequest other : otherRequests) {
+            if (!other.getRequestId().equals(requestId) && 
+                (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
+                other.setStatus(RequestStatus.REJECTED);
+                other.setRejectionReason("Already allotted to other team");
+                requestRepository.save(other);
+            }
+        }
+
+        // DROP OFF ALL OTHER PENDING/SCHEDULED REQUESTS FROM THIS TEAM FOR OTHER PROJECTS
+        List<ProjectRequest> otherRequestsByTeam = requestRepository.findByTeamTeamId(request.getTeam().getTeamId());
+        for (ProjectRequest other : otherRequestsByTeam) {
+            if (!other.getRequestId().equals(requestId) && 
+                (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
+                other.setStatus(RequestStatus.REJECTED);
+                other.setRejectionReason("One project is allowed per team");
+                requestRepository.save(other);
+            }
+        }
+
         System.out.println("Project ACCEPTED and ASSIGNED");
     }
 
     // ✅ REJECT
-    public void rejectProject(Long requestId) {
+    public void rejectProject(Long requestId, String rejectionReason) {
 
         ProjectRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         request.setStatus(RequestStatus.REJECTED);
+        request.setRejectionReason(rejectionReason);
         requestRepository.save(request);
 
-        System.out.println("Project REJECTED");
+        System.out.println("Project REJECTED with reason: " + rejectionReason);
     }
 }

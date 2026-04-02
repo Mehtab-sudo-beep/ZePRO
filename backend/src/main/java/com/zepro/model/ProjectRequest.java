@@ -21,6 +21,9 @@ public class ProjectRequest {
     @ManyToOne
     private Project project;
 
+    @Column(length = 500)
+    private String rejectionReason;
+
     public Long getRequestId() {
         return requestId;
     }
@@ -59,5 +62,13 @@ public class ProjectRequest {
 
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

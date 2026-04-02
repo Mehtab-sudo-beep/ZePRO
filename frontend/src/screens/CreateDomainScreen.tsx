@@ -76,7 +76,7 @@ const CreateDomainScreen = () => {
     try {
       console.log('Calling createDomain API...');
 
-      await createDomain(domainName, user.token);
+      await createDomain(domainName, user!.token);
 
       console.log('Domain created successfully');
 

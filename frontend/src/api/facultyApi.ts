@@ -36,6 +36,13 @@ export const createProject = async (data: any, token: string) => {
   return res.data;
 };
 
+export const updateProject = async (projectId: number, data: any, token: string) => {
+  const res = await axios.put(`${API}/faculty/project/${projectId}`, data, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
 export const createDomain = async (name: string, token: string) => {
   const res = await axios.post(
     `${API}/faculty/domain`,
@@ -147,8 +154,8 @@ export const acceptProject = async (requestId: number, token: string) => {
   });
 };
 
-export const rejectProject = async (requestId: number, token: string) => {
-  return axios.put(`${API}/faculty/meetings/request/${requestId}/reject`, {}, {
+export const rejectProject = async (requestId: number, token: string, reason: string) => {
+  return axios.put(`${API}/faculty/meetings/request/${requestId}/reject`, { reason }, {
     headers: { Authorization: `Bearer ${token}` },
   });
 };

@@ -1,7 +1,16 @@
 // src/context/AuthContext.tsx
 
 import React, { createContext, useState } from 'react';
-import { User } from '../auth/mockUsers';
+export interface User {
+  studentId?: string | number;
+  facultyId?: string | number;
+  name?: string;
+  email?: string;
+  role?: string;
+  isInTeam?: boolean;
+  isTeamLead?: boolean;
+  [key: string]: any;
+}
 
 interface AuthContextType {
   user: User | null;

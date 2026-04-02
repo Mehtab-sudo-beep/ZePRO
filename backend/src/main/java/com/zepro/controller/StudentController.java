@@ -91,8 +91,8 @@ public class StudentController {
     }
 
     @GetMapping("/projects")
-    public List<ProjectResponse> getAllProjects() {
-        return studentService.getAllProjects();
+    public List<ProjectResponse> getAllProjects(java.security.Principal principal) {
+        return studentService.getAllProjects(principal.getName());
     }
 
     @GetMapping("/project-request-history/{studentId}")

@@ -36,6 +36,7 @@ const FacultyRequestsScreen = () => {
   const [location, setLocation] = useState('');
 
   const [date, setDate] = useState(new Date());
+  const [hasSelectedDate, setHasSelectedDate] = useState(false);
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
 
@@ -43,7 +44,7 @@ const FacultyRequestsScreen = () => {
 
   const loadRequests = async () => {
     try {
-      const data = await getPendingRequests(user.token);
+      const data = await getPendingRequests(user!.token);
       setRequests(data || []);
     } catch (err) {
       console.log(err);
@@ -56,7 +57,7 @@ const FacultyRequestsScreen = () => {
 
   const handleCancel = async (requestId: number) => {
     try {
-      await cancelRequest(requestId, user.token);
+      await cancelRequest(requestId, user!.token);
       setMessage('Request cancelled');
       loadRequests();
     } catch (err) {
@@ -109,7 +110,7 @@ const FacultyRequestsScreen = () => {
         formattedTime,
         meetingLink,
         location,
-        user.token
+        user!.token
       );
 
       setMessage('Meeting scheduled successfully');
@@ -285,9 +286,11 @@ const FacultyRequestsScreen = () => {
                       </Text>
                     </TouchableOpacity>
 
-                    <Text style={[styles.helper, { color: colors.subText }]}>
-                      Selected: {date.toLocaleString()}
-                    </Text>
+                    {hasSelectedDate && (
+                      <Text style={[styles.helper, { color: colors.subText }]}>
+                        Selected: {date.toLocaleString()}
+                      </Text>
+                    )}
 
                     {showDate && (
                       <DateTimePicker
@@ -296,7 +299,10 @@ const FacultyRequestsScreen = () => {
                         minimumDate={today}
                         onChange={(event, selectedDate) => {
                           setShowDate(false);
-                          if (selectedDate) setDate(selectedDate);
+                          if (selectedDate) {
+                            setDate(selectedDate);
+                            setHasSelectedDate(true);
+                          }
                         }}
                       />
                     )}
@@ -305,9 +311,13 @@ const FacultyRequestsScreen = () => {
                       <DateTimePicker
                         value={date}
                         mode="time"
+                        is24Hour={true}
                         onChange={(event, selectedDate) => {
                           setShowTime(false);
-                          if (selectedDate) setDate(selectedDate);
+                          if (selectedDate) {
+                            setDate(selectedDate);
+                            setHasSelectedDate(true);
+                          }
                         }}
                       />
                     )}

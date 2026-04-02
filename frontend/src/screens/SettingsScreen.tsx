@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import API from '../api/api';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -33,7 +34,7 @@ const SettingsScreen: React.FC = () => {
 
   const [newName, setNewName] = useState(user?.name || '');
   const [newEmail, setNewEmail] = useState(user?.email || '');
-  const [newPhone, setNewPhone] = useState('');
+  const [newPhone, setNewPhone] = useState(user?.phone || '');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -47,30 +48,41 @@ const SettingsScreen: React.FC = () => {
 
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  const saveName = () => {
+  const saveName = async () => {
     if (!user) return;
     if (!newName.trim()) {
       showAlert('Error', 'Name cannot be empty.');
       return;
     }
-    setUser({ ...user, name: newName.trim() });
-    setEditNameVisible(false);
-    showAlert('Success', 'Name updated successfully.');
+    try {
+      await API.put('/auth/update-profile', { name: newName.trim(), email: user.email, phone: user.phone || '' });
+      setUser({ ...user, name: newName.trim() });
+      setEditNameVisible(false);
+      showAlert('Success', 'Name updated successfully.');
+    } catch (e: any) {
+      showAlert('Error', e.response?.data?.message || 'Failed to update name');
+    }
   };
 
-  const saveEmail = () => {
+  const saveEmail = async () => {
     if (!user) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
       showAlert('Error', 'Please enter a valid email address.');
       return;
     }
-    setUser({ ...user, email: newEmail.trim() });
-    setEditEmailVisible(false);
-    showAlert('Success', 'Email updated successfully.');
+    try {
+      await API.put('/auth/update-profile', { name: user.name, email: newEmail.trim(), phone: user.phone || '' });
+      setUser({ ...user, email: newEmail.trim() });
+      setEditEmailVisible(false);
+      showAlert('Success', 'Email updated successfully.');
+    } catch (e: any) {
+      showAlert('Error', 'Failed to update email. ' + (e.response?.data?.message || ''));
+    }
   };
 
-  const savePassword = () => {
+  const savePassword = async () => {
+    if (!user) return;
     if (!currentPassword) {
       showAlert('Error', 'Please enter your current password.');
       return;
@@ -87,20 +99,36 @@ const SettingsScreen: React.FC = () => {
       showAlert('Error', 'New password must be different from current password.');
       return;
     }
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setEditPasswordVisible(false);
-    showAlert('Success', 'Password updated successfully.');
+
+    try {
+      await API.post('/auth/change-password', {
+        email: user.email,
+        currentPassword,
+        newPassword
+      });
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setEditPasswordVisible(false);
+      showAlert('Success', 'Password updated successfully.');
+    } catch (err: any) {
+      showAlert('Error', err.response?.data?.message || 'Failed to change password');
+    }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
       showAlert('Error', 'Please type DELETE to confirm.');
       return;
     }
-    setUser(null);
-    navigation.replace('Login');
+    try {
+      await API.delete('/auth/delete-account');
+      setUser(null);
+      navigation.replace('Login');
+    } catch (e) {
+      showAlert('Error', 'Failed to delete account');
+    }
   };
 
   const card = [styles.row, isDark && styles.darkCard];
@@ -279,9 +307,15 @@ const SettingsScreen: React.FC = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.saveBtn}
-                  onPress={() => {
-                    setEditPhoneVisible(false);
-                    showAlert('Success', 'Phone number updated.');
+                  onPress={async () => {
+                    try {
+                      await API.put('/auth/update-profile', { name: user?.name || '', email: user?.email || '', phone: newPhone.trim() });
+                      setUser({ ...user, phone: newPhone.trim() });
+                      setEditPhoneVisible(false);
+                      showAlert('Success', 'Phone number updated.');
+                    } catch (e: any) {
+                      showAlert('Error', 'Failed to update phone');
+                    }
                   }}
                 >
                   <Text style={styles.saveText}>Save</Text>
