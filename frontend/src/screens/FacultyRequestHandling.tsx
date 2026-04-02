@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 
 type FacultyRequestsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FacultyRequests'>;
 
@@ -43,6 +44,7 @@ interface StudentRequest {
 
 const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useContext(ThemeContext);
+  const { showAlert } = useContext(AlertContext);
 
   const [requests, setRequests] = useState<StudentRequest[]>([
     {
@@ -119,13 +121,13 @@ const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
   const [meetingDetails, setMeetingDetails] = useState({ date: '', time: '', venue: '' });
 
   const handleAcceptRequest = (requestId: string) => {
-    Alert.alert('Accept Request', 'Are you sure you want to accept this request?', [
+    showAlert('Accept Request', 'Are you sure you want to accept this request?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Accept',
         onPress: () => {
           setRequests(requests.map(req => req.id === requestId ? { ...req, status: 'accepted' } : req));
-          Alert.alert('Success', 'Request accepted successfully!');
+          showAlert('Success', 'Request accepted successfully!');
           setShowDetailsModal(false);
         },
       },
@@ -133,14 +135,14 @@ const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleRejectRequest = (requestId: string) => {
-    Alert.alert('Reject Request', 'Are you sure you want to reject this request?', [
+    showAlert('Reject Request', 'Are you sure you want to reject this request?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reject',
         style: 'destructive',
         onPress: () => {
           setRequests(requests.map(req => req.id === requestId ? { ...req, status: 'rejected' } : req));
-          Alert.alert('Success', 'Request rejected');
+          showAlert('Success', 'Request rejected');
           setShowDetailsModal(false);
         },
       },
@@ -149,7 +151,7 @@ const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleScheduleMeeting = () => {
     if (!meetingDetails.date || !meetingDetails.time || !meetingDetails.venue) {
-      Alert.alert('Error', 'Please fill in all meeting details');
+      showAlert('Error', 'Please fill in all meeting details');
       return;
     }
     if (selectedRequest) {
@@ -159,7 +161,7 @@ const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
       setShowScheduleModal(false);
       setShowDetailsModal(false);
       setMeetingDetails({ date: '', time: '', venue: '' });
-      Alert.alert('Success', 'Meeting scheduled successfully!');
+      showAlert('Success', 'Meeting scheduled successfully!');
     }
   };
 
@@ -436,7 +438,7 @@ const FacultyRequestsScreen: React.FC<Props> = ({ navigation }) => {
 
             {[
               { placeholder: 'Meeting Date (e.g., 2024-02-15)', key: 'date' },
-              { placeholder: 'Meeting Time (e.g., 2:00 PM)', key: 'time' },
+              { placeholder: 'Meeting Time (e.g., 14:30)', key: 'time' },
               { placeholder: 'Venue (e.g., CS Dept, Room 304)', key: 'venue' },
             ].map(field => (
               <TextInput

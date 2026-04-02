@@ -8,6 +8,7 @@ public class AssignedProjectResponse {
     private String facultyName;
     private String teamName;
     private String projectTitle;
+    private String status;
 
     public AssignedProjectResponse() {}
 
@@ -35,6 +36,10 @@ public class AssignedProjectResponse {
         return projectTitle;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
     public void setProjectId(Long projectId) {
         this.projectId = projectId;
     }
@@ -57,5 +62,9 @@ public class AssignedProjectResponse {
 
     public void setProjectTitle(String projectTitle) {
         this.projectTitle = projectTitle;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

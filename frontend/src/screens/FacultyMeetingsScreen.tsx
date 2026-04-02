@@ -30,7 +30,7 @@ const FacultyMeetingsScreen = () => {
 
   const loadMeetings = async () => {
     try {
-      const data = await getAllMeetings(user.token);
+      const data = await getAllMeetings(user!.token);
       setMeetings(data || []);
     } catch (err) {
       console.log('Load meetings error:', err);
@@ -39,7 +39,7 @@ const FacultyMeetingsScreen = () => {
 
   const handleCancel = async (meetingId: number) => {
     try {
-      await cancelMeeting(meetingId, user.token);
+      await cancelMeeting(meetingId, user!.token);
       setSelectedMeeting(null);
       loadMeetings();
     } catch (err) {
@@ -49,7 +49,7 @@ const FacultyMeetingsScreen = () => {
 
   const handleComplete = async (meetingId: number) => {
     try {
-      await completeMeeting(meetingId, user.token);
+      await completeMeeting(meetingId, user!.token);
       setSelectedMeeting(null);
       loadMeetings();
     } catch (err) {

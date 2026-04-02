@@ -6,12 +6,14 @@ public class ProjectRequestHistoryResponse {
     private String projectTitle;
     private String facultyName;
     private String status;
+    private String rejectionReason;
 
-    public ProjectRequestHistoryResponse(Long requestId, String projectTitle, String facultyName, String status) {
+    public ProjectRequestHistoryResponse(Long requestId, String projectTitle, String facultyName, String status, String rejectionReason) {
         this.requestId = requestId;
         this.projectTitle = projectTitle;
         this.facultyName = facultyName;
         this.status = status;
+        this.rejectionReason = rejectionReason;
     }
 
     public Long getRequestId() {
@@ -28,5 +30,9 @@ public class ProjectRequestHistoryResponse {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
     }
 }

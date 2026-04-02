@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +24,84 @@ import {
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'FacultyHome'>;
 
+// ── Tiny icon helper ──────────────────────────────────────────────────────────
+const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
+  const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
+
+  const icons: Record<string, any> = {
+    requests: isDark
+      ? require('../assets/requests-white.png')
+      : require('../assets/requests.png'),
+    project: isDark
+      ? require('../assets/project-white.png')
+      : require('../assets/project.png'),
+    status: isDark
+      ? require('../assets/status-white.png')
+      : require('../assets/status.png'),
+    create: isDark
+      ? require('../assets/create-white.png')
+      : require('../assets/create.png'),
+    info: isDark
+      ? require('../assets/info-white.png')
+      : require('../assets/info.png'),
+  };
+
+  return (
+    <Image
+      source={icons[name]}
+      style={{ width: size, height: size, resizeMode: 'contain' }}
+    />
+  );
+};
+
+// ── SectionLabel ──────────────────────────────────────────────────────────────
+const SectionLabel = ({ label, colors }: { label: string; colors: any }) => (
+  <Text style={[styles.sectionLabel, { color: colors.subText }]}>
+    {label.toUpperCase()}
+  </Text>
+);
+
+// ── ActionRow ─────────────────────────────────────────────────────────────────
+const ActionRow = ({
+  label,
+  sublabel,
+  icon,
+  colors,
+  accentSoft,
+  onPress,
+  badge,
+  loading,
+}: {
+  label: string;
+  sublabel: string;
+  icon: string;
+  colors: any;
+  accentSoft: string;
+  onPress: () => void;
+  badge?: string;
+  loading?: boolean;
+}) => (
+  <TouchableOpacity style={styles.actionRow} onPress={onPress} activeOpacity={0.65}>
+    <View style={[styles.actionIconWrap, { backgroundColor: accentSoft }]}>
+      <Icon name={icon} size={17}  />
+    </View>
+    <View style={styles.actionRowText}>
+      <Text style={[styles.actionRowLabel, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.actionRowSub, { color: colors.subText }]}>{sublabel}</Text>
+    </View>
+    {loading ? (
+      <ActivityIndicator size="small" color={colors.primary} />
+    ) : badge ? (
+      <View style={[styles.badgePill, { backgroundColor: colors.primary }]}>
+        <Text style={styles.badgePillText}>{badge}</Text>
+      </View>
+    ) : (
+      <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>
+    )}
+  </TouchableOpacity>
+);
+
 const FacultyHomeScreen: React.FC = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
@@ -31,168 +110,132 @@ const FacultyHomeScreen: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    console.log('===== FacultyHomeScreen Loaded =====');
-
-    if (user?.token && user?.facultyId) {
-      loadData();
-    }
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.token && user?.facultyId) {
+        loadData();
+      }
+    }, [user])
+  );
 
   const loadData = async () => {
     try {
-      console.log('===== loadData() START =====');
-
-      const req = await getPendingRequests(user.token);
-
-      const proj = await getFacultyProjects(user.facultyId, user.token);
-
-      const meet = await getAllMeetings(user.token);
-
-      console.log('Requests:', req);
-      console.log('Projects:', proj);
-      console.log('Meetings:', meet);
+      setLoading(true);
+      const req = await getPendingRequests(user!.token);
+      if (!user?.facultyId) return;
+      
+      const proj = await getFacultyProjects(Number(user.facultyId), user!.token);
+      const meet = await getAllMeetings(user!.token);
 
       setRequests(req || []);
       setProjects(proj || []);
       setMeetings(meet || []);
     } catch (err: any) {
       console.log('API ERROR:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!user) return null;
-  if (user.role !== 'FACULTY') return null;
+  if (user.role !== 'FACULTY') {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+          <Text style={{ color: colors.text, padding: 20 }}>Loading...</Text>
+        </SafeAreaView>
+      );
+  }
+
+  const isDark = colors.background === '#111827';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = isDark ? '#374151' : '#E5E7EB';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Faculty Home
-          </Text>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.card, borderBottomColor: divider },
+          ]}
+        >
+          <View>
+            <Text style={[styles.headerGreeting, { color: colors.subText }]}>
+              Welcome back,
+            </Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              {user.name ?? 'Faculty'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
+            onPress={() => navigation.navigate('FacultyProfile')}
+          >
+            <Text style={[styles.avatarText, { color: colors.primary }]}>
+              {(user.name ?? 'F').charAt(0).toUpperCase()}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Pending Requests */}
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          
+          <SectionLabel label="Requests" colors={colors} />
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Pending Requests
-            </Text>
-
-            {requests.length === 0 && (
-              <Text style={[styles.item, { color: colors.subText }]}>
-                No pending requests
-              </Text>
-            )}
-
-            {requests.slice(0, 2).map(r => (
-              <Text
-                key={r.requestId}
-                style={[styles.item, { color: colors.subText }]}
-              >
-                • Team {r.teamId}
-              </Text>
-            ))}
-
-            <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+            <ActionRow
+              label="Pending Requests"
+              sublabel="Review unhandled team requests"
+              icon="requests"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={() => navigation.navigate('FacultyRequests')}
-            >
-              <Text style={styles.primaryBtnText}>View All Requests</Text>
-            </TouchableOpacity>
+            />
           </View>
 
-          {/* My Projects */}
+          <SectionLabel label="Projects" colors={colors} />
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              My Projects
-            </Text>
-
-            {projects.length === 0 && (
-              <Text style={[styles.item, { color: colors.subText }]}>
-                No projects created
-              </Text>
-            )}
-
-            {projects.slice(0, 2).map(p => (
-              <Text
-                key={p.projectId}
-                style={[styles.item, { color: colors.subText }]}
-              >
-                • {p.title}
-              </Text>
-            ))}
-
-            <TouchableOpacity
-              style={[styles.outlineBtn, { borderColor: colors.primary }]}
+            <ActionRow
+              label="My Projects"
+              sublabel="Manage your created projects"
+              icon="project"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={() => navigation.navigate('FacultyProjects')}
-            >
-              <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
-                View Project Details
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
 
-          {/* Meetings */}
+          <SectionLabel label="Meetings" colors={colors} />
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Meetings
-            </Text>
-
-            {meetings.length === 0 && (
-              <Text style={[styles.item, { color: colors.subText }]}>
-                No upcoming meetings
-              </Text>
-            )}
-
-            {meetings.slice(0, 2).map(m => (
-              <Text
-                key={m.meetingId}
-                style={[styles.item, { color: colors.subText }]}
-              >
-                • Team {m.teamId} – {new Date(m.meetingTime).toLocaleString()}
-              </Text>
-            ))}
-
-            <TouchableOpacity
-              style={[styles.outlineBtn, { borderColor: colors.primary }]}
+            <ActionRow
+              label="Upcoming Meetings"
+              sublabel="View scheduled team meetings"
+              icon="status"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={() => navigation.navigate('FacultyMeetings')}
-            >
-              <Text style={[styles.outlineBtnText, { color: colors.primary }]}>
-                View Meetings
-              </Text>
-            </TouchableOpacity>
+              badge={meetings.length > 0 ? `${meetings.length}` : undefined}
+            />
           </View>
+          <View style={{ height: 16 }} />
         </ScrollView>
 
         {/* Bottom Tab */}
         <View
-          style={[
-            styles.bottomTab,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
+          style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}
         >
           <View style={styles.tabItem}>
-            <Image
-              source={require('../assets/home-color.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tabActive, { color: colors.primary }]}>
-              Home
-            </Text>
+            <View style={[styles.tabActiveIndicator, { backgroundColor: colors.primary }]} />
+            <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>Home</Text>
           </View>
 
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyCreateMenu')}
           >
-            <Image
-              source={require('../assets/create.png')}
-              style={styles.tabIcon}
-            />
+            <Image source={require('../assets/create.png')} style={styles.tabIcon} />
             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
           </TouchableOpacity>
 
@@ -200,10 +243,7 @@ const FacultyHomeScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyMore')}
           >
-            <Image
-              source={require('../assets/more.png')}
-              style={styles.tabIcon}
-            />
+            <Image source={require('../assets/more.png')} style={styles.tabIcon} />
             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
           </TouchableOpacity>
         </View>
@@ -214,100 +254,127 @@ const FacultyHomeScreen: React.FC = () => {
 
 export default FacultyHomeScreen;
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    height: 64,
+    height: 72,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    elevation: 3,
-    borderBottomWidth: 0.5,
-    borderColor: '#eee',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    elevation: 2,
   },
-
+  headerGreeting: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  avatarBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 17,
+    fontWeight: '800',
   },
 
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 90,
+  content: { padding: 16, paddingBottom: 8 },
+
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    marginTop: 4,
+    marginLeft: 2,
   },
 
   card: {
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
-    elevation: 4,
-  },
-
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    borderRadius: 14,
     marginBottom: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
 
-  item: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-
-  primaryBtn: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 14,
+  actionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
-
-  primaryBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-
-  outlineBtn: {
-    borderWidth: 1.2,
-    paddingVertical: 11,
+  actionIconWrap: {
+    width: 38,
+    height: 38,
     borderRadius: 10,
-    marginTop: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
+  actionRowText: { flex: 1 },
+  actionRowLabel: { fontSize: 14, fontWeight: '600' },
+  actionRowSub: { fontSize: 12, marginTop: 1 },
+  chevron: { fontSize: 22, fontWeight: '300', marginRight: 2 },
 
-  outlineBtnText: {
-    fontWeight: '600',
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
   },
+  badgePillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 
   bottomTab: {
     height: 68,
-    borderTopWidth: 0.5,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingBottom: 6,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-
   tabItem: {
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    height: '100%',
   },
-
   tabIcon: {
     width: 24,
     height: 24,
     marginBottom: 4,
     resizeMode: 'contain',
   },
-
   tab: {
     fontSize: 12,
+    fontWeight: '500',
   },
-
   tabActive: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  tabActiveIndicator: {
+    position: 'absolute',
+    top: 0,
+    width: '40%',
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
   },
 });

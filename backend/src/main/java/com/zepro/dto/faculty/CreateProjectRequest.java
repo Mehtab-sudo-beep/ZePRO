@@ -6,6 +6,7 @@ public class CreateProjectRequest {
     private String description;
     private Long domainId;
     private Long subDomainId;
+    private Integer studentSlots;
 
     public String getTitle() {
         return title;
@@ -43,4 +44,7 @@ public class CreateProjectRequest {
   
     public Long getFacultyId() { return facultyId; }
     public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
+
+    public Integer getStudentSlots() { return studentSlots; }
+    public void setStudentSlots(Integer studentSlots) { this.studentSlots = studentSlots; }
 }

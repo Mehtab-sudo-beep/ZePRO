@@ -25,7 +25,7 @@
 //   const [loading, setLoading] = useState(true);
 
 //   useEffect(() => {
-//     if (user && user.token && user.facultyId) {
+//     if (user && user!.token && user.facultyId) {
 //       loadProjects();
 //     }
 //   }, [user]);
@@ -38,7 +38,7 @@
 //       console.log('FACULTY ID:', user?.facultyId);
 //       console.log('TOKEN:', user?.token);
 
-//       const data = await getFacultyProjects(user.facultyId, user.token);
+//       const data = await getFacultyProjects(user.facultyId, user!.token);
 
 //       console.log('PROJECT RESPONSE:', data);
 
@@ -262,28 +262,61 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 
-import { getFacultyProjects } from '../api/facultyApi';
+import { getFacultyProjects, updateProject, getDomains, getSubDomains } from '../api/facultyApi';
 
 const FacultyProjectsScreen = () => {
   const { user } = useContext(AuthContext);
+  const { showAlert } = useContext(AlertContext);
   const { colors } = useContext(ThemeContext);
   const navigation: any = useNavigation();
 
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Edit State
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editSlots, setEditSlots] = useState('');
+  
+  const [domains, setDomains] = useState<any[]>([]);
+  const [subDomains, setSubDomains] = useState<any[]>([]);
+  
+  const [editDomainId, setEditDomainId] = useState<number | null>(null);
+  const [editSubDomainId, setEditSubDomainId] = useState<number | null>(null);
+  const [editDomainName, setEditDomainName] = useState('');
+  const [editSubDomainName, setEditSubDomainName] = useState('');
+
+  const [domainModal, setDomainModal] = useState(false);
+  const [subDomainModal, setSubDomainModal] = useState(false);
+
+  useEffect(() => {
+    getDomains().then(d => setDomains(d || [])).catch(()=>console.log("No domains"));
+  }, []);
+
+  useEffect(() => {
+    if (editDomainId) {
+      getSubDomains(editDomainId).then(d => setSubDomains(d || [])).catch(()=>console.log("No subdomains"));
+    }
+  }, [editDomainId]);
+
   useEffect(() => {
     console.log('USE EFFECT TRIGGERED');
     console.log('USER IN USE EFFECT:', user);
 
-    if (user && user.token && user.facultyId) {
+    if (user && user!.token && user.facultyId) {
       loadProjects();
     } else {
       console.log('USER NOT READY YET');
@@ -308,7 +341,8 @@ const FacultyProjectsScreen = () => {
         setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
 
-      const apiCall = getFacultyProjects(user.facultyId, user.token);
+      if (!user?.facultyId) return;
+      const apiCall = getFacultyProjects(Number(user.facultyId), user!.token);
 
       const data: any = await Promise.race([apiCall, timeout]);
 
@@ -336,7 +370,37 @@ const FacultyProjectsScreen = () => {
     }
   };
 
-  if (!user || !user.token) {
+  const handleEditSubmit = async () => {
+    if (!editTitle.trim()) {
+      showAlert('Error', 'Title is required');
+      return;
+    }
+    const slotCount = parseInt(editSlots);
+    if (isNaN(slotCount) || slotCount < 1 || slotCount > 3) {
+      showAlert('Error', 'Slots must be between 1 and 3');
+      return;
+    }
+
+    try {
+      await updateProject(
+        editingProject.projectId,
+        {
+          title: editTitle,
+          description: editDesc,
+          studentSlots: slotCount,
+          domainId: editDomainId,
+          subDomainId: editSubDomainId
+        },
+        user!.token
+      );
+      setEditModalVisible(false);
+      loadProjects(); // reload to get fresh data
+    } catch (err) {
+      showAlert('Error', 'Failed to update project');
+    }
+  };
+
+  if (!user || !user!.token) {
     console.log('USER STILL NULL → SHOWING LOADER');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -379,9 +443,26 @@ const FacultyProjectsScreen = () => {
                 key={p.projectId}
                 style={[styles.card, { backgroundColor: colors.card }]}
               >
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  {p.title}
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={[styles.cardTitle, { color: colors.text, flex: 1 }]}>
+                    {p.title}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingProject(p);
+                      setEditTitle(p.title);
+                      setEditDesc(p.description);
+                      setEditSlots(p.slots ? p.slots.toString() : '3');
+                      setEditDomainId(p.domainId || null);
+                      setEditSubDomainId(p.subDomainId || null);
+                      setEditDomainName(p.domain || '');
+                      setEditSubDomainName(p.subdomain || '');
+                      setEditModalVisible(true);
+                    }}
+                  >
+                    <Text style={{ color: colors.primary, fontWeight: '600' }}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <Text style={[styles.item, { color: colors.subText }]}>
                   {p.description}
@@ -414,6 +495,18 @@ const FacultyProjectsScreen = () => {
                         {p.subdomain}
                       </Text>
                     ) : null}
+                    
+                    <Text
+                      style={[
+                        styles.badge,
+                        {
+                          backgroundColor: '#10B98120',
+                          color: '#10B981',
+                        },
+                      ]}
+                    >
+                      Slots: {p.studentSlots || p.slots || 3}
+                    </Text>
                   </View>
                 )}
 
@@ -423,6 +516,118 @@ const FacultyProjectsScreen = () => {
               </View>
             ))}
         </ScrollView>
+
+        {/* Edit Modal */}
+        <Modal visible={editModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Project</Text>
+              
+              <Text style={[styles.label, { color: colors.text }]}>Title</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                value={editTitle}
+                onChangeText={setEditTitle}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                value={editDesc}
+                onChangeText={setEditDesc}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>Student Slots (Max 3)</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+                keyboardType="numeric"
+                value={editSlots}
+                onChangeText={setEditSlots}
+              />
+
+              <Text style={[styles.label, { color: colors.text }]}>Domain</Text>
+              <TouchableOpacity
+                style={{ borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}
+                onPress={() => setDomainModal(true)}
+              >
+                <Text style={{ color: colors.text }}>{editDomainName || 'Select Domain'}</Text>
+              </TouchableOpacity>
+
+              <Text style={[styles.label, { color: colors.text }]}>Sub Domain</Text>
+              <TouchableOpacity
+                style={{ borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}
+                onPress={() => setSubDomainModal(true)}
+              >
+                <Text style={{ color: colors.text }}>{editSubDomainName || 'Select Sub Domain'}</Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: '#9CA3AF' }]}
+                  onPress={() => setEditModalVisible(false)}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                  onPress={handleEditSubmit}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* DOMAIN MODAL */}
+        <Modal visible={domainModal} animationType="slide" transparent>
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setDomainModal(false)} activeOpacity={1}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Domain</Text>
+              <ScrollView>
+                {domains.map((item) => (
+                  <TouchableOpacity
+                    key={item.domainId}
+                    style={{ padding: 15, borderBottomWidth: 1, borderColor: colors.border }}
+                    onPress={() => {
+                      setEditDomainId(item.domainId);
+                      setEditDomainName(item.name);
+                      setEditSubDomainId(null);
+                      setEditSubDomainName('');
+                      setDomainModal(false);
+                    }}
+                  >
+                    <Text style={{ color: colors.text }}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* SUBDOMAIN MODAL */}
+        <Modal visible={subDomainModal} animationType="slide" transparent>
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setSubDomainModal(false)} activeOpacity={1}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Sub Domain</Text>
+              <ScrollView>
+                {subDomains.map((item) => (
+                  <TouchableOpacity
+                    key={item.subDomainId}
+                    style={{ padding: 15, borderBottomWidth: 1, borderColor: colors.border }}
+                    onPress={() => {
+                      setEditSubDomainId(item.subDomainId);
+                      setEditSubDomainName(item.name);
+                      setSubDomainModal(false);
+                    }}
+                  >
+                    <Text style={{ color: colors.text }}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Bottom Navigation */}
         <View
@@ -502,6 +707,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 6,
+  },
+
+  label: {
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 15,
+    marginBottom: 16,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalSheet: {
+    width: '90%',
+    padding: 20,
+    borderRadius: 16,
+    elevation: 5,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 5,
   },
 
   item: {

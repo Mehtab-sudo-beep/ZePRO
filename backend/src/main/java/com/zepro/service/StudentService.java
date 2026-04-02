@@ -115,11 +115,17 @@ public class StudentService {
                 return "Successfully joined the team";
         }
 
-        public List<ProjectResponse> getAllProjects() {
+        public List<ProjectResponse> getAllProjects(String email) {
+
+                Student student = studentRepository.findByUser_Email(email)
+                        .orElseThrow(() -> new RuntimeException("Student not found"));
+
+                int teamSize = (student.getTeam() != null) ? student.getTeam().getMembers().size() : 1;
 
                 List<Project> projects = projectRepository.findAll();
 
                 return projects.stream()
+                                .filter(p -> p.getStudentSlots() != null && p.getStudentSlots() == teamSize && p.getStatus().equals("OPEN"))
                                 .map(project -> {
                                         String domainStr = "";
                                         String subdomainStr = "";
@@ -141,7 +147,7 @@ public class StudentService {
                                                         project.getTitle(),
                                                         project.getDescription(),
                                                         project.getFaculty().getUser().getName(),
-                                                        6, // default slots
+                                                        project.getStudentSlots(), 
                                                         domainStr,
                                                         subdomainStr);
                                 })
@@ -161,6 +167,11 @@ public class StudentService {
                 }
 
                 Team team = student.getTeam();
+
+                Project allocatedProject = projectRepository.findByTeam(team);
+                if (allocatedProject != null) {
+                        throw new RuntimeException("Your team is already assigned to a project");
+                }
 
                 // Fetch project entity from repository (this fixes any potential getFaculty IDE
                 // caching issues)
@@ -227,7 +238,8 @@ public class StudentService {
                                                 req.getRequestId(),
                                                 req.getProject().getTitle(),
                                                 req.getProject().getFaculty().getUser().getName(),
-                                                req.getStatus() != null ? req.getStatus().name() : null))
+                                                req.getStatus() != null ? req.getStatus().name() : null,
+                                                req.getRejectionReason()))
                                 .toList();
         }
 
@@ -249,8 +261,18 @@ public class StudentService {
                 AssignedProjectResponse response = new AssignedProjectResponse();
                 response.setTeamName(team.getTeamName());
 
-                // Later you can fetch actual project entity
-                response.setProjectTitle("Project not assigned yet");
+                Project project = projectRepository.findByTeam(team);
+                
+                if (project != null) {
+                        response.setProjectId(project.getProjectId());
+                        response.setTitle(project.getTitle());
+                        response.setProjectTitle(project.getTitle());
+                        response.setDescription(project.getDescription());
+                        response.setFacultyName(project.getFaculty().getUser().getName());
+                        response.setStatus(project.getStatus());
+                } else {
+                        response.setProjectTitle("Project not assigned yet");
+                }
 
                 return response;
         }
@@ -285,7 +307,8 @@ public class StudentService {
                                                 req.getRequestId(),
                                                 req.getProject().getTitle(),
                                                 req.getProject().getFaculty().getUser().getName(),
-                                                "ACCEPTED"));
+                                                "ACCEPTED",
+                                                req.getRejectionReason()));
                                 continue;
                         }
 
@@ -295,7 +318,8 @@ public class StudentService {
                                                 req.getRequestId(),
                                                 req.getProject().getTitle(),
                                                 req.getProject().getFaculty().getUser().getName(),
-                                                "REJECTED"));
+                                                "REJECTED",
+                                                req.getRejectionReason()));
                                 continue;
                         }
 
@@ -323,7 +347,7 @@ public class StudentService {
                                                         req.getRequestId(),
                                                         req.getProject().getTitle(),
                                                         req.getProject().getFaculty().getUser().getName(),
-                                                        "MEETING COMPLETED"));
+                                                        "MEETING COMPLETED", null));
                                 }
 
                                 // ✅ CANCELLED meeting → completed
@@ -332,7 +356,7 @@ public class StudentService {
                                                         req.getRequestId(),
                                                         req.getProject().getTitle(),
                                                         req.getProject().getFaculty().getUser().getName(),
-                                                        "CANCELLED"));
+                                                        "CANCELLED", null));
                                 }
                         }
                 }
@@ -546,6 +570,23 @@ public class StudentService {
                 response.setDate(meeting.getMeetingTime().toLocalDate().toString());
                 response.setTime(meeting.getMeetingTime().toLocalTime().toString());
 
+                // Fetch domain
+                String domainStr = "";
+                var pDomains = projectDomainRepository.findByProjectProjectId(project.getProjectId());
+                if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
+                        domainStr = pDomains.get(0).getDomain().getName();
+                }
+
+                // Fetch subdomain
+                String subdomainStr = "";
+                var pSubDomains = projectSubDomainRepository.findByProjectProjectId(project.getProjectId());
+                if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
+                        subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+                }
+
+                response.setDomain(domainStr);
+                response.setSubDomain(subdomainStr);
+
                 List<String> members = team.getMembers()
                                 .stream()
                                 .map(s -> s.getUser().getName())
@@ -577,7 +618,8 @@ public class StudentService {
                                                 req.getRequestId(),
                                                 req.getProject().getTitle(),
                                                 req.getProject().getFaculty().getUser().getName(),
-                                                req.getStatus() != null ? req.getStatus().name() : null))
+                                                req.getStatus() != null ? req.getStatus().name() : null,
+                                                req.getRejectionReason()))
                                 .toList();
         }
 

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -26,38 +27,35 @@ interface Team {
   alreadyRequested: boolean;
 }
 
+// ONLY UI IMPROVED — NO LOGIC CHANGED
+
 const JoinTeamScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
-  const { showAlert } = useContext(AlertContext);
   const isDark = colors.background === '#111827';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = isDark ? '#374151' : '#E5E7EB';
+
+  const { showAlert } = useContext(AlertContext);
   const navigation = useNavigation<any>();
+
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-
   const [teams, setTeams] = useState<Team[]>([]);
-  useEffect(() => {
 
+  useEffect(() => {
     const loadTeams = async () => {
       try {
-
         const studentId = await AsyncStorage.getItem("studentId");
-
         const res = await getAllTeams(Number(studentId));
-
         setTeams(res.data);
-
       } catch (err) {
-
         console.log("TEAM LIST ERROR:", err);
-
       }
     };
-
-    loadTeams();   // 🔴 THIS WAS MISSING
-
+    loadTeams();
   }, []);
+
   const sendRequest = async () => {
     try {
-
       const studentId = await AsyncStorage.getItem("studentId");
 
       await sendJoinRequest({
@@ -67,11 +65,9 @@ const JoinTeamScreen: React.FC = () => {
 
       showAlert("Request Sent", "Team leader will review your request.");
 
-      // 🔴 reload teams so alreadyRequested becomes true
       const res = await getAllTeams(Number(studentId));
       setTeams(res.data);
 
-      // update selected team also
       const updatedTeam = res.data.find(
         (t: Team) => t.teamId === selectedTeam!.teamId
       );
@@ -79,153 +75,123 @@ const JoinTeamScreen: React.FC = () => {
       setSelectedTeam(updatedTeam || null);
 
     } catch (err) {
-
       console.log("JOIN REQUEST ERROR:", err);
       showAlert("Error sending request");
-
     }
   };
 
-  /* =========================
-     TEAM DETAILS SCREEN
-  ========================= */
+  // ================= DETAILS SCREEN =================
   if (selectedTeam) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={styles.container}>
-          <View style={[styles.headerRow, { backgroundColor: colors.card }]}>
-            <TouchableOpacity style={styles.backButton} onPress={() => setSelectedTeam(null)}>
-              <Image
-                source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
-                style={styles.backIcon}
-              />
-            </TouchableOpacity>
-            <Text style={[styles.header, { color: colors.text }]}>Team Details</Text>
-          </View>
-
-          <View
-            style={[
-              styles.detailsCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.teamName, { color: colors.text }]}>
-              {selectedTeam.teamName}
-            </Text>
-
-            {selectedTeam.description ? (
-              <Text style={[styles.info, { color: colors.text, fontStyle: 'italic', marginBottom: 8 }]}>
-                {selectedTeam.description}
-              </Text>
-            ) : null}
-
-            <Text style={[styles.info, { color: colors.subText }]}>
-              Leader: {selectedTeam.teamLead}
-            </Text>
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Team Members (Max 3)
-            </Text>
-
-            {selectedTeam.members.map((member, index) => (
-              <Text key={index} style={[styles.member, { color: colors.text }]}>
-                • {member}
-              </Text>
-            ))}
-
-
-          </View>
-
-          {selectedTeam.alreadyRequested ? (
-
-            <View style={[styles.requestBtn, { backgroundColor: "#999" }]}>
-              <Text style={styles.btnText}>Request Already Sent</Text>
-            </View>
-
-          ) : (
-
-            <TouchableOpacity
-              style={[styles.requestBtn, { backgroundColor: colors.primary }]}
-              onPress={sendRequest}
-            >
-              <Text style={styles.btnText}>Send Join Request</Text>
-            </TouchableOpacity>
-
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.backBtn,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={() => setSelectedTeam(null)}
-          >
-            <Text style={[styles.btnText, { color: colors.subText }]}>
-              Back to Team List
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  /* =========================
-     TEAM LIST SCREEN
-  ========================= */
-  const renderTeam = ({ item }: { item: Team }) => (
-    <TouchableOpacity
-      style={[
-        styles.teamCard,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-        },
-      ]}
-      onPress={() => setSelectedTeam(item)}
-    >
-      <Text style={[styles.teamName, { color: colors.text }]}>
-        {item.teamName}
-      </Text>
-
-      {item.description ? (
-        <Text style={[styles.info, { color: colors.text, fontStyle: 'italic' }]} numberOfLines={2}>
-          {item.description}
-        </Text>
-      ) : null}
-
-      <Text style={[styles.info, { color: colors.subText }]}>
-        Leader: {item.teamLead}
-      </Text>
-
-      <Text style={[styles.info, { color: colors.subText }]}>
-        Members: {item.members.length}/3
-      </Text>
-    </TouchableOpacity>
-  );
-
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.container}>
-        <View style={[styles.headerRow, { backgroundColor: colors.card }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        
+        {/* HEADER */}
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
+          <TouchableOpacity onPress={() => setSelectedTeam(null)}>
             <Image
               source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
               style={styles.backIcon}
             />
           </TouchableOpacity>
-          <Text style={[styles.header, { color: colors.text }]}>Join a Team</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Team Details
+          </Text>
         </View>
-        <FlatList
-          data={teams}
-          keyExtractor={item => item.teamId.toString()}
-          renderItem={renderTeam}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
-        />
+
+        <ScrollView contentContainerStyle={styles.content}>
+          
+          {/* CARD */}
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.teamName, { color: colors.text }]}>
+              {selectedTeam.teamName}
+            </Text>
+
+            {selectedTeam.description && (
+              <Text style={[styles.desc, { color: colors.subText }]}>
+                {selectedTeam.description}
+              </Text>
+            )}
+
+            <Text style={[styles.meta, { color: colors.subText }]}>
+              Leader: {selectedTeam.teamLead}
+            </Text>
+
+            <Text style={[styles.sectionLabel, { color: colors.subText }]}>
+              MEMBERS
+            </Text>
+
+            {selectedTeam.members.map((m, i) => (
+              <Text key={i} style={[styles.member, { color: colors.text }]}>
+                • {m}
+              </Text>
+            ))}
+          </View>
+
+          {/* BUTTON */}
+          <TouchableOpacity
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: selectedTeam.alreadyRequested ? '#9CA3AF' : colors.primary }
+            ]}
+            onPress={sendRequest}
+            disabled={selectedTeam.alreadyRequested}
+          >
+            <Text style={styles.btnText}>
+              {selectedTeam.alreadyRequested ? 'Request Sent' : 'Send Join Request'}
+            </Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ================= LIST SCREEN =================
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Join Team
+        </Text>
       </View>
+
+      <FlatList
+        data={teams}
+        keyExtractor={item => item.teamId.toString()}
+        contentContainerStyle={styles.content}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: colors.card }]}
+            onPress={() => setSelectedTeam(item)}
+          >
+            <Text style={[styles.teamName, { color: colors.text }]}>
+              {item.teamName}
+            </Text>
+
+            {item.description && (
+              <Text style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+
+            <Text style={[styles.meta, { color: colors.subText }]}>
+              Leader: {item.teamLead}
+            </Text>
+
+            <Text style={[styles.meta, { color: colors.subText }]}>
+              {item.members.length}/3 members
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
     </SafeAreaView>
   );
 };
@@ -236,94 +202,77 @@ export default JoinTeamScreen;
    STYLES
 ========================= */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-
-  headerRow: {
+  header: {
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 60,
+    gap: 12,
     paddingHorizontal: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    marginBottom: 12,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    marginLeft: -8,
-  },
-  backIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: '600',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 
-  teamCard: {
-    padding: 15,
-    borderRadius: 12,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  content: {
+    padding: 16,
+  },
+
+  card: {
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
 
   teamName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
 
-  info: {
-    fontSize: 14,
+  desc: {
+    fontSize: 13,
     marginTop: 4,
   },
 
-  detailsCard: {
-    padding: 20,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 20,
+  meta: {
+    fontSize: 12,
+    marginTop: 4,
   },
 
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
     marginTop: 12,
   },
 
   member: {
-    fontSize: 15,
-    marginLeft: 5,
+    fontSize: 14,
     marginTop: 4,
   },
 
-  requestBtn: {
+  primaryBtn: {
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  backBtn: {
-    padding: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
+    marginTop: 10,
   },
 
   btnText: {
-    fontWeight: '600',
     color: '#fff',
+    fontWeight: '700',
+  },
+
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
 });

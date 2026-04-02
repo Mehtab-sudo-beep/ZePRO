@@ -2,7 +2,9 @@ package com.zepro.controller;
 
 import com.zepro.dto.LoginRequest;
 import com.zepro.dto.SignupRequest;
+import com.zepro.dto.ChangePasswordRequest;
 import com.zepro.dto.ForgotPasswordRequest;
+import org.springframework.security.core.Authentication;
 import com.zepro.service.AuthService;
 
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +43,18 @@ public class AuthController {
         authService.resetPassword(token, newPassword);
         return "Password updated";
     }
+
+    @PostMapping("/change-password")
+    public String changePassword(
+            @RequestBody ChangePasswordRequest request) {
+        
+        return authService.changePassword(
+                request.getEmail(), 
+                request.getCurrentPassword(), 
+                request.getNewPassword()
+        );
+    }
+
     @PostMapping("/logout")
     public String logout() {
         return "Logged out successfully";

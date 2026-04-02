@@ -9,6 +9,8 @@ public class StudentProfile {
     private Boolean isInTeam;
     private Boolean isTeamLead;
     private String teamName;
+    private String resumeLink;
+    private String marksheetLink;
 
     // getters & setters
 
@@ -29,4 +31,10 @@ public class StudentProfile {
 
     public String getTeamName() { return teamName; }
     public void setTeamName(String teamName) { this.teamName = teamName; }
+
+    public String getResumeLink() { return resumeLink; }
+    public void setResumeLink(String resumeLink) { this.resumeLink = resumeLink; }
+
+    public String getMarksheetLink() { return marksheetLink; }
+    public void setMarksheetLink(String marksheetLink) { this.marksheetLink = marksheetLink; }
 }

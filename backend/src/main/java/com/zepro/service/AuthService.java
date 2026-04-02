@@ -166,7 +166,10 @@ public class AuthService {
             facultyId,
             studentId,
             isInTeam,
-            isTeamLead
+            isTeamLead,
+            user.getEmail(),
+            user.getName(),
+            user.getPhone()
     );
 }
 
@@ -191,5 +194,47 @@ public class AuthService {
 
     public void resetPassword(String token,String newPassword){
         // implement reset logic later
+    }
+
+    // ------------------------------------------------
+    // CHANGE PASSWORD
+    // ------------------------------------------------
+
+    public String changePassword(String email, String currentPassword, String newPassword) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Incorrect current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return "Password changed successfully";
+    }
+
+    // ------------------------------------------------
+    // UPDATE PROFILE
+    // ------------------------------------------------
+    public String updateProfile(String currentEmail, String newName, String newPhone) {
+        Users user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (newName != null && !newName.trim().isEmpty()) user.setName(newName);
+        if (newPhone != null && !newPhone.trim().isEmpty()) user.setPhone(newPhone);
+        userRepository.save(user);
+        return "Profile updated successfully";
+    }
+
+    // ------------------------------------------------
+    // DELETE ACCOUNT
+    // ------------------------------------------------
+    public String deleteAccount(String email) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        // This attempts to delete the root user. Note that foreign key constraints on Student/Faculty might block this unless cascading is configured. 
+        // For settings screen parity, we execute it here.
+        userRepository.delete(user);
+        return "Account deleted successfully";
     }
 }

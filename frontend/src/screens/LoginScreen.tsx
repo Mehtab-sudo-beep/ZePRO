@@ -14,6 +14,7 @@ import { AuthContext } from '../context/AuthContext';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'react-native';
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
@@ -23,7 +24,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secure] = useState(true);
+  const [secure, setSecure] = useState(true);
 
 const handleLogin = async () => {
   try {
@@ -38,9 +39,12 @@ const handleLogin = async () => {
       password
     });
 
-const { token, role, studentId, facultyId, isInTeam, isTeamLead } = res.data;
+const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail, name, phone } = res.data;
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('role', role);
+    await AsyncStorage.setItem('userEmail', resEmail || '');
+    await AsyncStorage.setItem('userName', name || '');
+    await AsyncStorage.setItem('userPhone', phone || '');
 
     if (studentId) {
       await AsyncStorage.setItem('studentId', studentId.toString());
@@ -55,7 +59,10 @@ const { token, role, studentId, facultyId, isInTeam, isTeamLead } = res.data;
       studentId,
       facultyId,
       isInTeam,
-      isTeamLead
+      isTeamLead,
+      email: resEmail,
+      name,
+      phone
     });
 
     if (role === 'STUDENT') {
@@ -89,6 +96,11 @@ const { token, role, studentId, facultyId, isInTeam, isTeamLead } = res.data;
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
+        <Image 
+          source={require('../assets/zepro.png')} 
+          style={styles.logo} 
+          resizeMode="contain" 
+        />
         <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
         <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Project Allocation Portal</Text>
       </View>
@@ -115,6 +127,13 @@ const { token, role, studentId, facultyId, isInTeam, isTeamLead } = res.data;
             style={[styles.passwordInput, { color: colors.text }]}
             placeholderTextColor={colors.subText}
           />
+          <TouchableOpacity onPress={() => setSecure(!secure)} style={{ padding: 4 }}>
+            <Image 
+              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')} 
+              style={{ width: 20, height: 20, opacity: secure ? 0.4 : 1 }} 
+              resizeMode="contain" 
+            />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={[styles.loginBtn, { backgroundColor: colors.primary }]} onPress={handleLogin}>
@@ -149,6 +168,18 @@ const styles = StyleSheet.create({
   brandContainer: {
     alignItems: 'center',
     marginBottom: 25,
+    marginTop: 20,
+  },
+
+  logo: {
+    width: 140,
+    height: 140,
+    marginBottom: 5,
+    // Added a subtle shadow to help it pop from the background without harsh lines
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
 
   brandTitle: {

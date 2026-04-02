@@ -21,6 +21,8 @@ public class Project {
 
     private String status;
 
+    private Integer studentSlots;
+
     public Long getProjectId() { return projectId; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -34,4 +36,7 @@ public class Project {
     public void setFaculty(Faculty faculty) { this.faculty = faculty; }
     public void setTeam(Team team) { this.team = team; }
     public void setStatus(String status) { this.status = status; }
+
+    public Integer getStudentSlots() { return studentSlots; }
+    public void setStudentSlots(Integer studentSlots) { this.studentSlots = studentSlots; }
 }

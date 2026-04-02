@@ -43,6 +43,10 @@ public class FacultyProfileService {
         dto.setDepartment(faculty.getDepartment().getDepartmentName());
     }
 
+    dto.setProblemStatementLink(faculty.getProblemStatementLink());
+    dto.setDomains(faculty.getDomains());
+    dto.setSubDomains(faculty.getSubDomains());
+
     System.out.println("📦 Profile DTO prepared: " + dto.getName());
 
     return dto;
@@ -76,6 +80,10 @@ public class FacultyProfileService {
     faculty.setQualification(dto.getQualification());
     faculty.setCabinNo(dto.getCabinNo());
     faculty.setInstitute(dto.getInstitute());
+    
+    faculty.setProblemStatementLink(dto.getProblemStatementLink());
+    faculty.setDomains(dto.getDomains());
+    faculty.setSubDomains(dto.getSubDomains());
 
     facultyRepository.save(faculty);
 

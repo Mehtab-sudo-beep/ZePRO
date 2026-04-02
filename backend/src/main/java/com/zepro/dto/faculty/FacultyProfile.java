@@ -15,6 +15,10 @@ public class FacultyProfile {
     private String cabinNo;
     private String institute;
 
+    private String problemStatementLink;
+    private String domains;
+    private String subDomains;
+
     // getters and setters
 
     public String getName() { return name; }
@@ -49,4 +53,13 @@ public class FacultyProfile {
 
     public String getInstitute() { return institute; }
     public void setInstitute(String institute) { this.institute = institute; }
+
+    public String getProblemStatementLink() { return problemStatementLink; }
+    public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
+
+    public String getDomains() { return domains; }
+    public void setDomains(String domains) { this.domains = domains; }
+
+    public String getSubDomains() { return subDomains; }
+    public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
 }

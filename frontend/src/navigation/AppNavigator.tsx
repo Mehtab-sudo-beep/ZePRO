@@ -39,6 +39,7 @@ import FacultyCreateMenuScreen from '../screens/FacultyCreateMenuScreen';
 import CreateDomainScreen from '../screens/CreateDomainScreen';
 import CreateSubDomainScreen from '../screens/CreateSubDomainScreen';
 import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
+import AllocatedProjectScreen from '../screens/AllocatedProjectScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -90,6 +91,7 @@ export type RootStackParamList = {
   CreateDomain: undefined;
   CreateSubDomain: undefined;
   TeamProjectRequests: undefined;
+  AllocatedProject: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -156,6 +158,7 @@ const AppNavigator = () => {
       <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
       <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
+      <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen}/>
       
     </Stack.Navigator>
   );

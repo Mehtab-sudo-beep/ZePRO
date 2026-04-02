@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -22,6 +23,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<'STUDENT' | 'FACULTY' | ''>('');
+  
+  const [securePass, setSecurePass] = useState(true);
+  const [secureConfirm, setSecureConfirm] = useState(true);
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword || !role) {
@@ -91,23 +95,41 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           placeholderTextColor={colors.subText}
         />
 
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-          placeholderTextColor={colors.subText}
-        />
+        <View style={[styles.passwordContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <TextInput
+            placeholder="Password"
+            secureTextEntry={securePass}
+            value={password}
+            onChangeText={setPassword}
+            style={[styles.passwordInput, { color: colors.text }]}
+            placeholderTextColor={colors.subText}
+          />
+          <TouchableOpacity onPress={() => setSecurePass(!securePass)} style={{ padding: 4 }}>
+            <Image 
+              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')} 
+              style={{ width: 20, height: 20, opacity: securePass ? 0.4 : 1 }} 
+              resizeMode="contain" 
+            />
+          </TouchableOpacity>
+        </View>
 
-        <TextInput
-          placeholder="Confirm Password"
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-          placeholderTextColor={colors.subText}
-        />
+        <View style={[styles.passwordContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <TextInput
+            placeholder="Confirm Password"
+            secureTextEntry={secureConfirm}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            style={[styles.passwordInput, { color: colors.text }]}
+            placeholderTextColor={colors.subText}
+          />
+          <TouchableOpacity onPress={() => setSecureConfirm(!secureConfirm)} style={{ padding: 4 }}>
+            <Image 
+              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')} 
+              style={{ width: 20, height: 20, opacity: secureConfirm ? 0.4 : 1 }} 
+              resizeMode="contain" 
+            />
+          </TouchableOpacity>
+        </View>
 
         <Text style={[styles.roleLabel, { color: colors.text }]}>Select Role</Text>
 
@@ -215,6 +237,23 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 15,
     backgroundColor: '#ffffff',
+  },
+
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    backgroundColor: '#ffffff',
+  },
+
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 12,
+    color: '#000000',
   },
 
   roleLabel: {

@@ -53,6 +53,13 @@ public class FacultyController {
         return facultyService.createProject(request, faculty);
     }
 
+    @PutMapping("/project/{projectId}")
+    public ProjectResponse updateProject(
+            @PathVariable Long projectId,
+            @RequestBody CreateProjectRequest request) {
+        return facultyService.updateProject(projectId, request);
+    }
+
     @GetMapping("/{facultyId}/projects")
     public List<ProjectResponse> getProjects(@PathVariable("facultyId") Long facultyId) {
         return facultyService.getProjects(facultyId);

@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
-
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
@@ -15,22 +17,166 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { getProjectRequestsStatus, getAssignedProject, getTeamInfo } from '../api/studentApi';
-import { Alert, Modal, ActivityIndicator } from 'react-native';
-import { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'StudentHome'
 >;
 
+// ── Tiny icon helper ──────────────────────────────────────────────────────────
+const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
+  const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
+
+  const icons: Record<string, any> = {
+    team: isDark
+      ? require('../assets/team-white.png')
+      : require('../assets/team.png'),
+
+    create: isDark
+      ? require('../assets/create-white.png')
+      : require('../assets/create.png'),
+
+    join: isDark
+      ? require('../assets/join-white.png')
+      : require('../assets/join.png'),
+
+    requests: isDark
+      ? require('../assets/requests-white.png')
+      : require('../assets/requests.png'),
+
+    project: isDark
+      ? require('../assets/project-white.png')
+      : require('../assets/project.png'),
+
+    allocated: isDark
+      ? require('../assets/allocated-white.png')
+      : require('../assets/allocated.png'),
+
+    status: isDark
+      ? require('../assets/status-white.png')
+      : require('../assets/status.png'),
+
+    close: isDark
+      ? require('../assets/close-white.png')
+      : require('../assets/close.png'),
+
+    lead: isDark
+      ? require('../assets/lead-white.png')
+      : require('../assets/lead.png'),
+
+    info: isDark
+      ? require('../assets/info-white.png')
+      : require('../assets/info.png'),
+  };
+
+  return (
+    <Image
+      source={icons[name]}
+      style={{ width: size, height: size, resizeMode: 'contain' }}
+    />
+  );
+};
+
+// ── SectionLabel ──────────────────────────────────────────────────────────────
+const SectionLabel = ({ label, colors }: { label: string; colors: any }) => (
+  <Text style={[styles.sectionLabel, { color: colors.subText }]}>
+    {label.toUpperCase()}
+  </Text>
+);
+
+// ── ActionRow ─────────────────────────────────────────────────────────────────
+const ActionRow = ({
+  label,
+  sublabel,
+  icon,
+  colors,
+  accentSoft,
+  onPress,
+  badge,
+  loading,
+}: {
+  label: string;
+  sublabel: string;
+  icon: string;
+  colors: any;
+  accentSoft: string;
+  onPress: () => void;
+  badge?: string;
+  loading?: boolean;
+}) => (
+  <TouchableOpacity style={styles.actionRow} onPress={onPress} activeOpacity={0.65}>
+    <View style={[styles.actionIconWrap, { backgroundColor: accentSoft }]}>
+      <Icon name={icon} size={17}  />
+    </View>
+    <View style={styles.actionRowText}>
+      <Text style={[styles.actionRowLabel, { color: colors.text }]}>{label}</Text>
+      <Text style={[styles.actionRowSub, { color: colors.subText }]}>{sublabel}</Text>
+    </View>
+    {loading ? (
+      <ActivityIndicator size="small" color={colors.primary} />
+    ) : badge ? (
+      <View style={[styles.badgePill, { backgroundColor: colors.primary }]}>
+        <Text style={styles.badgePillText}>{badge}</Text>
+      </View>
+    ) : (
+      <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>
+    )}
+  </TouchableOpacity>
+);
+
+// ── ProjectStatusRow ──────────────────────────────────────────────────────────
+const ProjectStatusRow = ({
+  project,
+  colors,
+  divider,
+}: {
+  project: any;
+  colors: any;
+  divider: string;
+}) => {
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    PENDING:   { bg: '#FEF3C7', text: '#92400E' },
+    ACCEPTED:  { bg: '#D1FAE5', text: '#065F46' },
+    REJECTED:  { bg: '#FEE2E2', text: '#991B1B' },
+    SCHEDULED: { bg: '#DBEAFE', text: '#1E40AF' },
+    COMPLETED: { bg: '#EDE9FE', text: '#5B21B6' },
+    APPROVED:  { bg: '#D1FAE5', text: '#065F46' },
+  };
+  const s = statusColors[project.status] ?? { bg: '#F3F4F6', text: '#374151' };
+  return (
+    <View style={[styles.projectStatusRow, { borderBottomColor: divider }]}>
+      <Text style={[styles.psTitle, { color: colors.text }]}>{project.title}</Text>
+      <Text style={[styles.psFaculty, { color: colors.subText }]}>
+        {project.facultyName || 'N/A'}
+      </Text>
+      <View
+        style={{
+          backgroundColor: s.bg,
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+          borderRadius: 999,
+          alignSelf: 'flex-start',
+          marginTop: 4,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontWeight: '700', color: s.text }}>
+          {project.status}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
 const StudentHomeScreen: React.FC = () => {
-  
   const { colors } = useContext(ThemeContext);
   const navigation = useNavigation<StudentHomeNavigationProp>();
-const { user, setUser } = useContext(AuthContext);
-  const [showAllocatedMessage, setShowAllocatedMessage] = useState(false);
+  const { user, setUser } = useContext(AuthContext);
+
+  // ✅ ALL hooks are declared unconditionally — no early returns before this block
   const [showAllocatedModal, setShowAllocatedModal] = useState(false);
   const [allocatedProject, setAllocatedProject] = useState<any>(null);
   const [loadingAllocated, setLoadingAllocated] = useState(false);
@@ -38,45 +184,89 @@ const { user, setUser } = useContext(AuthContext);
   const [showProjectStatusModal, setShowProjectStatusModal] = useState(false);
   const [projectStatus, setProjectStatus] = useState<any>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
 
-  if (!user) return null;
+  useFocusEffect(
+    useCallback(() => {
+      const loadTeam = async () => {
+        try {
+          setLoadingTeam(true);
+          const studentId = await AsyncStorage.getItem('studentId');
+          if (!studentId) return;
+          const res = await getTeamInfo(Number(studentId));
+          setTeamInfo(res.data);
+          setUser((prev: any) => ({
+            ...prev!,
+            isInTeam: true,
+            isTeamLead: res.data.teamLeadId === prev?.studentId,
+          }));
+        } catch (err) {
+          console.log('TEAM LOAD ERROR:', err);
+        } finally {
+          setLoadingTeam(false);
+        }
+      };
+      loadTeam();
+    }, [setUser]),
+  );
 
+  // ✅ Conditional returns AFTER all hooks
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+      </SafeAreaView>
+    );
+  }
+
+  if (user.role !== 'STUDENT') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.text, padding: 20 }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Derived values
   const { isInTeam } = user;
   const isTeamLead = isInTeam && user.isTeamLead === true;
+  const isDark = colors.background === '#111827';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = isDark ? '#374151' : '#E5E7EB';
+  const successColor = '#10B981';
 
+  // Handlers
   const handleViewAllocatedProject = async () => {
-  setLoadingAllocated(true);
-  setAllocatedProject(null);
-  setAllocatedMessage(null);
-
-  try {
-    const res = await getAssignedProject(user.studentId);
-
-    if (res.data && (res.data.status === "SCHEDULED" || res.data.status === "ACCEPTED" || res.data.status === "COMPLETED" || res.data.status === "APPROVED")) {
-      setAllocatedProject(res.data);
-      setShowAllocatedModal(true);   // popup only here
-    } else {
-      setAllocatedMessage("Your project has not been allocated yet.");
+    setLoadingAllocated(true);
+    setAllocatedMessage(null);
+    try {
+      if (!user?.studentId) return;
+      const res = await getAssignedProject(Number(user!.studentId));
+      if (
+        res.data &&
+        res.data.projectTitle !== 'Project not assigned yet' && 
+        res.data.status === 'ASSIGNED'
+      ) {
+         navigation.navigate('AllocatedProject' as any);
+      } else {
+        setAllocatedMessage('Your project has not been allocated yet.');
+      }
+    } catch (err: any) {
+      setAllocatedMessage(
+        err?.response?.data?.message || 'Your project has not been allocated yet.',
+      );
+    } finally {
+      setLoadingAllocated(false);
     }
-
-  } catch (err: any) {
-    setAllocatedMessage(
-      err?.response?.data?.message || "Your project has not been allocated yet."
-    );
-  } finally {
-    setLoadingAllocated(false);
-  }
-};
+  };
 
   const handleViewProjectStatus = async () => {
     setLoadingStatus(true);
     setShowProjectStatusModal(true);
     try {
-      const res = await getProjectRequestsStatus(user.studentId);
-     setProjectStatus(res);
+      const res = await getProjectRequestsStatus(Number(user!.studentId));
+      setProjectStatus(res);
     } catch (err: any) {
       setProjectStatus(null);
       Alert.alert('Error', err?.response?.data?.message || 'Could not fetch status');
@@ -85,283 +275,300 @@ const { user, setUser } = useContext(AuthContext);
     }
   };
 
-  useFocusEffect(
-  useCallback(() => {
-
-    const loadTeam = async () => {
-
-      try {
-
-        setLoadingTeam(true);
-
-        const studentId = await AsyncStorage.getItem("studentId");
-        if (!studentId) return;
-
-        const res = await getTeamInfo(Number(studentId));
-
-        setTeamInfo(res.data);
-
-        setUser((prev: any) => ({
-          ...prev!,
-          isInTeam: true,
-          isTeamLead: res.data.teamLeadId === prev?.studentId
-        }));
-
-      } catch (err) {
-
-        console.log("TEAM LOAD ERROR:", err);
-
-      } finally {
-
-        setLoadingTeam(false);
-
-      }
-
+  const StatusBadge = ({ status }: { status: string }) => {
+    const map: Record<string, { bg: string; text: string }> = {
+      PENDING:   { bg: '#FEF3C7', text: '#92400E' },
+      ACCEPTED:  { bg: '#D1FAE5', text: '#065F46' },
+      REJECTED:  { bg: '#FEE2E2', text: '#991B1B' },
+      SCHEDULED: { bg: '#DBEAFE', text: '#1E40AF' },
+      COMPLETED: { bg: '#EDE9FE', text: '#5B21B6' },
+      APPROVED:  { bg: '#D1FAE5', text: '#065F46' },
     };
-
-    loadTeam();
-
-  }, [setUser])
-);
-
-  if (!user || user.role !== 'STUDENT') {
+    const s = map[status] ?? { bg: accentSoft, text: colors.primary };
     return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <Text>Loading...</Text>
-      </SafeAreaView>
+      <View
+        style={{
+          backgroundColor: s.bg,
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+          borderRadius: 999,
+          alignSelf: 'flex-start',
+          marginTop: 2,
+        }}
+      >
+        <Text style={{ fontSize: 11, fontWeight: '700', color: s.text, letterSpacing: 0.5 }}>
+          {status}
+        </Text>
+      </View>
     );
-  }
+  };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+  <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={styles.container}>
+
+      {/* Header */}
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.card, borderBottomColor: divider },
+        ]}
+      >
+        {/* LEFT SIDE (TEXT) */}
+        <View>
+          <Text style={[styles.headerGreeting, { color: colors.subText }]}>
+            Welcome back,
+          </Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {user.name ?? 'Student'}
+          </Text>
         </View>
 
-        {/* Content */}
-        <ScrollView contentContainerStyle={styles.content}>
+        {/* RIGHT SIDE (PROFILE BUTTON) */}
+        <TouchableOpacity
+          style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Text style={[styles.avatarText, { color: colors.primary }]}>
+            {(user.name ?? 'S').charAt(0).toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+        {/* Scrollable Body */}
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+          {/* Team / No-team section */}
           {!isInTeam ? (
             <>
+              <SectionLabel label="Team" colors={colors} />
               <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  Team Actions
-                </Text>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, { borderColor: colors.primary }]}
+                <ActionRow
+                  label="Create Team"
+                  sublabel="Start a new project team"
+                  icon="create"
+                  colors={colors}
+                  accentSoft={accentSoft}
                   onPress={() => navigation.navigate('CreateTeam')}
-                >
-                  <Text style={[styles.actionText, { color: colors.primary }]}>
-                    Create Team
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, { borderColor: colors.primary }]}
+                />
+                <View style={[styles.rowDivider, { backgroundColor: divider }]} />
+                <ActionRow
+                  label="Join Team"
+                  sublabel="Send a request to join a team"
+                  icon="join"
+                  colors={colors}
+                  accentSoft={accentSoft}
                   onPress={() => navigation.navigate('JoinTeam')}
-                >
-                  <Text style={[styles.actionText, { color: colors.primary }]}>
-                    Join Team
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
 
-              {/* Requests Sent — only for students not in a team */}
+              <SectionLabel label="Requests" colors={colors} />
               <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  Requests Sent
-                </Text>
-                <Text style={[styles.label, { color: colors.subText }]}>
-                  View all join requests you have sent to teams.
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { borderColor: colors.primary, marginTop: 12 },
-                  ]}
+                <ActionRow
+                  label="View Sent Requests"
+                  sublabel="Track all your join requests"
+                  icon="requests"
+                  colors={colors}
+                  accentSoft={accentSoft}
                   onPress={() => navigation.navigate('SentRequests')}
-                >
-                  <Text style={[styles.actionText, { color: colors.primary }]}>
-                    View Sent Requests
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             </>
           ) : (
             <>
+              <SectionLabel label="My Team" colors={colors} />
               <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  My Team
-                </Text>
                 {loadingTeam ? (
-                  <Text style={{ color: colors.subText }}>Loading...</Text>
+                  <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
                 ) : teamInfo ? (
                   <>
-                    <Text style={[styles.label, { color: colors.subText }]}>
-                      Team Name
-                    </Text>
-                    <Text style={[styles.value, { color: colors.text }]}>
-                      {teamInfo.teamName}
-                    </Text>
+                    <View style={styles.teamHeaderRow}>
+                      <View style={[styles.teamIconCircle, { backgroundColor: accentSoft }]}>
+                        <Icon name="team" size={22}  />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[styles.teamName, { color: colors.text }]}>
+                          {teamInfo.teamName}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                          <Icon name="lead" size={12}  />
+                          <Text style={[styles.teamLead, { color: colors.subText, marginLeft: 4 }]}>
+                            {teamInfo.teamLead}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
 
-                    <Text style={[styles.label, { color: colors.subText }]}>
-                      Team Lead
-                    </Text>
-                    <Text style={[styles.value, { color: colors.text }]}>
-                      {teamInfo.teamLead}
-                    </Text>
-
-                    <Text style={[styles.label, { color: colors.subText }]}>
-                      Members
-                    </Text>
-                    {teamInfo.members?.map((m: string, idx: number) => (
-                      <Text key={idx} style={[styles.value, { color: colors.text }]}>
-                        • {m}
-                      </Text>
-                    ))}
+                    <View style={[styles.membersContainer, { borderTopColor: divider }]}>
+                      <Text style={[styles.membersLabel, { color: colors.subText }]}>MEMBERS</Text>
+                      <View style={styles.membersList}>
+                        {teamInfo.members?.map((m: string, idx: number) => (
+                          <View
+                            key={idx}
+                            style={[styles.memberChip, { backgroundColor: accentSoft }]}
+                          >
+                            <Text style={[styles.memberChipText, { color: colors.primary }]}>
+                              {m}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
                   </>
                 ) : (
-                  <Text style={{ color: colors.subText }}>No team info found.</Text>
+                  <Text style={[styles.emptyText, { color: colors.subText }]}>
+                    No team info found.
+                  </Text>
                 )}
               </View>
 
-              {/* Received Requests — only for team lead */}
               {isTeamLead && (
-                <View style={[styles.card, { backgroundColor: colors.card }]}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>
-                    Join Requests
-                  </Text>
-                  <Text style={[styles.label, { color: colors.subText }]}>
-                    Review incoming requests from students who want to join your
-                    team.
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionButton,
-                      { borderColor: colors.primary, marginTop: 12 },
-                    ]}
-                    onPress={() => navigation.navigate('ReceivedRequests')}
-                  >
-                    <Text
-                      style={[styles.actionText, { color: colors.primary }]}
-                    >
-                      View Received Requests
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <>
+                  <SectionLabel label="Management" colors={colors} />
+                  <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <ActionRow
+                      label="View Join Requests"
+                      sublabel="Review incoming requests from students"
+                      icon="requests"
+                      colors={colors}
+                      accentSoft={accentSoft}
+                      onPress={() => navigation.navigate('ReceivedRequests')}
+                      badge="Review"
+                    />
+                  </View>
+                </>
               )}
             </>
           )}
 
-          {/* Projects Section */}
+          {/* Projects section */}
+          <SectionLabel label="Projects" colors={colors} />
           <View style={[styles.card, { backgroundColor: colors.card }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Projects
-            </Text>
-
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
+            <ActionRow
+              label="Browse Projects"
+              sublabel="Explore all available projects"
+              icon="project"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={() => navigation.navigate('ViewProjects')}
-            >
-              <Text style={[styles.actionText, { color: colors.primary }]}>
-                View Projects
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
+            />
+            <View style={[styles.rowDivider, { backgroundColor: divider }]} />
+            <ActionRow
+              label="Allocated Project"
+              sublabel="View your assigned project details"
+              icon="allocated"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={handleViewAllocatedProject}
-            >
-              <Text style={[styles.actionText, { color: colors.primary }]}>
-                View Allocated Project
-              </Text>
-            </TouchableOpacity>
+              loading={loadingAllocated}
+            />
             {allocatedMessage && (
-  <View
-    style={[
-      styles.messageBox,
-      { borderColor: colors.border, backgroundColor: colors.background },
-    ]}
-  >
-    <Text style={[styles.messageText, { color: colors.subText }]}>
-      {allocatedMessage}
-    </Text>
-  </View>
-)}
-
-            <TouchableOpacity
-              style={[styles.actionButton, { borderColor: colors.primary }]}
+              <View
+                style={[
+                  styles.inlineAlert,
+                  { backgroundColor: accentSoft, borderColor: colors.border },
+                ]}
+              >
+                <Icon name="info" size={13} />
+                <Text style={[styles.inlineAlertText, { color: colors.subText }]}>
+                  {allocatedMessage}
+                </Text>
+              </View>
+            )}
+            <View style={[styles.rowDivider, { backgroundColor: divider }]} />
+            <ActionRow
+              label="Project Requests Status"
+              sublabel="Track the status of all requests"
+              icon="status"
+              colors={colors}
+              accentSoft={accentSoft}
               onPress={() => navigation.navigate('TeamProjectRequests' as any)}
-            >
-              <Text style={[styles.actionText, { color: colors.primary }]}>
-                View Project Requests Status
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
+
+          <View style={{ height: 16 }} />
         </ScrollView>
 
-        {/* Allocated Project Modal */}
-        <Modal visible={showAllocatedModal} transparent animationType="slide">
-          <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, width: '85%' }}>
-              <TouchableOpacity onPress={() => setShowAllocatedModal(false)} style={{ alignSelf: 'flex-end' }}>
-                <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Close</Text>
-              </TouchableOpacity>
-              {loadingAllocated ? (
-                <ActivityIndicator color={colors.primary} />
-              ) : allocatedProject ? (
-                <>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>Allocated Project</Text>
-                  <Text style={{ color: colors.text, fontWeight: 'bold' }}>{allocatedProject.title}</Text>
-                  <Text style={{ color: colors.subText }}>{allocatedProject.description}</Text>
-                  <Text style={{ color: colors.text, marginTop: 8 }}>Faculty: {allocatedProject.facultyName}</Text>
-                </>
-              ) : (
-                <Text style={{ color: colors.subText }}>No project assigned yet.</Text>
-              )}
-            </View>
-          </View>
-        </Modal>
+        {/* Allocated Project Modal removed - now uses separate screen */}
 
         {/* Project Requests Status Modal */}
-        <Modal visible={showProjectStatusModal} transparent animationType="slide">
-          <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: colors.card, padding: 24, borderRadius: 12, width: '90%', maxHeight: '80%' }}>
-              <TouchableOpacity onPress={() => setShowProjectStatusModal(false)} style={{ alignSelf: 'flex-end' }}>
-                <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Close</Text>
-              </TouchableOpacity>
+        <Modal visible={showProjectStatusModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View
+              style={[styles.modalSheet, { backgroundColor: colors.card, maxHeight: '82%' }]}
+            >
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Project Requests</Text>
+                <TouchableOpacity
+                  onPress={() => setShowProjectStatusModal(false)}
+                  style={[styles.closeBtn, { backgroundColor: accentSoft }]}
+                >
+                  <Icon name="close" size={13} />
+                </TouchableOpacity>
+              </View>
+
               {loadingStatus ? (
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={colors.primary} style={{ marginVertical: 32 }} />
               ) : projectStatus ? (
-                <ScrollView>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>Project Requests Status</Text>
-                  <Text style={{ color: colors.primary, marginTop: 8, fontWeight: 'bold' }}>Upcoming</Text>
-                  {projectStatus.upcoming.length === 0 && (
-                    <Text style={{ color: colors.subText }}>No upcoming requests.</Text>
-                  )}
-                  {projectStatus.upcoming.map((p: any) => (
-                    <View key={p.projectId} style={{ marginVertical: 6 }}>
-                      <Text style={{ color: colors.text }}>{p.title}</Text>
-                      <Text style={{ color: colors.subText }}>Faculty: {p.facultyName || 'N/A'}</Text>
-                      <Text style={{ color: colors.subText }}>Status: {p.status}</Text>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.statusGroup}>
+                    <View style={[styles.statusGroupLabel, { backgroundColor: accentSoft }]}>
+                      <Text style={[styles.statusGroupText, { color: colors.primary }]}>
+                        UPCOMING
+                      </Text>
                     </View>
-                  ))}
-                  <Text style={{ color: colors.primary, marginTop: 12, fontWeight: 'bold' }}>Completed</Text>
-                  {projectStatus.completed.length === 0 && (
-                    <Text style={{ color: colors.subText }}>No completed requests.</Text>
-                  )}
-                  {projectStatus.completed.map((p: any) => (
-                    <View key={p.projectId} style={{ marginVertical: 6 }}>
-                      <Text style={{ color: colors.text }}>{p.title}</Text>
-                      <Text style={{ color: colors.subText }}>Faculty: {p.facultyName || 'N/A'}</Text>
-                      <Text style={{ color: colors.subText }}>Status: {p.status}</Text>
+                    {projectStatus.upcoming.length === 0 ? (
+                      <Text style={[styles.emptyText, { color: colors.subText }]}>
+                        No upcoming requests.
+                      </Text>
+                    ) : (
+                      projectStatus.upcoming.map((p: any) => (
+                        <ProjectStatusRow
+                          key={p.projectId}
+                          project={p}
+                          colors={colors}
+                          divider={divider}
+                        />
+                      ))
+                    )}
+                  </View>
+
+                  <View style={[styles.statusGroup, { marginTop: 16 }]}>
+                    <View
+                      style={[
+                        styles.statusGroupLabel,
+                        {
+                          backgroundColor: isDark
+                            ? 'rgba(16,185,129,0.12)'
+                            : 'rgba(16,185,129,0.08)',
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.statusGroupText, { color: successColor }]}>
+                        COMPLETED
+                      </Text>
                     </View>
-                  ))}
+                    {projectStatus.completed.length === 0 ? (
+                      <Text style={[styles.emptyText, { color: colors.subText }]}>
+                        No completed requests.
+                      </Text>
+                    ) : (
+                      projectStatus.completed.map((p: any) => (
+                        <ProjectStatusRow
+                          key={p.projectId}
+                          project={p}
+                          colors={colors}
+                          divider={divider}
+                        />
+                      ))
+                    )}
+                  </View>
+                  <View style={{ height: 16 }} />
                 </ScrollView>
               ) : (
-                <Text style={{ color: colors.subText }}>No data found.</Text>
+                <Text style={[styles.emptyText, { color: colors.subText }]}>No data found.</Text>
               )}
             </View>
           </View>
@@ -369,152 +576,275 @@ const { user, setUser } = useContext(AuthContext);
 
         {/* Bottom Tab */}
         <View
-          style={[
-            styles.bottomTab,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
+          style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}
         >
           <View style={styles.tabItem}>
-            <Image
-              source={require('../assets/home-color.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tabActive, { color: colors.primary }]}>
-              Home
-            </Text>
+            <View style={[styles.tabActiveIndicator, { backgroundColor: colors.primary }]} />
+            <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>Home</Text>
           </View>
 
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('ScheduledMeetings')}
           >
-            <Image
-              source={require('../assets/meeting.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Meetings
-            </Text>
+            <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
+            <Text style={[styles.tab, { color: colors.subText }]}>Meetings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.tabItem}
             onPress={() => navigation.navigate('More')}
           >
-            <Image
-              source={require('../assets/more.png')}
-              style={styles.tabIcon}
-            />
+            <Image source={require('../assets/more.png')} style={styles.tabIcon} />
             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
   );
 };
 
 export default StudentHomeScreen;
 
-/* ======================= STYLES ======================= */
-
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    height: 60,
+    height: 72,
     paddingHorizontal: 20,
-    justifyContent: 'center',
-    elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    elevation: 2,
   },
-
+  headerGreeting: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '500',
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  avatarBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 17,
+    fontWeight: '800',
   },
 
-  content: {
-    padding: 16,
+  content: { padding: 16, paddingBottom: 8 },
+
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    marginTop: 4,
+    marginLeft: 2,
   },
 
   card: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 3,
-  },
-
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '500',
+    borderRadius: 14,
     marginBottom: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
 
-  label: {
-    fontSize: 13,
-    marginTop: 8,
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
   },
 
-  value: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-
-  actionButton: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
+  actionRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  actionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionRowText: { flex: 1 },
+  actionRowLabel: { fontSize: 14, fontWeight: '600' },
+  actionRowSub: { fontSize: 12, marginTop: 1 },
+  chevron: { fontSize: 22, fontWeight: '300', marginRight: 2 },
+
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  badgePillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  teamHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  teamIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  teamName: { fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  teamLead: { fontSize: 13 },
+  membersContainer: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  membersLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    marginBottom: 8,
+  },
+  membersList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  memberChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  memberChipText: { fontSize: 12, fontWeight: '600' },
+
+  emptyText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    padding: 12,
+    textAlign: 'center',
+  },
+
+  inlineAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  inlineAlertText: { fontSize: 13, flex: 1 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    paddingTop: 12,
+    elevation: 10,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  projectBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 10,
   },
-
-  actionText: {
-    fontWeight: '600',
+  projectTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
+  projectDesc: { fontSize: 13, lineHeight: 20 },
+  facultyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
+  facultyLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.4 },
+  facultyValue: { fontSize: 13, fontWeight: '600' },
 
-  placeholderText: {
-    fontStyle: 'italic',
+  statusGroup: { gap: 2 },
+  statusGroupLabel: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
   },
+  statusGroupText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  projectStatusRow: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  psTitle: { fontSize: 14, fontWeight: '600' },
+  psFaculty: { fontSize: 12, marginTop: 2 },
 
   bottomTab: {
-    height: 60,
-    borderTopWidth: 1,
+    height: 62,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
   },
-messageBox: {
-  marginTop: 10,
-  borderWidth: 1,
-  borderRadius: 8,
-  paddingVertical: 10,
-  paddingHorizontal: 12,
-  width: "100%",
-},
-
-messageText: {
-  fontSize: 13,
-  lineHeight: 18,
-},
-  tab: {
-    fontSize: 12,
+  tabItem: { alignItems: 'center', justifyContent: 'center' },
+  tabActiveIndicator: {
+    position: 'absolute',
+    top: -10,
+    width: 24,
+    height: 3,
+    borderRadius: 999,
   },
+  tab: { fontSize: 11, marginTop: 3 },
+  tabActive: { fontSize: 11, fontWeight: '700', marginTop: 3 },
+  tabIcon: { width: 22, height: 22, marginBottom: 3, resizeMode: 'contain' },
+//   headerGreeting: {
+//   fontSize: 13,
+//   fontWeight: '500',
+//   letterSpacing: 0.6,
+// },
 
-  tabActive: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  tabIcon: {
-    width: 22,
-    height: 22,
-    marginBottom: 4,
-    resizeMode: 'contain',
-  },
+// headerTitle: {
+//   fontSize: 22,
+//   fontWeight: '800',
+//   letterSpacing: -0.4,
+// },
 });
-
-
