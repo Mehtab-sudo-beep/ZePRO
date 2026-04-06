@@ -273,7 +273,7 @@ import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 
-import { getFacultyProjects, updateProject, getDomains, getSubDomains } from '../api/facultyApi';
+import { getFacultyProjects, updateProject, getDomains, getSubDomains, activateProjectStatus, deactivateProjectStatus } from '../api/facultyApi';
 
 const FacultyProjectsScreen = () => {
   const { user } = useContext(AuthContext);
@@ -510,9 +510,37 @@ const FacultyProjectsScreen = () => {
                   </View>
                 )}
 
-                <Text style={[styles.status, { color: colors.primary }]}>
-                  Status: {p.status}
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.status, { color: colors.primary }]}>
+                    Status: {p.status}
+                  </Text>
+                  
+                  {/* Activation Toggle */}
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: p.isActive ? '#10B981' : '#EF4444'
+                    }}
+                    onPress={async () => {
+                      try {
+                        if (p.isActive) {
+                          await deactivateProjectStatus(p.projectId, user!.token);
+                        } else {
+                          await activateProjectStatus(p.projectId, user!.token);
+                        }
+                        loadProjects();
+                      } catch (error) {
+                        showAlert('Error', 'Failed to toggle project status');
+                      }
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
+                      {p.isActive ? 'Active' : 'Inactive'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
         </ScrollView>

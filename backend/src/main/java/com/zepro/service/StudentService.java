@@ -30,7 +30,7 @@ public class StudentService {
         private final ProjectRepository projectRepository;
         private final com.zepro.repository.ProjectDomainRepository projectDomainRepository;
         private final com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository;
-
+        private final com.zepro.repository.AllocationRulesRepository allocationRulesRepository;
         public StudentService(StudentRepository studentRepository,
                         TeamRepository teamRepository,
                         TeamJoinRequestRepository joinRequestRepository,
@@ -38,7 +38,8 @@ public class StudentService {
                         MeetingRepository meetingRepository,
                         ProjectRepository projectRepository,
                         com.zepro.repository.ProjectDomainRepository projectDomainRepository,
-                        com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository) {
+                        com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository,
+                        com.zepro.repository.AllocationRulesRepository allocationRulesRepository) {
                 this.studentRepository = studentRepository;
                 this.teamRepository = teamRepository;
                 this.joinRequestRepository = joinRequestRepository;
@@ -47,6 +48,7 @@ public class StudentService {
                 this.projectRepository = projectRepository;
                 this.projectDomainRepository = projectDomainRepository;
                 this.projectSubDomainRepository = projectSubDomainRepository;
+                this.allocationRulesRepository = allocationRulesRepository;
         }
 
         // ------------------------------------------------
@@ -106,6 +108,11 @@ public class StudentService {
                 Team team = teamRepository.findById(request.getTeamId())
                                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
+                int maxTeamSize = allocationRulesRepository.findMaxTeamSize().orElse(3);
+                if (team.getMembers().size() >= maxTeamSize) {
+                        throw new RuntimeException("Limit reached in the current team");
+                }
+
                 student.setTeam(team);
                 student.setInTeam(true);
                 student.setTeamLead(false);
@@ -125,7 +132,7 @@ public class StudentService {
                 List<Project> projects = projectRepository.findAll();
 
                 return projects.stream()
-                                .filter(p -> p.getStudentSlots() != null && p.getStudentSlots() == teamSize && p.getStatus().equals("OPEN"))
+                                .filter(p -> p.getStudentSlots() != null && p.getStudentSlots() == teamSize && p.getStatus().equals("OPEN") && p.getIsActive())
                                 .map(project -> {
                                         String domainStr = "";
                                         String subdomainStr = "";
@@ -471,8 +478,9 @@ public class StudentService {
                         throw new RuntimeException("Student already belongs to a team");
                 }
 
-                if (team.getMembers().size() >= 3) {
-                        throw new RuntimeException("Team is already full");
+                int maxTeamSize = allocationRulesRepository.findMaxTeamSize().orElse(3);
+                if (team.getMembers().size() >= maxTeamSize) {
+                        throw new RuntimeException("Limit reached in the current team");
                 }
 
                 // add student

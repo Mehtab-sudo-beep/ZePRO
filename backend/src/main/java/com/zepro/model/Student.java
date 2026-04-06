@@ -14,7 +14,26 @@ public class Student {
     @JoinColumn(name = "user_id")
     private Users user;
 
-    // Student specific flags
+    @Column(name = "roll_no", unique = true)
+    private String rollNo;
+
+    // Mirrors Student.cgpa — shown in student cards + report
+    @Column(name = "cgpa")
+    private String cgpa;
+
+    // Mirrors Student.year — e.g. "3rd Year"
+    @Column(name = "year")
+    private String year;
+
+    // Mirrors Student.isAllocated — drives Allocated/Unallocated badge
+    
+    @Column(name = "is_allocated")
+    private boolean isAllocated = false;
+
+    @ManyToOne
+    @JoinColumn(name = "allocated_faculty_id")
+    private Faculty allocatedFaculty;
+    
     private boolean isInTeam = false;
 
     private boolean isTeamLead = false;
@@ -24,25 +43,41 @@ public class Student {
     @JoinColumn(name = "team_id")
     private Team team;
 
-
     @ManyToOne
     private Department department;
 
     private String resumeLink;
 
     private String marksheetLink;
+
     // ----------- GETTERS -----------
 
     public Long getStudentId() {
         return studentId;
     }
 
-    public String getName(){
-        return user.getName();
-    }
-
     public Users getUser() {
         return user;
+    }
+
+    public String getName() {
+        return (user != null) ? user.getName() : null;
+    }
+
+    public String getRollNo() {
+        return rollNo;
+    }
+
+    public String getCgpa() {
+        return cgpa;
+    }
+
+    public String getYear() {
+        return year;
+    }
+
+    public boolean isAllocated() {
+        return isAllocated;
     }
 
     public boolean isInTeam() {
@@ -55,6 +90,14 @@ public class Student {
 
     public Team getTeam() {
         return team;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public Faculty getAllocatedFaculty() {
+        return allocatedFaculty;
     }
 
     public String getResumeLink() {
@@ -75,6 +118,22 @@ public class Student {
         this.user = user;
     }
 
+    public void setRollNo(String rollNo) {
+        this.rollNo = rollNo;
+    }
+
+    public void setCgpa(String cgpa) {
+        this.cgpa = cgpa;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+    public void setAllocated(boolean allocated) {
+        this.isAllocated = allocated;
+    }
+
     public void setInTeam(boolean inTeam) {
         this.isInTeam = inTeam;
     }
@@ -87,6 +146,14 @@ public class Student {
         this.team = team;
     }
 
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public void setAllocatedFaculty(Faculty faculty) {
+        this.allocatedFaculty = faculty;
+    }
+
     public void setResumeLink(String resumeLink) {
         this.resumeLink = resumeLink;
     }
@@ -94,15 +161,4 @@ public class Student {
     public void setMarksheetLink(String marksheetLink) {
         this.marksheetLink = marksheetLink;
     }
-    // ----------- GETTER -----------
-
-public Department getDepartment() {
-    return department;
-}
-
-// ----------- SETTER -----------
-
-public void setDepartment(Department department) {
-    this.department = department;
-}
 }

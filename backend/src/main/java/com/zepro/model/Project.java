@@ -23,6 +23,9 @@ public class Project {
 
     private Integer studentSlots;
 
+    @Column(name = "is_active", nullable = false, columnDefinition = "boolean default true")
+    private boolean isActive = true;
+
     public Long getProjectId() { return projectId; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
@@ -39,4 +42,7 @@ public class Project {
 
     public Integer getStudentSlots() { return studentSlots; }
     public void setStudentSlots(Integer studentSlots) { this.studentSlots = studentSlots; }
+
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
 }

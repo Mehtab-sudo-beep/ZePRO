@@ -4,7 +4,6 @@ public enum UserRole {
 
     STUDENT,
     FACULTY,
-    FACULTY_COORDINATOR,
     ADMIN
 
 }

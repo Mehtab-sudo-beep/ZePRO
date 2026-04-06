@@ -10,6 +10,7 @@ public class ProjectResponse {
     private String title;
     private String description;
     private String status;
+    private boolean isActive;
 
     private Long teamId;
     private String teamName;
@@ -25,13 +26,14 @@ public class ProjectResponse {
 
     // 🔥 Constructor for projects
     public ProjectResponse(Long projectId, String title, String description,
-                           String status, String domain, String subdomain) {
+                           String status, String domain, String subdomain, boolean isActive) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
         this.status = status;
         this.domain = domain;
         this.subdomain = subdomain;
+        this.isActive = isActive;
     }
 
     // 🔥 Optional full constructor
@@ -69,6 +71,9 @@ public class ProjectResponse {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public boolean getIsActive() { return isActive; }
+    public void setIsActive(boolean isActive) { this.isActive = isActive; }
 
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }

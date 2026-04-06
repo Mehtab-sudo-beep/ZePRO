@@ -250,7 +250,7 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect } from 'react';
-import { getFacultyProfile } from '../api/facultyApi';
+import { getFacultyProfile, promoteToFC } from '../api/facultyApi';
 
 const FacultyMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -299,6 +299,22 @@ const FacultyMoreScreen: React.FC = () => {
       ],
       { cancelable: true },
     );
+  };
+
+  const handleDevPromote = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) return;
+      await promoteToFC(token);
+      Alert.alert(
+        "Promoted!",
+        "You are now a Faculty Coordinator. Please re-login to activate the features.",
+        [{ text: "OK", onPress: handleLogout }]
+      );
+    } catch (err) {
+      console.log("❌ PROMOTE ERROR:", err);
+      Alert.alert("Error", "Failed to promote. Try again.");
+    }
   };
 
   if (!user || user.role !== 'FACULTY') return null;
@@ -353,6 +369,18 @@ const FacultyMoreScreen: React.FC = () => {
           <MenuItem
             title="Settings"
             onPress={() => navigation.navigate('Settings')}
+            colors={colors}
+          />
+          {user?.isFC && (
+            <MenuItem
+              title="Activate Faculty Coordinator"
+              onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
+              colors={colors}
+            />
+          )}
+          <MenuItem
+            title="Promote to Coordinator (Dev Tools)"
+            onPress={handleDevPromote}
             colors={colors}
           />
           <MenuItem

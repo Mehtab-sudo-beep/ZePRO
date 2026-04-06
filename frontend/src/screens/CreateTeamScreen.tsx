@@ -13,6 +13,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createTeam } from '../api/studentApi';
@@ -23,6 +24,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CreateTeam'>;
 const CreateTeamScreen = ({ navigation }: Props) => {
   const { colors } = useContext(ThemeContext);
   const { user, setUser } = useContext(AuthContext);
+  const { setStudentUser } = useContext(StudentAuthContext);
   const { showAlert } = useContext(AlertContext);
   const [teamNameError, setTeamNameError] = useState('');
 
@@ -49,11 +51,14 @@ const CreateTeamScreen = ({ navigation }: Props) => {
       description,
     });
 
-    setUser({
+    const updatedUser = {
       ...user,
       isInTeam: true,
       isTeamLead: true,
-    });
+    };
+
+    setUser(updatedUser as any);
+    setStudentUser(updatedUser);
 
     showAlert("Team created successfully");
     navigation.replace("StudentHome");

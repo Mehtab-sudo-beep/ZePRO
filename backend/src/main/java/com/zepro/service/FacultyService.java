@@ -4,6 +4,7 @@ import com.zepro.dto.faculty.CreateProjectRequest;
 import com.zepro.dto.faculty.ProjectResponse;
 import com.zepro.model.*;
 import com.zepro.repository.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class FacultyService {
     private final ProjectRequestRepository projectRequestRepository;
     private final ProjectDomainRepository projectDomainRepository;
 private final ProjectSubDomainRepository projectSubDomainRepository;
+private final StudentRepository studentRepository;
 
     public FacultyService(ProjectRepository projectRepository,
                       FacultyRepository facultyRepository,
@@ -29,7 +31,8 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
                       SubDomainRepository subDomainRepository,
                       ProjectRequestRepository projectRequestRepository,
                       ProjectDomainRepository projectDomainRepository,
-                      ProjectSubDomainRepository projectSubDomainRepository) {
+                      ProjectSubDomainRepository projectSubDomainRepository,
+    StudentRepository studentRepository) {
 
     this.projectRepository = projectRepository;
     this.facultyRepository = facultyRepository;
@@ -39,6 +42,7 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
     this.projectRequestRepository = projectRequestRepository;
     this.projectDomainRepository = projectDomainRepository;
     this.projectSubDomainRepository = projectSubDomainRepository;
+    this.studentRepository = studentRepository;
 }
 
     public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
@@ -79,7 +83,8 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
             saved.getDescription(),
             saved.getStatus(),
             domain.getName(),
-            subDomain.getName()
+            subDomain.getName(),
+            saved.getIsActive()
     );
 }
 
@@ -128,7 +133,8 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
                 saved.getTitle(),
                 saved.getDescription(),
                 saved.getStatus(),
-                "", ""
+                "", "",
+                saved.getIsActive()
         );
     }
 
@@ -158,34 +164,78 @@ private final ProjectSubDomainRepository projectSubDomainRepository;
                             p.getDescription(),
                             p.getStatus(),
                             domainStr,
-                            subdomainStr);
+                            subdomainStr,
+                            p.getIsActive());
                 })
                 .collect(Collectors.toList());
     }
 
-    public void assignProject(Long projectId, Long teamId) {
-
-    Project project = projectRepository.findById(projectId).orElseThrow();
-
-    if(!project.getStatus().equals("REQUESTED")){
-        throw new RuntimeException("Project not requested yet");
+    public ProjectResponse activateProject(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        project.setIsActive(true);
+        Project saved = projectRepository.save(project);
+        return getProjectResponse(saved);
     }
 
-    Team team = teamRepository.findById(teamId).orElseThrow();
+    public ProjectResponse deactivateProject(Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        project.setIsActive(false);
+        Project saved = projectRepository.save(project);
+        return getProjectResponse(saved);
+    }
 
-    project.setTeam(team);
-    project.setStatus("ASSIGNED");
+    private ProjectResponse getProjectResponse(Project p) {
+        String domainStr = "";
+        String subdomainStr = "";
+        var pDomains = projectDomainRepository.findByProjectProjectId(p.getProjectId());
+        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) domainStr = pDomains.get(0).getDomain().getName();
+        var pSubDomains = projectSubDomainRepository.findByProjectProjectId(p.getProjectId());
+        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+        return new ProjectResponse(p.getProjectId(), p.getTitle(), p.getDescription(), p.getStatus(), domainStr, subdomainStr, p.getIsActive());
+    }
 
-    projectRepository.save(project);
+    @Transactional
+    public void assignProject(Long projectId, Long teamId) {
+        Project project = projectRepository.findById(projectId).orElseThrow();
 
-    ProjectRequest request = projectRequestRepository
-            .findByTeamTeamId(teamId).stream().findFirst()
-            .orElseThrow();
+        if(!project.getStatus().equals("REQUESTED")){
+            throw new RuntimeException("Project not requested yet");
+        }
 
-    request.setStatus(RequestStatus.ACCEPTED);
+        Team team = teamRepository.findById(teamId).orElseThrow();
+        Faculty faculty = project.getFaculty();
 
-    projectRequestRepository.save(request);
-}
+        // 1. Link Project to Team
+        project.setTeam(team);
+        project.setStatus("ASSIGNED");
+        projectRepository.save(project);
+
+        // 2. Link Team to Faculty
+        team.setFaculty(faculty);
+        teamRepository.save(team);
+
+        // 3. Mark all students in the team as Allocated
+        List<Student> members = team.getMembers();
+        if (members != null && !members.isEmpty()) {
+            for (Student student : members) {
+                student.setAllocated(true);
+                student.setAllocatedFaculty(faculty);
+                studentRepository.save(student);
+            }
+            // 4. Update Faculty slot counter
+            faculty.setAllocatedStudents(faculty.getAllocatedStudents() + members.size());
+            facultyRepository.save(faculty);
+        }
+
+        // 5. Accept the request
+        ProjectRequest request = projectRequestRepository
+                .findByTeamTeamId(teamId).stream().findFirst()
+                .orElseThrow();
+        request.setStatus(RequestStatus.ACCEPTED);
+        projectRequestRepository.save(request);
+    }
 
  public List<ProjectResponse> getPendingRequests(Long facultyId) {
 
