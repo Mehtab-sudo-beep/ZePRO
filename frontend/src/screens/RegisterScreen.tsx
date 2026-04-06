@@ -39,7 +39,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     // ✅ Password length validation
-    if (password.length < 8) {
+    if (password.length < 1) {
       showAlert('Error', 'Password must be at least 8 characters long');
       return;
     }

@@ -43,6 +43,20 @@ export const updateProject = async (projectId: number, data: any, token: string)
   return res.data;
 };
 
+export const activateProjectStatus = async (projectId: number, token: string) => {
+  const res = await axios.post(`${API}/faculty/project/${projectId}/activate`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const deactivateProjectStatus = async (projectId: number, token: string) => {
+  const res = await axios.post(`${API}/faculty/project/${projectId}/deactivate`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
 export const createDomain = async (name: string, token: string) => {
   const res = await axios.post(
     `${API}/faculty/domain`,
@@ -158,5 +172,12 @@ export const rejectProject = async (requestId: number, token: string, reason: st
   return axios.put(`${API}/faculty/meetings/request/${requestId}/reject`, { reason }, {
     headers: { Authorization: `Bearer ${token}` },
   });
+};
+
+export const promoteToFC = async (token: string) => {
+  const res = await axios.post(`${API}/faculty/make-fc`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
 };
 

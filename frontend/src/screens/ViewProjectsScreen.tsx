@@ -20,6 +20,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
 
 /* ================= ICON ================= */
@@ -56,6 +57,7 @@ const ProjectListScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
+  const { studentUser } = useContext(StudentAuthContext);
   const { showAlert } = useContext(AlertContext);
 
   const isDark = colors.background === '#111827';
@@ -63,11 +65,9 @@ const ProjectListScreen: React.FC = () => {
 
   const [projects, setProjects] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<SearchFilter>('PROJECT');
-  const [dropdownVisible, setDropdownVisible] = useState(false);
   const [requestedProjects, setRequestedProjects] = useState<number[]>([]);
 
-  const isTeamLead = user?.isTeamLead === true;
+  const isTeamLead = studentUser?.isTeamLead === true;
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -90,14 +90,12 @@ const ProjectListScreen: React.FC = () => {
 
   const filteredProjects = projects.filter(project => {
     const query = search.toLowerCase();
-
-    if (filter === "DOMAIN") {
-      return project.domain?.toLowerCase().includes(query);
-    } else if (filter === "FACULTY") {
-      return project.facultyName?.toLowerCase().includes(query);
-    } else {
-      return project.title?.toLowerCase().includes(query);
-    }
+    
+    return (
+      project.title?.toLowerCase().includes(query) ||
+      project.domain?.toLowerCase().includes(query) ||
+      project.facultyName?.toLowerCase().includes(query)
+    );
   });
 
   const sendRequest = async (projectId: number, projectTitle: string) => {
@@ -221,51 +219,14 @@ const ProjectListScreen: React.FC = () => {
           <Icon name="search" colors={colors} />
 
           <TextInput
-            placeholder={`Search ${filter.toLowerCase()}`}
+            placeholder="Search projects..."
             placeholderTextColor={colors.subText}
             value={search}
             onChangeText={setSearch}
             style={[styles.searchInput, { color: colors.text }]}
           />
-
-          <TouchableOpacity onPress={() => setDropdownVisible(true)}>
-            <Icon name="filter" colors={colors} />
-          </TouchableOpacity>
         </View>
 
-        {/* DROPDOWN */}
-        <Modal visible={dropdownVisible} transparent animationType="fade">
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            onPress={() => setDropdownVisible(false)}
-          >
-            <View style={[
-              styles.dropdownBox,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderWidth: 1,
-              }
-            ]}>
-              {['PROJECT', 'DOMAIN', 'FACULTY'].map(type => (
-                <TouchableOpacity
-                  key={type}
-                  activeOpacity={0.6}   // 👈 smoother feedback
-
-                  style={styles.dropdownOption}
-                  onPress={() => {
-                    setFilter(type as SearchFilter);
-                    setDropdownVisible(false);
-                  }}
-                >
-                  <Text style={{ color: colors.text }}>
-                    {type}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
 
         {/* LIST */}
         <FlatList

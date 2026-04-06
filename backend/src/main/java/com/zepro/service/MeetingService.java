@@ -12,6 +12,8 @@ import com.zepro.repository.ProjectRepository;
 import com.zepro.repository.ProjectRequestRepository;
 import com.zepro.repository.ProjectDomainRepository;
 import com.zepro.repository.ProjectSubDomainRepository;
+import com.zepro.repository.StudentRepository;
+import com.zepro.model.Student;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -24,17 +26,20 @@ public class MeetingService {
     private final ProjectRepository projectRepository;
     private final ProjectDomainRepository projectDomainRepository;
     private final ProjectSubDomainRepository projectSubDomainRepository;
+    private final StudentRepository studentRepository;
 
     public MeetingService(MeetingRepository meetingRepository,
             ProjectRequestRepository requestRepository,
             ProjectRepository projectRepository,
             ProjectDomainRepository projectDomainRepository,
-            ProjectSubDomainRepository projectSubDomainRepository) {
+            ProjectSubDomainRepository projectSubDomainRepository,
+            StudentRepository studentRepository) {
         this.meetingRepository = meetingRepository;
         this.requestRepository = requestRepository;
         this.projectRepository = projectRepository;
         this.projectDomainRepository = projectDomainRepository;
         this.projectSubDomainRepository = projectSubDomainRepository;
+        this.studentRepository = studentRepository;
     }
 
     // Schedule meeting
@@ -204,6 +209,15 @@ public class MeetingService {
 
         request.setStatus(RequestStatus.ACCEPTED);
         requestRepository.save(request);
+
+        // ✅ ALLOCATE PROJECT FOR ALL TEAM MEMBERS
+        if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+                for (Student student : request.getTeam().getMembers()) {
+                        student.setAllocated(true);
+                        student.setAllocatedFaculty(request.getFaculty());
+                        studentRepository.save(student);
+                }
+        }
 
         // DROP OFF ALL OTHER PENDING/SCHEDULED REQUESTS FOR THIS PROJECT
         List<ProjectRequest> otherRequests = requestRepository.findByProjectProjectId(project.getProjectId());

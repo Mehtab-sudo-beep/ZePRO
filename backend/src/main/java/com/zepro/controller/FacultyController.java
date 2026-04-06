@@ -65,6 +65,16 @@ public class FacultyController {
         return facultyService.getProjects(facultyId);
     }
 
+    @PostMapping("/project/{projectId}/activate")
+    public ProjectResponse activateProject(@PathVariable Long projectId) {
+        return facultyService.activateProject(projectId);
+    }
+
+    @PostMapping("/project/{projectId}/deactivate")
+    public ProjectResponse deactivateProject(@PathVariable Long projectId) {
+        return facultyService.deactivateProject(projectId);
+    }
+
     @GetMapping("/pending-requests")
     public List<ProjectResponse> getPendingRequests(Authentication authentication) {
 
@@ -110,5 +120,15 @@ public class FacultyController {
     @PutMapping("/requests/{requestId}/cancel")
     public ProjectRequest cancelRequest(@PathVariable("requestId") Long requestId) {
         return requestService.cancelRequest(requestId);
+    }
+
+    @PostMapping("/make-fc")
+    public String makeFC(Authentication authentication) {
+        String email = authentication.getName();
+        Faculty faculty = facultyRepository.findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        faculty.setIsFC(true);
+        facultyRepository.save(faculty);
+        return "Promoted to Faculty Coordinator";
     }
 }

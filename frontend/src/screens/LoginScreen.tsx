@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { login } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,87 +20,107 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { setUser } = useContext(AuthContext);
+  const { studentUser, setStudentUser } = useContext(StudentAuthContext);
   const { showAlert } = useContext(AlertContext);
   const { colors } = useContext(ThemeContext);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-const handleLogin = async () => {
-  try {
 
-    if (!email || !password) {
-      showAlert("Error", "Please enter email and password");
-      return;
+  const handleLogin = async () => {
+    setErrorMsg(null);
+    try {
+
+      if (!email || !password) {
+        setErrorMsg("Please enter email and password");
+        return;
+      }
+
+      const res = await login({
+        email,
+        password
+      });
+
+      const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail, name, phone, fc: isFC } = res.data;
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('role', role);
+      await AsyncStorage.setItem('userEmail', resEmail || '');
+      await AsyncStorage.setItem('userName', name || '');
+      await AsyncStorage.setItem('userPhone', phone || '');
+      await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
+
+      if (studentId) {
+        await AsyncStorage.setItem('studentId', studentId.toString());
+      }
+      if (facultyId) {
+        await AsyncStorage.setItem('facultyId', facultyId.toString());
+      }
+
+      setUser({
+        token,
+        role,
+        studentId,
+        facultyId,
+        isInTeam,
+        isTeamLead,
+        email: resEmail,
+        name,
+        phone,
+        isFC
+      });
+
+      if (role === 'STUDENT') {
+        console.log("STUDENT LOGGED IN:", res.data);
+
+        const user = {
+          ...res.data,
+          isInTeam: res.data.inTeam,
+          isTeamLead: res.data.teamLead,
+        };
+
+        // ✅ Save
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+
+        // ✅ Update context
+        setStudentUser(user);
+
+        // ✅ FORCE NAVIGATION (NO useEffect)
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'StudentHome' }],
+        });
+      }
+      else if (role === 'FACULTY') {
+        navigation.replace('FacultyHome');
+      }
+      else if (role === 'ADMIN') {
+        navigation.replace('AddInstitute');
+      }
+
+    } catch (error: any) {
+
+      console.log("LOGIN ERROR:", error);
+
+      if (error.response) {
+        setErrorMsg(error.response.data.message || "Invalid credentials");
+      } else if (error.request) {
+        setErrorMsg("Cannot connect to server");
+      } else {
+        setErrorMsg("Something went wrong");
+      }
     }
-
-    const res = await login({
-      email,
-      password
-    });
-
-const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail, name, phone } = res.data;
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('role', role);
-    await AsyncStorage.setItem('userEmail', resEmail || '');
-    await AsyncStorage.setItem('userName', name || '');
-    await AsyncStorage.setItem('userPhone', phone || '');
-
-    if (studentId) {
-      await AsyncStorage.setItem('studentId', studentId.toString());
-    }
-    if (facultyId) {
-      await AsyncStorage.setItem('facultyId', facultyId.toString());
-    }
-
-    setUser({
-      token,
-      role,
-      studentId,
-      facultyId,
-      isInTeam,
-      isTeamLead,
-      email: resEmail,
-      name,
-      phone
-    });
-
-    if (role === 'STUDENT') {
-      console.log("STUDENT LOGGED IN:", res.data);
-      navigation.replace('StudentHome');
-    } 
-    else if (role === 'FACULTY') {
-      navigation.replace('FacultyHome');
-    }
-    else if (role === 'FACULTY_COORDINATOR') {
-      navigation.replace('FacultyCoordinatorDashboard');
-    }
-    else if (role === 'ADMIN') {
-      navigation.replace('AddInstitute');
-    }
-
-  } catch (error: any) {
-
-    console.log("LOGIN ERROR:", error);
-
-    if (error.response) {
-      showAlert("Login Failed", error.response.data.message || "Invalid credentials");
-    } else if (error.request) {
-      showAlert("Network Error", "Cannot connect to server");
-    } else {
-      showAlert("Error", "Something went wrong");
-    }
-  }
-};
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
-        <Image 
-          source={require('../assets/zepro.png')} 
-          style={styles.logo} 
-          resizeMode="contain" 
+        <Image
+          source={require('../assets/zepro_new.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
         <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
         <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Project Allocation Portal</Text>
@@ -108,6 +129,16 @@ const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
         <Text style={[styles.signInTitle, { color: colors.text }]}>Sign in</Text>
         <Text style={[styles.signInSubtitle, { color: colors.subText }]}>Enter your details below</Text>
+
+        {errorMsg && (
+          <View style={styles.inlineAlert}>
+            <Image
+              source={require('../assets/info.png')}
+              style={[styles.alertIcon, { tintColor: '#ef4444' }]}
+            />
+            <Text style={styles.inlineAlertText}>{errorMsg}</Text>
+          </View>
+        )}
 
         <TextInput
           placeholder="Email"
@@ -128,10 +159,10 @@ const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail
             placeholderTextColor={colors.subText}
           />
           <TouchableOpacity onPress={() => setSecure(!secure)} style={{ padding: 4 }}>
-            <Image 
-              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')} 
-              style={{ width: 20, height: 20, opacity: secure ? 0.4 : 1 }} 
-              resizeMode="contain" 
+            <Image
+              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')}
+              style={{ width: 20, height: 20, opacity: secure ? 0.4 : 1 }}
+              resizeMode="contain"
             />
           </TouchableOpacity>
         </View>
@@ -264,5 +295,26 @@ const styles = StyleSheet.create({
   link: {
     color: '#2563eb',
     fontSize: 12,
+  },
+  inlineAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  alertIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
+  },
+  inlineAlertText: {
+    color: '#b91c1c',
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
   },
 });

@@ -41,10 +41,10 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasRole("ADMIN")
 
                 // faculty APIs
-                .requestMatchers("/faculty/**").hasAnyRole("FACULTY","FACULTY_COORDINATOR")
+                .requestMatchers("/faculty/**").hasRole("FACULTY")
 
                 // coordinator APIs
-                .requestMatchers("/coordinator/**").hasRole("FACULTY_COORDINATOR")
+                .requestMatchers("/coordinator/**").hasRole("FACULTY")
 
                 // student APIs
                 .requestMatchers("/student/**").hasRole("STUDENT")

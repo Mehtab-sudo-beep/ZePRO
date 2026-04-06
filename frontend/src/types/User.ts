@@ -1,4 +1,4 @@
-export type Role = 'STUDENT' | 'FACULTY' | 'ADMIN' | 'FACULTY_COORDINATOR';
+export type Role = 'STUDENT' | 'FACULTY' | 'ADMIN';
 
 export interface User {
   token: string;
@@ -9,4 +9,5 @@ export interface User {
   studentId?: number;
   isInTeam?: boolean;
   isTeamLead?: boolean;
+  isFC?: boolean;
 }

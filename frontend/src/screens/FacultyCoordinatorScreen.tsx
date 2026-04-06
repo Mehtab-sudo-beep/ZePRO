@@ -1,465 +1,527 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useContext, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  Image,
-  Alert,
-  StyleSheet,
-  StatusBar,
-  TextInput,
+  View, Text, ScrollView, TouchableOpacity, Modal, Image,
+  StyleSheet, StatusBar, TextInput, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AuthContext } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
-type FacultyCoordinatorDashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'FacultyCoordinatorDashboard'>;
-type FacultyNavProp = NativeStackNavigationProp<RootStackParamList>;
+type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
-interface Props {
-  navigation: FacultyCoordinatorDashboardNavigationProp;
-}
+const BASE_URL = 'http://localhost:8080/api/coordinator';
 
-interface Faculty {
-  id: string;
-  name: string;
-  email: string;
-  department: string;
-  maxStudents: number;
-  allocatedStudents: number;
-  specialization: string;
-}
-
-interface Student {
-  id: string;
-  name: string;
-  rollNo: string;
-  email: string;
-  department: string;
-  year: string;
-  cgpa: string;
-  isAllocated: boolean;
-  allocatedFacultyId?: string;
-  teamId?: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-  projectTitle: string;
-  facultyId: string;
-  facultyName: string;
-  members: string[];
-  status: 'active' | 'completed' | 'pending';
-}
-
-interface Rules {
-  maxTeamSize: number;
-  maxStudentsPerFaculty: number;
-}
-
-const FacultyCoordinatorDashboard: React.FC<Props> = ({}) => {
+const FacultyCoordinatorDashboard: React.FC = () => {
   const { colors } = useContext(ThemeContext);
-  const navigation = useNavigation<FacultyNavProp>();
+  const { user } = useContext(AuthContext);
+  const navigation = useNavigation<NavProp>();
 
-  const [rules, setRules] = useState<Rules>({
-    maxTeamSize: 4,
-    maxStudentsPerFaculty: 10,
-  });
+  const isDark = colors.background === '#111827';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = colors.border;
 
-  const [faculties, setFaculties] = useState<Faculty[]>([
-    { id: 'F001', name: 'Dr. Sarah Johnson', email: 'sarah.j@university.edu', department: 'Computer Science', maxStudents: 10, allocatedStudents: 8, specialization: 'Machine Learning' },
-    { id: 'F002', name: 'Prof. Michael Chen', email: 'michael.c@university.edu', department: 'Computer Science', maxStudents: 8, allocatedStudents: 6, specialization: 'Web Development' },
-    { id: 'F003', name: 'Dr. Emily Rodriguez', email: 'emily.r@university.edu', department: 'Computer Science', maxStudents: 12, allocatedStudents: 12, specialization: 'Data Science' },
-    { id: 'F004', name: 'Prof. James Williams', email: 'james.w@university.edu', department: 'Computer Science', maxStudents: 10, allocatedStudents: 5, specialization: 'Cybersecurity' },
-  ]);
+  // ───────── ICON HELPER ─────────
+  const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
+    const icons: any = {
+      overview: isDark ? require('../assets/overview-white.png') : require('../assets/overview.png'),
+      faculty: isDark ? require('../assets/faculty-white.png') : require('../assets/faculty.png'),
+      students: isDark ? require('../assets/students-white.png') : require('../assets/students.png'),
+      team: isDark ? require('../assets/team-white.png') : require('../assets/team.png'),
+      rules: isDark ? require('../assets/rules-white.png') : require('../assets/rules.png'),
+      search: isDark ? require('../assets/search-white.png') : require('../assets/search.png'),
+      download: isDark ? require('../assets/download-white.png') : require('../assets/download.png'),
+      info: require('../assets/info.png'),
+    };
+    return <Image source={icons[name]} style={{ width: size, height: size }} />;
+  };
 
-  const [students, setStudents] = useState<Student[]>([
-    { id: 'S001', name: 'John Doe', rollNo: 'CS2021001', email: 'john.d@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '8.5', isAllocated: true, allocatedFacultyId: 'F001', teamId: 'T001' },
-    { id: 'S002', name: 'Jane Smith', rollNo: 'CS2021002', email: 'jane.s@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '9.0', isAllocated: true, allocatedFacultyId: 'F001', teamId: 'T001' },
-    { id: 'S003', name: 'Mike Johnson', rollNo: 'CS2021003', email: 'mike.j@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '7.8', isAllocated: true, allocatedFacultyId: 'F002', teamId: 'T002' },
-    { id: 'S004', name: 'Sarah Williams', rollNo: 'CS2021004', email: 'sarah.w@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '8.9', isAllocated: false },
-    { id: 'S005', name: 'Alex Brown', rollNo: 'CS2021005', email: 'alex.b@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '8.2', isAllocated: false },
-    { id: 'S006', name: 'Emma Davis', rollNo: 'CS2021006', email: 'emma.d@student.edu', department: 'Computer Science', year: '3rd Year', cgpa: '9.2', isAllocated: true, allocatedFacultyId: 'F003', teamId: 'T003' },
-  ]);
+  // ───────── STATE ─────────
+  const [stats, setStats] = useState<any>(null);
+  const [faculties, setFaculties] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [team, setteam] = useState<any[]>([]);
+  const [rules, setRules] = useState<any>({ maxTeamSize: 4, maxStudentsPerFaculty: 10, maxProjectsPerFaculty: 3 });
+  const [tempRules, setTempRules] = useState(rules);
 
-  const [teams] = useState<Team[]>([
-    { id: 'T001', name: 'Team Alpha', projectTitle: 'AI-Based Chatbot for Customer Support', facultyId: 'F001', facultyName: 'Dr. Sarah Johnson', members: ['S001', 'S002'], status: 'active' },
-    { id: 'T002', name: 'Team Beta', projectTitle: 'E-Commerce Platform with React', facultyId: 'F002', facultyName: 'Prof. Michael Chen', members: ['S003'], status: 'active' },
-    { id: 'T003', name: 'Team Gamma', projectTitle: 'Predictive Analytics Dashboard', facultyId: 'F003', facultyName: 'Dr. Emily Rodriguez', members: ['S006'], status: 'active' },
-  ]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'faculties' | 'students' | 'download' | 'rules'>('overview');
+  const [loading, setLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'faculties' | 'students' | 'teams' | 'rules'>('overview');
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedFacultyId, setSelectedFacultyId] = useState('');
+
   const [facultySearchQuery, setFacultySearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
-  const [tempRules, setTempRules] = useState<Rules>(rules);
 
-  const filteredFaculties = useMemo(() => {
-    if (!facultySearchQuery.trim()) return faculties;
-    const query = facultySearchQuery.toLowerCase();
-    return faculties.filter(f =>
-      f.name.toLowerCase().includes(query) ||
-      f.email.toLowerCase().includes(query) ||
-      f.specialization.toLowerCase().includes(query)
-    );
-  }, [faculties, facultySearchQuery]);
+  // ── Blended Alert State ──
+  const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  const filteredStudents = useMemo(() => {
-    if (!studentSearchQuery.trim()) return students;
-    const query = studentSearchQuery.toLowerCase();
-    return students.filter(s =>
-      s.name.toLowerCase().includes(query) ||
-      s.rollNo.toLowerCase().includes(query) ||
-      s.email.toLowerCase().includes(query)
-    );
-  }, [students, studentSearchQuery]);
+  const isMounted = useRef(false);
 
-  const stats = {
-    totalStudents: students.length,
-    allocatedStudents: students.filter(s => s.isAllocated).length,
-    unallocatedStudents: students.filter(s => !s.isAllocated).length,
-    totalTeams: teams.length,
-    totalFaculty: faculties.length,
-    availableSlots:
-      faculties.reduce((sum, f) => sum + f.maxStudents, 0) -
-      faculties.reduce((sum, f) => sum + f.allocatedStudents, 0),
+  const authHeader = useCallback(() => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${user?.token ?? ''}`,
+  }), [user]);
+
+  const safeFetch = useCallback(async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) return null;
+      return res.json();
+    } catch (e) {
+      return null;
+    }
+  }, []);
+
+  const showLocalMsg = (text: string, type: 'success' | 'error') => {
+    setMsg({ text, type });
   };
 
-  const handleAllocateStudent = () => {
+  // ───────── FETCH ─────────
+  const fetchAll = async () => {
+    setLoading(true);
+    const headers = { headers: authHeader() };
+    const [s, f, st, t, r] = await Promise.all([
+      safeFetch(`${BASE_URL}/stats`, headers),
+      safeFetch(`${BASE_URL}/faculties`, headers),
+      safeFetch(`${BASE_URL}/students`, headers),
+      safeFetch(`${BASE_URL}/teams`, headers),
+      safeFetch(`${BASE_URL}/rules`, headers)
+    ]);
+    if (s) setStats(s);
+    if (f) setFaculties(f.map((item: any) => ({ ...item, id: String(item.facultyId) })));
+    if (st) setStudents(st.map((item: any) => ({ ...item, id: String(item.studentId) })));
+    if (t) setteam(t.map((item: any) => ({ ...item, id: String(item.teamId) })));
+    if (r) {
+      setRules(r);
+      setTempRules(r);
+    }
+    setLoading(false);
+    isMounted.current = true;
+  };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  // ───────── ACTIONS ─────────
+  const handleAllocateStudent = async () => {
     if (!selectedStudent || !selectedFacultyId) {
-      Alert.alert('Error', 'Please select both student and faculty');
+      showLocalMsg("Please select faculty", "error");
       return;
     }
-    const faculty = faculties.find(f => f.id === selectedFacultyId);
-    if (!faculty || faculty.allocatedStudents >= faculty.maxStudents) {
-      Alert.alert('Error', 'No slots available for this faculty');
-      return;
+    try {
+      const res = await fetch(`${BASE_URL}/allocate`, {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ studentId: selectedStudent.id, facultyId: selectedFacultyId }),
+      });
+      if (res.ok) {
+        showLocalMsg("Student allocated successfully!", "success");
+        fetchAll();
+        setShowAllocationModal(false);
+      } else {
+        const err = await res.text();
+        showLocalMsg(err || "Allocation failed", "error");
+      }
+    } catch {
+      showLocalMsg("Network error", "error");
     }
-    setStudents(students.map(s =>
-      s.id === selectedStudent.id ? { ...s, isAllocated: true, allocatedFacultyId: selectedFacultyId } : s
-    ));
-    setFaculties(faculties.map(f =>
-      f.id === selectedFacultyId ? { ...f, allocatedStudents: f.allocatedStudents + 1 } : f
-    ));
-    setShowAllocationModal(false);
-    setSelectedStudent(null);
-    setSelectedFacultyId('');
-    Alert.alert('Success', 'Student allocated successfully!');
   };
 
-  const handleOverrideAllocation = () => {
+  const handleOverrideAllocation = async () => {
     if (!selectedStudent || !selectedFacultyId) {
-      Alert.alert('Error', 'Please select faculty');
+      showLocalMsg("Please select faculty", "error");
       return;
     }
-    const newFaculty = faculties.find(f => f.id === selectedFacultyId);
-    if (!newFaculty || newFaculty.allocatedStudents >= newFaculty.maxStudents) {
-      Alert.alert('Error', 'No slots available for this faculty');
-      return;
+    try {
+      const res = await fetch(`${BASE_URL}/override`, {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify({ studentId: selectedStudent.id, newFacultyId: selectedFacultyId }),
+      });
+      if (res.ok) {
+        showLocalMsg("Allocation overridden successfully!", "success");
+        fetchAll();
+        setShowOverrideModal(false);
+      } else {
+        const err = await res.text();
+        showLocalMsg(err || "Override failed", "error");
+      }
+    } catch {
+      showLocalMsg("Network error", "error");
     }
-    const oldFacultyId = selectedStudent.allocatedFacultyId;
-    setStudents(students.map(s =>
-      s.id === selectedStudent.id ? { ...s, allocatedFacultyId: selectedFacultyId } : s
-    ));
-    setFaculties(faculties.map(f => {
-      if (f.id === oldFacultyId) return { ...f, allocatedStudents: f.allocatedStudents - 1 };
-      if (f.id === selectedFacultyId) return { ...f, allocatedStudents: f.allocatedStudents + 1 };
-      return f;
-    }));
-    setShowOverrideModal(false);
-    setSelectedStudent(null);
-    setSelectedFacultyId('');
-    Alert.alert('Success', 'Allocation overridden successfully!');
   };
 
-  const handleDownloadAllTeamsReport = () => {
-    const report = `
-═══════════════════════════════════════════
-     ALL TEAMS PROJECT REPORT
-═══════════════════════════════════════════
-
-Total Teams: ${teams.length}
-Generated on: ${new Date().toLocaleDateString()}
-
-${teams.map((team, idx) => {
-  const teamMembers = students.filter(s => team.members.includes(s.id));
-  const faculty = faculties.find(f => f.id === team.facultyId);
-  return `
-─────────────────────────────────────────
-TEAM ${idx + 1}: ${team.name}
-─────────────────────────────────────────
-Project Title: ${team.projectTitle}
-Status: ${team.status.toUpperCase()}
-
-Project Guide:
-  Name: ${faculty?.name || 'N/A'}
-  Email: ${faculty?.email || 'N/A'}
-  Specialization: ${faculty?.specialization || 'N/A'}
-
-Team Members (${teamMembers.length}):
-${teamMembers.map((member, i) =>
-  `  ${i + 1}. ${member.name} (${member.rollNo})\n     Email: ${member.email}\n     CGPA: ${member.cgpa}`
-).join('\n')}
-`;
-}).join('\n')}
-
-═══════════════════════════════════════════
-    `.trim();
-
-    Alert.alert('All Teams Report', report, [{ text: 'OK' }]);
+  const handleSaveRules = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/rules`, {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify(tempRules),
+      });
+      if (res.ok) {
+        setRules(tempRules);
+        showLocalMsg("Rules updated successfully!", "success");
+      } else {
+        showLocalMsg("Failed to save rules", "error");
+      }
+    } catch {
+      showLocalMsg("Network error", "error");
+    }
   };
 
-  const handleSaveRules = () => {
-    setRules(tempRules);
-    Alert.alert('Success', 'Rules updated successfully!');
+  const handleDownloadReport = async () => {
+    try {
+      setLoading(true);
+      const fileName = `team_report_${Date.now()}.pdf`;
+      const filePath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${fileName}`;
+      await ReactNativeBlobUtil.config({
+        path: filePath,
+        addAndroidDownloads: {
+          useDownloadManager: true,
+          notification: true,
+          title: 'team Report',
+          mime: 'application/pdf',
+        },
+      }).fetch('GET', `${BASE_URL}/teams/report/pdf`, authHeader());
+      showLocalMsg("Report downloaded successfully!", "success");
+    } catch {
+      showLocalMsg("Download failed", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ─── Tab Content Renderers ───────────────────────────────────────────────────
-
-  const renderOverview = () => (
-    <View>
-      <View style={styles.statsGrid}>
-        {[
-          { label: 'Total Students', value: stats.totalStudents, color: '#1F2937' },
-          { label: 'Allocated', value: stats.allocatedStudents, color: '#059669' },
-          { label: 'Unallocated', value: stats.unallocatedStudents, color: '#D97706' },
-          { label: 'Active Teams', value: stats.totalTeams, color: '#1F2937' },
-          { label: 'Total Faculty', value: stats.totalFaculty, color: '#1F2937' },
-          { label: 'Available Slots', value: stats.availableSlots, color: '#4F46E5' },
-        ].map((stat, idx) => (
-          <View key={idx} style={styles.statCard}>
-            <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
+  // ───────── UI COMPONENTS ─────────
+  const InlineAlert = () => {
+    if (!msg) return null;
+    const isError = msg.type === 'error';
+    return (
+      <View style={[
+        styles.inlineAlert,
+        { backgroundColor: isError ? '#fef2f2' : '#f0fdf4', borderColor: isError ? '#fecaca' : '#bbf7d0' }
+      ]}>
+        <Icon name="info" />
+        <Text style={[styles.inlineAlertText, { color: isError ? '#b91c1c' : '#15803d' }]}>{msg.text}</Text>
+        <TouchableOpacity onPress={() => setMsg(null)}>
+          <Text style={{ fontSize: 16, color: isError ? '#b91c1c' : '#15803d' }}>✕</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    );
+  };
+
+  const SectionLabel = ({ label }: { label: string }) => (
+    <Text style={[styles.sectionLabel, { color: colors.subText }]}>{label.toUpperCase()}</Text>
   );
 
-  const renderFaculties = () => (
-    <View>
+  const Card = ({ children }: any) => (
+    <View style={[styles.card, { backgroundColor: colors.card }]}>{children}</View>
+  );
+
+  const SearchBox = ({ value, setValue }: any) => (
+    <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Icon name="search" />
       <TextInput
-        style={styles.searchInput}
-        placeholder="Search faculty..."
-        placeholderTextColor="#9CA3AF"
-        value={facultySearchQuery}
-        onChangeText={setFacultySearchQuery}
+        value={value}
+        onChangeText={setValue}
+        placeholder="Search..."
+        placeholderTextColor={colors.subText}
+        style={{ flex: 1, color: colors.text, paddingVertical: 8, marginLeft: 8 }}
       />
-      {filteredFaculties.map(faculty => (
-        <View key={faculty.id} style={styles.card}>
-          <Text style={styles.cardTitle}>{faculty.name}</Text>
-          <Text style={styles.cardText}>{faculty.email}</Text>
-          <Text style={styles.cardText}>Specialization: {faculty.specialization}</Text>
-          <View style={styles.slotInfo}>
-            <Text style={styles.slotText}>Slots: {faculty.allocatedStudents}/{faculty.maxStudents}</Text>
-          </View>
-        </View>
-      ))}
     </View>
   );
 
-  const renderStudents = () => (
-    <View>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search students..."
-        placeholderTextColor="#9CA3AF"
-        value={studentSearchQuery}
-        onChangeText={setStudentSearchQuery}
-      />
-      {filteredStudents.map(student => (
-        <View key={student.id} style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{student.name}</Text>
-              <Text style={styles.cardText}>{student.rollNo}</Text>
-            </View>
-            <View style={[styles.badge, student.isAllocated ? styles.badgeAllocated : styles.badgeUnallocated]}>
-              <Text style={[styles.badgeText, student.isAllocated ? styles.badgeTextAllocated : styles.badgeTextUnallocated]}>
-                {student.isAllocated ? 'Allocated' : 'Unallocated'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.cardText}>Email: {student.email}</Text>
-          <Text style={styles.cardText}>CGPA: {student.cgpa}</Text>
-          {student.isAllocated && student.allocatedFacultyId && (
-            <Text style={styles.cardText}>
-              Faculty: {faculties.find(f => f.id === student.allocatedFacultyId)?.name}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[styles.button, student.isAllocated && styles.buttonOverride]}
-            onPress={() => {
-              setSelectedStudent(student);
-              student.isAllocated ? setShowOverrideModal(true) : setShowAllocationModal(true);
-            }}
-          >
-            <Text style={styles.buttonText}>
-              {student.isAllocated ? 'Override Allocation' : 'Allocate Faculty'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ))}
-    </View>
-  );
+  // ───────── RENDERERS ─────────
+  const renderOverview = () => {
+    const allocationRate = stats?.totalStudents ? Math.round((stats.allocatedStudents / stats.totalStudents) * 100) : 0;
+    
+    return (
+      <View style={{ gap: 16 }}>
+        {loading && !stats ? (
+          <Card><ActivityIndicator color={colors.primary} /></Card>
+        ) : (
+          <>
+            {/* Main Stats Grid */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}>
+                  <Icon name="students" />
+                </View>
+                <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalStudents || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.subText }]}>Total Students</Text>
+              </View>
 
-  const renderTeams = () => (
-    <View>
-      <TouchableOpacity style={styles.downloadAllButton} onPress={handleDownloadAllTeamsReport}>
-        <Text style={styles.downloadAllButtonText}>Download All Teams Report</Text>
-      </TouchableOpacity>
-      {teams.map(team => {
-        const teamMembers = students.filter(s => team.members.includes(s.id));
-        return (
-          <View key={team.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>{team.name}</Text>
-              <View style={styles.badgeAllocated}>
-                <Text style={styles.badgeTextAllocated}>{team.status}</Text>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+                  <Icon name="faculty" />
+                </View>
+                <Text style={[styles.statNum, { color: '#059669' }]}>{stats?.allocatedStudents || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.subText }]}>Allocated</Text>
+              </View>
+
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(99,102,241,0.1)' }]}>
+                  <Icon name="team" />
+                </View>
+                <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalTeams || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.subText }]}>Active Teams</Text>
+              </View>
+
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+                  <Icon name="faculty" />
+                </View>
+                <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalFaculty || 0}</Text>
+                <Text style={[styles.statLabel, { color: colors.subText }]}>Total Faculty</Text>
               </View>
             </View>
-            <Text style={[styles.cardText, { fontWeight: '600' }]}>{team.projectTitle}</Text>
-            <Text style={styles.cardText}>Guide: {team.facultyName}</Text>
-            <View style={styles.teamMembers}>
-              <Text style={styles.teamMembersTitle}>Members ({teamMembers.length})</Text>
-              {teamMembers.map(member => (
-                <Text key={member.id} style={styles.cardText}>• {member.name} ({member.rollNo})</Text>
-              ))}
+
+            {/* Allocation Progress Card */}
+            <Card>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
+                <View>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>Allocation Status</Text>
+                  <Text style={{ color: colors.subText, fontSize: 12 }}>Overall progress of student-guide assignment</Text>
+                </View>
+                <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>{allocationRate}%</Text>
+              </View>
+              
+              <View style={{ height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
+                <View style={{ height: '100%', width: `${allocationRate}%`, backgroundColor: colors.primary }} />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+                <View>
+                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>UNALLOCATED</Text>
+                  <Text style={{ color: '#D97706', fontSize: 16, fontWeight: '700' }}>{stats?.unallocatedStudents || 0}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>AVAILABLE SLOTS</Text>
+                  <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}>{stats?.availableSlots || 0}</Text>
+                </View>
+              </View>
+            </Card>
+
+            {/* General Summary Card */}
+            <SectionLabel label="General Summary" />
+            <Card>
+              <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
+                Currently, <Text style={{fontWeight: '700', color: colors.primary}}>{stats?.allocatedStudents || 0}</Text> out of <Text style={{fontWeight: '700'}}>{stats?.totalStudents || 0}</Text> students have been successfully allocated to a faculty guide. 
+                There are <Text style={{fontWeight: '700', color: '#ef4444'}}>{stats?.unallocatedStudents || 0}</Text> students still awaiting allocation.
+              </Text>
+            </Card>
+          </>
+        )}
+      </View>
+    );
+  };
+
+  const renderFaculties = () => (
+    <>
+      <SearchBox value={facultySearchQuery} setValue={setSearchQuery(setFacultySearchQuery)} />
+      {faculties.filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase())).map(f => {
+        const usage = f.maxStudents > 0 ? (f.allocatedStudents / f.maxStudents) * 100 : 0;
+        const isFull = f.allocatedStudents >= f.maxStudents;
+        
+        return (
+          <Card key={f.id}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{f.name}</Text>
+                <Text style={{ color: colors.subText, fontSize: 13, marginTop: 2 }}>{f.email}</Text>
+              </View>
+              <View style={{ backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                <Text style={{ color: isFull ? '#ef4444' : colors.primary, fontSize: 10, fontWeight: '800' }}>
+                  {isFull ? 'FULL' : 'AVAILABLE'}
+                </Text>
+              </View>
             </View>
-          </View>
+
+            <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: divider, paddingTop: 12 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>SLOT UTILIZATION</Text>
+                <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{f.allocatedStudents} / {f.maxStudents}</Text>
+              </View>
+              <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
+                <View style={{ height: '100%', width: `${usage}%`, backgroundColor: isFull ? '#ef4444' : colors.primary }} />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginTop: 12, gap: 15 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ padding: 4, backgroundColor: accentSoft, borderRadius: 6 }}>
+                  <Icon name="rules" size={12} />
+                </View>
+                <Text style={{ color: colors.text, fontSize: 12 }}>{f.specialization || 'General'}</Text>
+              </View>
+            </View>
+          </Card>
         );
       })}
-    </View>
+    </>
+  );
+
+  const setSearchQuery = (setter: any) => (val: string) => setter(val);
+
+  const renderStudents = () => (
+    <>
+      <SearchBox value={studentSearchQuery} setValue={setStudentSearchQuery} />
+      {students.filter(s => s.name.toLowerCase().includes(studentSearchQuery.toLowerCase())).map(s => (
+        <Card key={s.id}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: accentSoft, justifyContent: 'center', alignItems: 'center' }}>
+              <Icon name="students" size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>{s.name}</Text>
+                <View style={{
+                  backgroundColor: s.isAllocated ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20
+                }}>
+                  <Text style={{ color: s.isAllocated ? '#10b981' : '#f59e0b', fontSize: 10, fontWeight: '800' }}>
+                    {s.isAllocated ? 'ALLOCATED' : 'PENDING'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Roll: {s.rollNo}</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
+            <TouchableOpacity
+              style={[styles.miniBtn, { backgroundColor: s.isAllocated ? '#6366f1' : colors.primary, flex: 1 }]}
+              onPress={() => {
+                setSelectedStudent(s);
+                setMsg(null);
+                if (s.isAllocated) setShowOverrideModal(true);
+                else setShowAllocationModal(true);
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                {s.isAllocated ? 'Override Allocation' : 'Manual Allocation'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
+      ))}
+    </>
+  );
+
+  const renderteam = () => (
+    <>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.primary, marginBottom: 16 }]}
+        onPress={handleDownloadReport}
+      >
+        <Icon name="download" />
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Export All Teams (PDF)</Text>
+      </TouchableOpacity>
+
+      <View style={[styles.tableContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.tableHeader, { backgroundColor: accentSoft, borderBottomColor: colors.border }]}>
+          <Text style={[styles.columnHeader, { color: colors.subText, flex: 2 }]}>TEAM NAME</Text>
+          <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>PROJECT TITLE</Text>
+          <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>DOWNLOAD INFO</Text>
+        </View>
+
+        {team.length === 0 ? (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text style={{ color: colors.subText }}>No teams found</Text>
+          </View>
+        ) : (
+          team.map((t, idx) => (
+            <View key={t.id} style={[styles.tableRow, { borderBottomColor: colors.border, backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }]}>
+              <Text style={[styles.cellText, { color: colors.text, fontWeight: '700', flex: 2 }]} numberOfLines={2}>
+                {t.teamName || t.name || 'Unnamed'}
+              </Text>
+              <Text style={[styles.cellText, { color: colors.text, flex: 3 }]} numberOfLines={2}>
+                {t.projectTitle || 'No Project'}
+              </Text>
+              <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                 <View style={{ padding: 4, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 4 }}>
+                    <Icon name="download" size={12} />
+                 </View>
+                 <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '600' }} numberOfLines={1}>
+                    {t.teamName} - {t.projectTitle ? (t.projectTitle.length > 15 ? t.projectTitle.substring(0,12)+'...' : t.projectTitle) : 'N/A'}
+                 </Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+    </>
   );
 
   const renderRules = () => (
-    <View style={styles.rulesContainer}>
-      <Text style={styles.rulesTitle}>Project Allocation Rules</Text>
+    <Card>
+      <Text style={{ color: colors.text, fontWeight: '700', marginBottom: 12 }}>Allocation Rules</Text>
 
-      <View style={styles.ruleCard}>
-        <Text style={styles.ruleLabel}>Maximum Team Size</Text>
-        <TextInput
-          style={styles.ruleInput}
-          placeholder="Enter max team size"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-          value={String(tempRules.maxTeamSize)}
-          onChangeText={text => setTempRules({ ...tempRules, maxTeamSize: parseInt(text) || 0 })}
-        />
-        <Text style={styles.ruleDescription}>Maximum number of students allowed per team</Text>
-      </View>
+      <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 4 }}>Max Team Size</Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: divider }]}
+        keyboardType="numeric"
+        value={String(tempRules.maxTeamSize)}
+        onChangeText={v => setTempRules({ ...tempRules, maxTeamSize: parseInt(v) || 0 })}
+      />
 
-      <View style={styles.ruleCard}>
-        <Text style={styles.ruleLabel}>Maximum Students per Faculty</Text>
-        <TextInput
-          style={styles.ruleInput}
-          placeholder="Enter max students"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-          value={String(tempRules.maxStudentsPerFaculty)}
-          onChangeText={text => setTempRules({ ...tempRules, maxStudentsPerFaculty: parseInt(text) || 0 })}
-        />
-        <Text style={styles.ruleDescription}>Maximum number of students a faculty can guide</Text>
-      </View>
+      <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 4, marginTop: 12 }}>Max Students per Faculty</Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: divider }]}
+        keyboardType="numeric"
+        value={String(tempRules.maxStudentsPerFaculty)}
+        onChangeText={v => setTempRules({ ...tempRules, maxStudentsPerFaculty: parseInt(v) || 0 })}
+      />
 
-      <TouchableOpacity style={styles.saveRulesButton} onPress={handleSaveRules}>
-        <Text style={styles.saveRulesButtonText}>Save Rules</Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
+        onPress={handleSaveRules}
+      >
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Save Rules</Text>
       </TouchableOpacity>
-
-      <View style={styles.currentRulesCard}>
-        <Text style={styles.currentRulesTitle}>Current Active Rules</Text>
-        <Text style={styles.currentRuleText}>Max Team Size: {rules.maxTeamSize}</Text>
-        <Text style={styles.currentRuleText}>Max Students per Faculty: {rules.maxStudentsPerFaculty}</Text>
-      </View>
-    </View>
+    </Card>
   );
 
-  // ─── Allocation Modal ────────────────────────────────────────────────────────
-
   const renderModal = (isOverride: boolean) => (
-    <Modal
-      visible={isOverride ? showOverrideModal : showAllocationModal}
-      transparent
-      animationType="slide"
-    >
+    <Modal visible={isOverride ? showOverrideModal : showAllocationModal} transparent animationType="fade">
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{isOverride ? 'Override' : 'Allocate'} Faculty</Text>
-            <TouchableOpacity
-              onPress={() => isOverride ? setShowOverrideModal(false) : setShowAllocationModal(false)}
-            >
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 }}>
+            {isOverride ? 'Override' : 'Manual'} Allocation
+          </Text>
 
-          {selectedStudent && (
-            <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>Student</Text>
-              <Text style={styles.infoText}>{selectedStudent.name} ({selectedStudent.rollNo})</Text>
-              {isOverride && selectedStudent.allocatedFacultyId && (
-                <Text style={styles.infoText}>
-                  Current: {faculties.find(f => f.id === selectedStudent.allocatedFacultyId)?.name}
-                </Text>
-              )}
-            </View>
-          )}
-
-          <Text style={styles.sectionTitle}>Select Faculty</Text>
-          <ScrollView style={styles.facultyList}>
-            {faculties
-              .filter(f => !isOverride || f.id !== selectedStudent?.allocatedFacultyId)
-              .map(faculty => {
-                const isDisabled = faculty.allocatedStudents >= faculty.maxStudents;
-                return (
-                  <TouchableOpacity
-                    key={faculty.id}
-                    style={[
-                      styles.facultyOption,
-                      selectedFacultyId === faculty.id && styles.facultyOptionSelected,
-                      isDisabled && styles.facultyOptionDisabled,
-                    ]}
-                    onPress={() => !isDisabled && setSelectedFacultyId(faculty.id)}
-                    disabled={isDisabled}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.facultyOptionName}>{faculty.name}</Text>
-                      <Text style={styles.facultyOptionSpec}>{faculty.specialization}</Text>
-                    </View>
-                    <View style={styles.slotBadge}>
-                      <Text style={[styles.slotBadgeText, isDisabled && styles.slotBadgeTextFull]}>
-                        {faculty.allocatedStudents}/{faculty.maxStudents}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+          <ScrollView style={{ maxHeight: 300 }}>
+            {faculties.map(f => (
+              <TouchableOpacity
+                key={f.id}
+                style={[
+                  styles.facultyItem,
+                  { borderColor: divider, backgroundColor: selectedFacultyId === f.id ? accentSoft : 'transparent' }
+                ]}
+                onPress={() => setSelectedFacultyId(f.id)}
+              >
+                <Text style={{ color: colors.text, fontWeight: '600' }}>{f.name}</Text>
+                <Text style={{ color: colors.subText, fontSize: 12 }}>{f.allocatedStudents} / {f.maxStudents} slots used</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
 
-          <View style={styles.modalButtons}>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => {
-                isOverride ? setShowOverrideModal(false) : setShowAllocationModal(false);
-                setSelectedStudent(null);
-                setSelectedFacultyId('');
-              }}
+              style={[styles.modalBtn, { backgroundColor: colors.border }]}
+              onPress={() => { setShowAllocationModal(false); setShowOverrideModal(false); setSelectedFacultyId(''); }}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={{ color: colors.text }}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]}
               onPress={isOverride ? handleOverrideAllocation : handleAllocateStudent}
             >
-              <Text style={styles.submitButtonText}>{isOverride ? 'Override' : 'Allocate'}</Text>
+              <Text style={{ color: '#fff', fontWeight: '700' }}>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -467,63 +529,71 @@ ${teamMembers.map((member, i) =>
     </Modal>
   );
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
-
+  // ───────── MAIN UI ─────────
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Faculty Coordinator</Text>
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
+        <View>
+          <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>DASHBOARD</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>
+            Coordinator
+          </Text>
         </View>
+      </View>
 
-        {/* Top Tabs */}
-        <View style={styles.topTabs}>
-          {(['overview', 'faculties', 'students', 'teams', 'rules'] as const).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.topTab, activeTab === tab && styles.topTabActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.topTabText, activeTab === tab && styles.topTabTextActive]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <InlineAlert />
 
-        {/* Content */}
-        <ScrollView style={styles.content}>
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'faculties' && renderFaculties()}
-          {activeTab === 'students' && renderStudents()}
-          {activeTab === 'teams' && renderTeams()}
-          {activeTab === 'rules' && renderRules()}
-        </ScrollView>
-
-        {/* Modals */}
-        {renderModal(false)}
-        {renderModal(true)}
-
-        {/* Bottom Tab — same as FacultyHomeScreen */}
-        <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.bottomTabItem}>
-            <Image source={require('../assets/home-color.png')} style={styles.bottomTabIcon} />
-            <Text style={[styles.bottomTabLabelActive, { color: colors.primary }]}>Home</Text>
+        <SectionLabel label="Quick Menu" />
+        <Card>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            {['overview', 'faculties', 'students', 'download', 'rules'].map(tab => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]}
+                onPress={() => { setMsg(null); setActiveTab(tab as any); }}
+              >
+                <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}>
+                  <Icon name={tab === 'faculties' ? 'faculty' : tab} size={16} />
+                </View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: activeTab === tab ? colors.primary : colors.subText, marginTop: 4 }}>
+                  {tab.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
+        </Card>
 
-    
+        <SectionLabel label={activeTab} />
 
-          <TouchableOpacity
-            style={styles.bottomTabItem}
-            onPress={() => navigation.navigate('FacultyCoordinatorMore')}
-          >
-            <Image source={require('../assets/more.png')} style={styles.bottomTabIcon} />
-            <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>More</Text>
-          </TouchableOpacity>
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'faculties' && renderFaculties()}
+        {activeTab === 'students' && renderStudents()}
+        {activeTab === 'download' && renderteam()}
+        {activeTab === 'rules' && renderRules()}
+
+      </ScrollView>
+
+      {renderModal(false)}
+      {renderModal(true)}
+
+      {/* BOTTOM TAB */}
+      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}>
+        <View style={styles.tabItem}>
+          <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
+          <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700', marginTop: 2 }}>Home</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate('FacultyCoordinatorMore')}
+        >
+          <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+          <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500', marginTop: 2 }}>More</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -531,118 +601,183 @@ ${teamMembers.map((member, i) =>
 
 export default FacultyCoordinatorDashboard;
 
+// ───────── STYLES ─────────
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  header: {
+    height: 80,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+  },
 
-  // Header
-  header: { backgroundColor: '#ffffff', paddingTop: 15, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#000000' },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    marginBottom: 8,
+    marginTop: 16,
+    letterSpacing: 1,
+  },
 
-  // Top Tabs
-  topTabs: { flexDirection: 'row', backgroundColor: '#FFFFFF', elevation: 2 },
-  topTab: { flex: 1, paddingVertical: 16, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  topTabActive: { borderBottomColor: '#43425a' },
-  topTabText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  topTabTextActive: { color: '#4F46E5' },
+  card: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
 
-  // Content
-  content: { flex: 1, padding: 16 },
-  searchInput: { backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 16, fontSize: 14, borderWidth: 1, borderColor: '#E5E7EB' },
+  menuItem: {
+    width: '18%',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
 
-  // Stats
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  statCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, width: '48%', elevation: 2 },
-  statValue: { fontSize: 28, fontWeight: 'bold' },
-  statLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-  // Cards
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
-  cardText: { fontSize: 14, color: '#6B7280', marginTop: 4 },
-  slotInfo: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
-  slotText: { fontSize: 14, fontWeight: '600', color: '#4F46E5' },
+  searchBox: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    alignItems: 'center',
+    height: 45,
+  },
 
-  // Badges
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
-  badgeAllocated: { backgroundColor: '#D1FAE5' },
-  badgeUnallocated: { backgroundColor: '#FEF3C7' },
-  badgeText: { fontSize: 11, fontWeight: '600' },
-  badgeTextAllocated: { color: '#059669' },
-  badgeTextUnallocated: { color: '#D97706' },
+  button: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    elevation: 2,
+  },
 
-  // Buttons
-  button: { backgroundColor: '#000000', paddingVertical: 10, borderRadius: 8, alignItems: 'center', marginTop: 12 },
-  buttonOverride: { backgroundColor: '#6360a6' },
-  buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  miniBtn: {
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
 
-  // Teams
-  teamMembers: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, marginTop: 8 },
-  teamMembersTitle: { fontSize: 13, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
-  downloadAllButton: { backgroundColor: '#4F46E5', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
-  downloadAllButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
+  input: {
+    height: 45,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+  },
 
-  // Rules
-  rulesContainer: { paddingBottom: 20 },
-  rulesTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginBottom: 20 },
-  ruleCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2 },
-  ruleLabel: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 8 },
-  ruleInput: { backgroundColor: '#F9FAFB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 8 },
-  ruleDescription: { fontSize: 12, color: '#6B7280' },
-  saveRulesButton: { backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginBottom: 20 },
-  saveRulesButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
-  currentRulesCard: { backgroundColor: '#EEF2FF', borderRadius: 12, padding: 16 },
-  currentRulesTitle: { fontSize: 16, fontWeight: 'bold', color: '#4F46E5', marginBottom: 8 },
-  currentRuleText: { fontSize: 14, color: '#1F2937', marginTop: 4 },
-
-  // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '100%', maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 24, fontWeight: 'bold', color: '#1F2937' },
-  closeButton: { fontSize: 24, color: '#6B7280' },
-  infoSection: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 },
-  infoText: { fontSize: 14, color: '#6B7280', marginBottom: 4 },
-  facultyList: { maxHeight: 250, marginBottom: 20 },
-  facultyOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 8, marginBottom: 8 },
-  facultyOptionSelected: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },
-  facultyOptionDisabled: { opacity: 0.5 },
-  facultyOptionName: { fontSize: 15, fontWeight: '600', color: '#1F2937' },
-  facultyOptionSpec: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  slotBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  slotBadgeText: { fontSize: 13, fontWeight: '600', color: '#059669' },
-  slotBadgeTextFull: { color: '#EF4444' },
-  modalButtons: { flexDirection: 'row', gap: 12 },
-  cancelButton: { flex: 1, paddingVertical: 14, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center' },
-  cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  submitButton: { flex: 1, backgroundColor: '#4F46E5', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
-  submitButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-
-  // Bottom Tab — matches FacultyHomeScreen exactly
   bottomTab: {
-    height: 60,
-    borderTopWidth: 1,
+    height: 65,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
+    borderTopWidth: 1,
   },
-  bottomTabItem: {
+
+  tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomTabIcon: {
-    width: 22,
-    height: 22,
-    marginBottom: 4,
-    resizeMode: 'contain',
+
+  tabIcon: {
+    width: 22, height: 22, resizeMode: 'contain'
   },
-  bottomTabLabel: {
-    fontSize: 12,
+
+  inlineAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 8,
+    gap: 10
   },
-  bottomTabLabelActive: {
-    fontSize: 12,
-    fontWeight: '700',
+  inlineAlertText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600'
   },
+  alertIcon: { width: 18, height: 18 },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalContent: {
+    borderRadius: 20,
+    padding: 24,
+    elevation: 10
+  },
+  facultyItem: {
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 8
+  },
+  modalBtn: {
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  miniCard: {
+    borderRadius: 16,
+    padding: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  statNum: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  tableContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  columnHeader: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    padding: 14,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  cellText: {
+    fontSize: 13,
+  }
 });

@@ -71,27 +71,15 @@ public class AuthService {
                 break;
 
             case FACULTY:
-
                 Faculty faculty = new Faculty();
                 faculty.setUser(savedUser);
-
                 facultyRepository.save(faculty);
                 break;
 
             case ADMIN:
-
                 Admin admin = new Admin();
                 admin.setUser(savedUser);
-
                 adminRepository.save(admin);
-                break;
-
-            case FACULTY_COORDINATOR:
-                // Implement if needed
-                Faculty facultyCoord = new Faculty();
-                facultyCoord.setUser(savedUser);
-                facultyCoord.setIsCoordinator(true);
-                facultyRepository.save(facultyCoord);
                 break;
         }
 
@@ -128,18 +116,8 @@ public class AuthService {
         isTeamLead = student.isTeamLead();
     }
 
-    if(user.getRole() == UserRole.FACULTY_COORDINATOR){
+    boolean isFC = false;
 
-        Faculty faculty = facultyRepository
-                .findByUser_Email(user.getEmail())
-                .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
-        
-        facultyId = faculty.getFacultyId();
-
-        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
-            user.setRole(UserRole.FACULTY_COORDINATOR);
-        }
-    }
     if(user.getRole() == UserRole.FACULTY){
 
         Faculty faculty = facultyRepository
@@ -147,14 +125,11 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
         
         facultyId = faculty.getFacultyId();
-
-        if(faculty.getIsCoordinator() != null && faculty.getIsCoordinator()){
-            user.setRole(UserRole.FACULTY_COORDINATOR);
-        }
+        isFC = (faculty.getIsFC() != null && faculty.getIsFC());
     }   
     if(user.getRole() == UserRole.ADMIN){
 
-        Admin admin = adminRepository
+        adminRepository
                 .findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Admin profile not found"));
 
@@ -169,7 +144,8 @@ public class AuthService {
             isTeamLead,
             user.getEmail(),
             user.getName(),
-            user.getPhone()
+            user.getPhone(),
+            isFC
     );
 }
 

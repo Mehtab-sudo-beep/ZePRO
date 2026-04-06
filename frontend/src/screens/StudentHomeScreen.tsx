@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
@@ -109,7 +110,7 @@ const ActionRow = ({
 }) => (
   <TouchableOpacity style={styles.actionRow} onPress={onPress} activeOpacity={0.65}>
     <View style={[styles.actionIconWrap, { backgroundColor: accentSoft }]}>
-      <Icon name={icon} size={17}  />
+      <Icon name={icon} size={17} />
     </View>
     <View style={styles.actionRowText}>
       <Text style={[styles.actionRowLabel, { color: colors.text }]}>{label}</Text>
@@ -138,12 +139,12 @@ const ProjectStatusRow = ({
   divider: string;
 }) => {
   const statusColors: Record<string, { bg: string; text: string }> = {
-    PENDING:   { bg: '#FEF3C7', text: '#92400E' },
-    ACCEPTED:  { bg: '#D1FAE5', text: '#065F46' },
-    REJECTED:  { bg: '#FEE2E2', text: '#991B1B' },
+    PENDING: { bg: '#FEF3C7', text: '#92400E' },
+    ACCEPTED: { bg: '#D1FAE5', text: '#065F46' },
+    REJECTED: { bg: '#FEE2E2', text: '#991B1B' },
     SCHEDULED: { bg: '#DBEAFE', text: '#1E40AF' },
     COMPLETED: { bg: '#EDE9FE', text: '#5B21B6' },
-    APPROVED:  { bg: '#D1FAE5', text: '#065F46' },
+    APPROVED: { bg: '#D1FAE5', text: '#065F46' },
   };
   const s = statusColors[project.status] ?? { bg: '#F3F4F6', text: '#374151' };
   return (
@@ -174,8 +175,8 @@ const ProjectStatusRow = ({
 const StudentHomeScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const navigation = useNavigation<StudentHomeNavigationProp>();
-  const { user, setUser } = useContext(AuthContext);
-
+  const { studentUser, setStudentUser, loading } = useContext(StudentAuthContext);
+  const { setUser } = useContext(AuthContext); // ✅ Added AuthContext
   // ✅ ALL hooks are declared unconditionally — no early returns before this block
   const [showAllocatedModal, setShowAllocatedModal] = useState(false);
   const [allocatedProject, setAllocatedProject] = useState<any>(null);
@@ -186,69 +187,121 @@ const StudentHomeScreen: React.FC = () => {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
+  const [teamLoaded, setTeamLoaded] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      if (teamLoaded) return; // ✅ prevents repeated API calls
+
+      let isActive = true;
+
       const loadTeam = async () => {
         try {
           setLoadingTeam(true);
+
           const studentId = await AsyncStorage.getItem('studentId');
           if (!studentId) return;
+
           const res = await getTeamInfo(Number(studentId));
+          console.log("TEAM API:", res.data);
+
+          if (!isActive) return;
+
           setTeamInfo(res.data);
-          setUser((prev: any) => ({
-            ...prev!,
-            isInTeam: true,
-            isTeamLead: res.data.teamLeadId === prev?.studentId,
-          }));
+
+          const storedUserStr = await AsyncStorage.getItem('user');
+          if (storedUserStr) {
+            const storedUser = JSON.parse(storedUserStr);
+            const isLead = res.data.teamLeadId === Number(studentId);
+
+            const updatedUser = {
+              ...studentUser,
+              isInTeam: true,
+              isTeamLead: isLead,
+            };
+
+            // ✅ update BOTH contexts
+            setStudentUser(updatedUser);
+            setUser(updatedUser as any);
+          }
+
+          setTeamLoaded(true); // ✅ mark loaded
         } catch (err) {
           console.log('TEAM LOAD ERROR:', err);
         } finally {
-          setLoadingTeam(false);
+          if (isActive) setLoadingTeam(false);
         }
       };
+
       loadTeam();
-    }, [setUser]),
+
+      return () => {
+        isActive = false;
+      };
+    }, [teamLoaded]) // ❗ removed setStudentUser
   );
 
+
+  console.log("studentUser:", studentUser);
   // ✅ Conditional returns AFTER all hooks
-  if (!user) {
+  if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading app...</Text>
+        <ActivityIndicator />
       </SafeAreaView>
     );
   }
 
-  if (user.role !== 'STUDENT') {
+  if (!studentUser) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        <Text style={{ color: colors.text, padding: 20 }}>Loading...</Text>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ color: colors.text, marginBottom: 10 }}>
+          Loading user...
+        </Text>
+        <ActivityIndicator color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (studentUser.role !== 'STUDENT') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
 
   // Derived values
-  const { isInTeam } = user;
-  const isTeamLead = isInTeam && user.isTeamLead === true;
+  const { isInTeam } = studentUser;
+  const isTeamLead = isInTeam && studentUser.isTeamLead === true;
   const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
   const divider = isDark ? '#374151' : '#E5E7EB';
   const successColor = '#10B981';
-
+  const refreshTeam = () => {
+    setTeamLoaded(false);
+  };
   // Handlers
   const handleViewAllocatedProject = async () => {
     setLoadingAllocated(true);
     setAllocatedMessage(null);
     try {
-      if (!user?.studentId) return;
-      const res = await getAssignedProject(Number(user!.studentId));
+      if (!studentUser?.studentId) return;
+      const res = await getAssignedProject(Number(studentUser!.studentId));
       if (
         res.data &&
-        res.data.projectTitle !== 'Project not assigned yet' && 
+        res.data.projectTitle !== 'Project not assigned yet' &&
         res.data.status === 'ASSIGNED'
       ) {
-         navigation.navigate('AllocatedProject' as any);
+        navigation.navigate('AllocatedProject' as any);
       } else {
         setAllocatedMessage('Your project has not been allocated yet.');
       }
@@ -265,7 +318,7 @@ const StudentHomeScreen: React.FC = () => {
     setLoadingStatus(true);
     setShowProjectStatusModal(true);
     try {
-      const res = await getProjectRequestsStatus(Number(user!.studentId));
+      const res = await getProjectRequestsStatus(Number(studentUser!.studentId));
       setProjectStatus(res);
     } catch (err: any) {
       setProjectStatus(null);
@@ -277,12 +330,12 @@ const StudentHomeScreen: React.FC = () => {
 
   const StatusBadge = ({ status }: { status: string }) => {
     const map: Record<string, { bg: string; text: string }> = {
-      PENDING:   { bg: '#FEF3C7', text: '#92400E' },
-      ACCEPTED:  { bg: '#D1FAE5', text: '#065F46' },
-      REJECTED:  { bg: '#FEE2E2', text: '#991B1B' },
+      PENDING: { bg: '#FEF3C7', text: '#92400E' },
+      ACCEPTED: { bg: '#D1FAE5', text: '#065F46' },
+      REJECTED: { bg: '#FEE2E2', text: '#991B1B' },
       SCHEDULED: { bg: '#DBEAFE', text: '#1E40AF' },
       COMPLETED: { bg: '#EDE9FE', text: '#5B21B6' },
-      APPROVED:  { bg: '#D1FAE5', text: '#065F46' },
+      APPROVED: { bg: '#D1FAE5', text: '#065F46' },
     };
     const s = map[status] ?? { bg: accentSoft, text: colors.primary };
     return (
@@ -305,36 +358,36 @@ const StudentHomeScreen: React.FC = () => {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-  <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={styles.container}>
 
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.card, borderBottomColor: divider },
-        ]}
-      >
-        {/* LEFT SIDE (TEXT) */}
-        <View>
-          <Text style={[styles.headerGreeting, { color: colors.subText }]}>
-            Welcome back,
-          </Text>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {user.name ?? 'Student'}
-          </Text>
-        </View>
-
-        {/* RIGHT SIDE (PROFILE BUTTON) */}
-        <TouchableOpacity
-          style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
-          onPress={() => navigation.navigate('Profile')}
+        {/* Header */}
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.card, borderBottomColor: divider },
+          ]}
         >
-          <Text style={[styles.avatarText, { color: colors.primary }]}>
-            {(user.name ?? 'S').charAt(0).toUpperCase()}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* LEFT SIDE (TEXT) */}
+          <View>
+            <Text style={[styles.headerGreeting, { color: colors.subText }]}>
+              Welcome back,
+            </Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              {studentUser.name ?? 'Student'}
+            </Text>
+          </View>
+
+          {/* RIGHT SIDE (PROFILE BUTTON) */}
+          <TouchableOpacity
+            style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={[styles.avatarText, { color: colors.primary }]}>
+              {(studentUser.name ?? 'S').charAt(0).toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Scrollable Body */}
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -350,7 +403,10 @@ const StudentHomeScreen: React.FC = () => {
                   icon="create"
                   colors={colors}
                   accentSoft={accentSoft}
-                  onPress={() => navigation.navigate('CreateTeam')}
+                  onPress={() => {
+                    refreshTeam(); // ✅ reset cache
+                    navigation.navigate('CreateTeam');
+                  }}
                 />
                 <View style={[styles.rowDivider, { backgroundColor: divider }]} />
                 <ActionRow
@@ -359,7 +415,10 @@ const StudentHomeScreen: React.FC = () => {
                   icon="join"
                   colors={colors}
                   accentSoft={accentSoft}
-                  onPress={() => navigation.navigate('JoinTeam')}
+                  onPress={() => {
+                    refreshTeam(); // ✅ reset cache
+                    navigation.navigate('JoinTeam');
+                  }}
                 />
               </View>
 
@@ -385,14 +444,14 @@ const StudentHomeScreen: React.FC = () => {
                   <>
                     <View style={styles.teamHeaderRow}>
                       <View style={[styles.teamIconCircle, { backgroundColor: accentSoft }]}>
-                        <Icon name="team" size={22}  />
+                        <Icon name="team" size={22} />
                       </View>
                       <View style={{ flex: 1, marginLeft: 12 }}>
                         <Text style={[styles.teamName, { color: colors.text }]}>
                           {teamInfo.teamName}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                          <Icon name="lead" size={12}  />
+                          <Icon name="lead" size={12} />
                           <Text style={[styles.teamLead, { color: colors.subText, marginLeft: 4 }]}>
                             {teamInfo.teamLead}
                           </Text>
@@ -601,7 +660,7 @@ const StudentHomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
-      </SafeAreaView>
+    </SafeAreaView>
   );
 };
 
@@ -836,15 +895,15 @@ const styles = StyleSheet.create({
   tab: { fontSize: 11, marginTop: 3 },
   tabActive: { fontSize: 11, fontWeight: '700', marginTop: 3 },
   tabIcon: { width: 22, height: 22, marginBottom: 3, resizeMode: 'contain' },
-//   headerGreeting: {
-//   fontSize: 13,
-//   fontWeight: '500',
-//   letterSpacing: 0.6,
-// },
+  //   headerGreeting: {
+  //   fontSize: 13,
+  //   fontWeight: '500',
+  //   letterSpacing: 0.6,
+  // },
 
-// headerTitle: {
-//   fontSize: 22,
-//   fontWeight: '800',
-//   letterSpacing: -0.4,
-// },
+  // headerTitle: {
+  //   fontSize: 22,
+  //   fontWeight: '800',
+  //   letterSpacing: -0.4,
+  // },
 });
