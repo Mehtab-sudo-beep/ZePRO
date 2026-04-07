@@ -15,11 +15,11 @@ public class Student {
     private Users user;
 
     @Column(name = "roll_no", unique = true)
-    private String rollNo;
+    private String rollNumber;
 
     // Mirrors Student.cgpa — shown in student cards + report
     @Column(name = "cgpa")
-    private String cgpa;
+    private double cgpa;
 
     // Mirrors Student.year — e.g. "3rd Year"
     @Column(name = "year")
@@ -64,11 +64,11 @@ public class Student {
         return (user != null) ? user.getName() : null;
     }
 
-    public String getRollNo() {
-        return rollNo;
+    public String getRollNumber() {
+        return rollNumber;
     }
 
-    public String getCgpa() {
+    public double getCgpa() {
         return cgpa;
     }
 
@@ -118,11 +118,11 @@ public class Student {
         this.user = user;
     }
 
-    public void setRollNo(String rollNo) {
-        this.rollNo = rollNo;
+    public void setRollNumber(String rollNumber) {
+        this.rollNumber = rollNumber;
     }
 
-    public void setCgpa(String cgpa) {
+    public void setCgpa(double cgpa) {
         this.cgpa = cgpa;
     }
 

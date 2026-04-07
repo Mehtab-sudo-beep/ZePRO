@@ -18,6 +18,9 @@ public class FacultyProfile {
     private String problemStatementLink;
     private String domains;
     private String subDomains;
+    private int totalCreatedSlots;
+    private int allocatedStudents;
+    private int maxStudentsPerFaculty;
 
     // getters and setters
 
@@ -62,4 +65,13 @@ public class FacultyProfile {
 
     public String getSubDomains() { return subDomains; }
     public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
+
+    public int getTotalCreatedSlots() { return totalCreatedSlots; }
+    public void setTotalCreatedSlots(int totalCreatedSlots) { this.totalCreatedSlots = totalCreatedSlots; }
+
+    public int getAllocatedStudents() { return allocatedStudents; }
+    public void setAllocatedStudents(int allocatedStudents) { this.allocatedStudents = allocatedStudents; }
+
+    public int getMaxStudentsPerFaculty() { return maxStudentsPerFaculty; }
+    public void setMaxStudentsPerFaculty(int maxStudentsPerFaculty) { this.maxStudentsPerFaculty = maxStudentsPerFaculty; }
 }

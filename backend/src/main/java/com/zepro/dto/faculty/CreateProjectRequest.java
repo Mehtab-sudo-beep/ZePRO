@@ -1,12 +1,12 @@
 package com.zepro.dto.faculty;
-
 public class CreateProjectRequest {
 
     private String title;
     private String description;
     private Long domainId;
     private Long subDomainId;
-    private Integer studentSlots;
+    private Integer studentSlots; // ✅ NEW
+    
 
     public String getTitle() {
         return title;
@@ -39,12 +39,12 @@ public class CreateProjectRequest {
     public void setSubDomainId(Long subDomainId) {
         this.subDomainId = subDomainId;
     }
-    private Long facultyId;
 
-  
-    public Long getFacultyId() { return facultyId; }
-    public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
+    public Integer getStudentSlots() { // ✅ NEW
+        return studentSlots;
+    }
 
-    public Integer getStudentSlots() { return studentSlots; }
-    public void setStudentSlots(Integer studentSlots) { this.studentSlots = studentSlots; }
+    public void setStudentSlots(Integer studentSlots) { // ✅ NEW
+        this.studentSlots = studentSlots;
+    }
 }

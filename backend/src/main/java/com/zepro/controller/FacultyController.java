@@ -21,6 +21,7 @@ import com.zepro.service.RequestService;
 
 @RestController
 @RequestMapping("/faculty")
+@CrossOrigin
 public class FacultyController {
 
     private final FacultyService facultyService;
@@ -60,13 +61,15 @@ public class FacultyController {
         return facultyService.updateProject(projectId, request);
     }
 
-    @GetMapping("/{facultyId}/projects")
-    public List<ProjectResponse> getProjects(@PathVariable("facultyId") Long facultyId) {
-        return facultyService.getProjects(facultyId);
+    @GetMapping("/my-projects")
+    public List<ProjectResponse> getMyProjects(Authentication authentication) {
+        String email = authentication.getName();
+        return facultyService.getProjectsByEmail(email);
     }
 
     @PostMapping("/project/{projectId}/activate")
     public ProjectResponse activateProject(@PathVariable Long projectId) {
+        
         return facultyService.activateProject(projectId);
     }
 

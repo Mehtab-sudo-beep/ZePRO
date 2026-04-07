@@ -19,30 +19,76 @@ public class Project {
     @ManyToOne
     private Team team;
 
-    private String status;
+    private String status; // OPEN or CLOSE
 
-    private Integer studentSlots;
+    private boolean isActive;
 
-    @Column(name = "is_active", nullable = false, columnDefinition = "boolean default true")
-    private boolean isActive = true;
+    @Column(name = "student_slots", nullable = false)
+    private int studentSlots = 0; // ✅ NEW - tracks manually set slots
 
-    public Long getProjectId() { return projectId; }
-    public String getTitle() { return title; }
-    public String getDescription() { return description; }
-    public Faculty getFaculty() { return faculty; }
-    public Team getTeam() { return team; }
-    public String getStatus() { return status; }
+    // ─── Getters & Setters ─────────────────────────────────
 
-    public void setProjectId(Long projectId) { this.projectId = projectId; }
-    public void setTitle(String title) { this.title = title; }
-    public void setDescription(String description) { this.description = description; }
-    public void setFaculty(Faculty faculty) { this.faculty = faculty; }
-    public void setTeam(Team team) { this.team = team; }
-    public void setStatus(String status) { this.status = status; }
+    public Long getProjectId() {
+        return projectId;
+    }
 
-    public Integer getStudentSlots() { return studentSlots; }
-    public void setStudentSlots(Integer studentSlots) { this.studentSlots = studentSlots; }
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
+    }
 
-    public boolean getIsActive() { return isActive; }
-    public void setIsActive(boolean isActive) { this.isActive = isActive; }
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Faculty getFaculty() {
+        return faculty;
+    }
+
+    public void setFaculty(Faculty faculty) {
+        this.faculty = faculty;
+    }
+
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public int getStudentSlots() { // ✅ NEW
+        return studentSlots;
+    }
+
+    public void setStudentSlots(int studentSlots) { // ✅ NEW
+        this.studentSlots = studentSlots;
+    }
 }

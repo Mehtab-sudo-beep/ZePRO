@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  Modal,
 } from 'react-native';
 
 import { ThemeContext } from '../theme/ThemeContext';
@@ -19,7 +18,7 @@ import {
 } from "../api/studentApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import { AuthContext } from "../context/AuthContext";
+// import { AuthContext } from "../context/AuthContext";
 import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
 
@@ -50,13 +49,12 @@ const Icon = ({ name, size = 16, colors }: any) => {
   );
 };
 
-type SearchFilter = 'DOMAIN' | 'FACULTY' | 'PROJECT';
+// type SearchFilter = 'DOMAIN' | 'FACULTY' | 'PROJECT';
 
 const ProjectListScreen: React.FC = () => {
 
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-  const { user } = useContext(AuthContext);
   const { studentUser } = useContext(StudentAuthContext);
   const { showAlert } = useContext(AlertContext);
 
@@ -143,16 +141,17 @@ const ProjectListScreen: React.FC = () => {
           </Text>
         </View>
 
+        {/* ✅ SHOW REMAINING SLOTS */}
         <View style={styles.row}>
           <Icon name="slot" colors={colors} />
           <Text
             style={[
-              styles.slots, // you may adjust styles.slots margin later if needed
-              { color: item.slots > 0 ? colors.primary : '#EF4444', marginTop: 0 },
+              styles.slots,
+              { color: item.remainingSlots > 0 ? colors.primary : '#EF4444', marginTop: 0 },
             ]}
           >
-            {item.slots > 0
-              ? `${item.slots} slots available`
+            {item.remainingSlots > 0
+              ? `${item.remainingSlots} slots available`
               : "No slots available"}
           </Text>
         </View>

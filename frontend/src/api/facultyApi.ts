@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
 const API = 'http://localhost:8080';
 
@@ -9,8 +10,8 @@ export const getPendingRequests = async (token: string) => {
   return res.data;
 };
 
-export const getFacultyProjects = async (facultyId: number, token: string) => {
-  const res = await axios.get(`${API}/faculty/${facultyId}/projects`, {
+export const getFacultyProjects = async (token: string) => {
+  const res = await axios.get(`${API}/faculty/my-projects`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

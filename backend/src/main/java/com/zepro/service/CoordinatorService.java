@@ -70,10 +70,12 @@ public class CoordinatorService {
                 long totalTeams = teamRepository.count();
                 long totalFaculty = facultyRepository.count();
 
-                Integer totalMaxSlotsInt = facultyRepository.sumMaxStudents();
+                // ✅ Get global rule for dynamic calculation
+                AllocationRules rules = allocationRulesRepository.findById(1L).orElse(new AllocationRules());
+                int globalMaxPerFaculty = rules.getMaxStudentsPerFaculty();
+                long totalMaxSlots = totalFaculty * globalMaxPerFaculty;
 
-                long totalMaxSlots = (totalMaxSlotsInt != null) ? totalMaxSlotsInt : 0;
-                long totalUsedSlots = studentRepository.countByIsAllocatedTrue(); // Use student count directly
+                long totalUsedSlots = studentRepository.countByIsAllocatedTrue();
                 int availableSlots = (int) (totalMaxSlots - totalUsedSlots);
 
                 return new DashboardStatsResponse(
@@ -137,9 +139,12 @@ public class CoordinatorService {
                 Faculty faculty = facultyRepository.findById(request.getFacultyId())
                                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
 
-                if (faculty.getAllocatedStudents() >= faculty.getMaxStudents()) {
+                // ✅ Use Dynamic Rule instead of faculty.maxStudents
+                AllocationRules rules = allocationRulesRepository.findById(1L).orElse(new AllocationRules());
+                if (faculty.getAllocatedStudents() >= rules.getMaxStudentsPerFaculty()) {
                         throw new RuntimeException(
-                                        "No slots available for faculty: " + faculty.getUser().getName());
+                                        "No slots available for faculty: " + faculty.getUser().getName() +
+                                                        " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
                 }
 
                 // ── Update student ───────────────────────────────────────────────────
@@ -184,9 +189,13 @@ public class CoordinatorService {
                                         "New faculty must be different from the current faculty.");
                 }
 
-                if (newFaculty.getAllocatedStudents() >= newFaculty.getMaxStudents()) {
+                // ✅ Use Dynamic Rule instead of faculty.maxStudents
+                AllocationRules rules = allocationRulesRepository.findById(1L)
+                                .orElse(new AllocationRules());
+                if (newFaculty.getAllocatedStudents() >= rules.getMaxStudentsPerFaculty()) {
                         throw new RuntimeException(
-                                        "No slots available for faculty: " + newFaculty.getUser().getName());
+                                        "No slots available for faculty: " + newFaculty.getUser().getName() +
+                                                        " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
                 }
 
                 // ── Update faculty slot counts ───────────────────────────────────────
@@ -236,7 +245,7 @@ public class CoordinatorService {
                                                                 t.getTeamName() != null ? t.getTeamName() : "Unknown",
                                                                 "N/A", null, "N/A",
                                                                 t.getStatus() != null ? t.getStatus() : "unknown",
-                                                                List.of());
+                                                                List.of(), 3);
                                         }
                                 })
                                 .collect(Collectors.toList());
@@ -262,7 +271,7 @@ public class CoordinatorService {
                                                                 t.getTeamName() != null ? t.getTeamName() : "Unknown",
                                                                 "N/A", null, "N/A",
                                                                 t.getStatus() != null ? t.getStatus() : "unknown",
-                                                                List.of());
+                                                                List.of(), 3);
                                         }
                                 })
                                 .collect(Collectors.toList());
@@ -387,7 +396,7 @@ public class CoordinatorService {
                                                                 borderGray, rowBg));
                                                 membersTable.addCell(memberCell(m.getEmail(), regular, 8, textMuted,
                                                                 borderGray, rowBg));
-                                                membersTable.addCell(memberCell(m.getCgpa(), regular, 9, textDark,
+                                                membersTable.addCell(memberCell(String.valueOf(m.getCgpa()), regular, 9, textDark,
                                                                 borderGray, rowBg));
                                                 membersTable.addCell(memberCell(
                                                                 m.getAllocatedFacultyName() != null
@@ -452,7 +461,7 @@ public class CoordinatorService {
         // =========================================================================
 
         public AllocationRulesResponse getRules() {
-                AllocationRules rules = allocationRulesRepository.findFirstByOrderByIdAsc()
+                AllocationRules rules = allocationRulesRepository.findById(1L)
                                 .orElseGet(() -> {
                                         AllocationRules defaults = new AllocationRules();
                                         defaults.setMaxTeamSize(4);
@@ -460,7 +469,8 @@ public class CoordinatorService {
                                         defaults.setMaxProjectsPerFaculty(3);
                                         return defaults;
                                 });
-                return new AllocationRulesResponse(rules.getMaxTeamSize(), rules.getMaxStudentsPerFaculty(), rules.getMaxProjectsPerFaculty());
+                return new AllocationRulesResponse(rules.getMaxTeamSize(), rules.getMaxStudentsPerFaculty(),
+                                rules.getMaxProjectsPerFaculty());
         }
 
         @Transactional
@@ -472,12 +482,22 @@ public class CoordinatorService {
                 if (request.getMaxProjectsPerFaculty() <= 0)
                         throw new RuntimeException("Max projects per faculty must be greater than 0");
 
-                AllocationRules rules = allocationRulesRepository.findFirstByOrderByIdAsc()
+                AllocationRules rules = allocationRulesRepository.findById(1L)
                                 .orElse(new AllocationRules());
                 rules.setMaxTeamSize(request.getMaxTeamSize());
                 rules.setMaxStudentsPerFaculty(request.getMaxStudentsPerFaculty());
                 rules.setMaxProjectsPerFaculty(request.getMaxProjectsPerFaculty());
+
                 allocationRulesRepository.save(rules);
+
+                // ✅ Sync existing faculties to the new slot limit
+                List<Faculty> faculties = facultyRepository.findAll();
+                faculties.forEach(f -> {
+                        f.setMaxStudents(request.getMaxStudentsPerFaculty());
+                        facultyRepository.save(f);
+                });
+                System.out.println("Updated " + faculties.size() + " faculties with maxStudents = "
+                                + request.getMaxStudentsPerFaculty());
         }
 
         // =========================================================================
@@ -487,9 +507,16 @@ public class CoordinatorService {
         private CoordinatorFacultyResponse mapToFacultyResponse(Faculty f) {
                 String deptName = (f.getDepartment() != null) ? f.getDepartment().getDepartmentName() : "N/A";
                 int allocatedCount = (int) studentRepository.countByAllocatedFaculty(f);
+                // ✅ Always use the Global Rule for Max Students display
+                AllocationRules rules = allocationRulesRepository.findById(1L)
+                                .orElse(new AllocationRules());
+                // ✅ Dynamic Created Slots count
+                int totalCreatedSlots = projectRepository.findByFacultyFacultyId(f.getFacultyId()).size()
+                                * rules.getMaxTeamSize();
+
                 return new CoordinatorFacultyResponse(f.getFacultyId(), f.getUser().getName(),
-                                f.getUser().getEmail(), deptName, f.getMaxStudents(), allocatedCount,
-                                f.getSpecialization());
+                                f.getUser().getEmail(), deptName, rules.getMaxStudentsPerFaculty(), allocatedCount,
+                                totalCreatedSlots, f.getSpecialization());
         }
 
         private CoordinatorStudentResponse mapToStudentResponse(Student s) {
@@ -502,7 +529,7 @@ public class CoordinatorService {
                 Long teamId = (s.getTeam() != null) ? s.getTeam().getTeamId() : null;
                 String deptName = (s.getDepartment() != null) ? s.getDepartment().getDepartmentName() : "N/A";
                 return new CoordinatorStudentResponse(s.getStudentId(), s.getUser().getName(),
-                                s.getRollNo() != null ? s.getRollNo() : "N/A", s.getUser().getEmail(),
+                                s.getRollNumber() != null ? s.getRollNumber() : "N/A", s.getUser().getEmail(),
                                 deptName, s.getYear(), s.getCgpa(), s.isAllocated(),
                                 allocatedFacultyId, allocatedFacultyName, teamId);
         }
@@ -524,7 +551,7 @@ public class CoordinatorService {
                                         ? t.getMembers().stream()
                                                         .map(s -> new TeamMemberInfo(
                                                                         s.getUser().getName(),
-                                                                        s.getRollNo(),
+                                                                        s.getRollNumber(),
                                                                         s.getUser().getEmail(),
                                                                         s.getCgpa(),
                                                                         s.getStudentId().equals(teamLeadId),
@@ -533,6 +560,9 @@ public class CoordinatorService {
                                                         .collect(Collectors.toList())
                                         : new java.util.ArrayList<>();
 
+                        AllocationRules rules = allocationRulesRepository.findById(1L).orElse(new AllocationRules());
+                        int teamSlots = rules.getMaxTeamSize();
+
                         return new CoordinatorTeamResponse(
                                         t.getTeamId(),
                                         t.getTeamName(),
@@ -540,20 +570,21 @@ public class CoordinatorService {
                                         facultyId,
                                         facultyName,
                                         t.getStatus(),
-                                        members);
+                                        members,
+                                        teamSlots);
                 } catch (Exception e) {
                         System.out.println("Error mapping team " + t.getTeamId() + ": " + e.getMessage());
                         return new CoordinatorTeamResponse(
                                         t.getTeamId(),
                                         t.getTeamName(),
                                         "N/A", null, "N/A", t.getStatus(),
-                                        new java.util.ArrayList<>());
+                                        new java.util.ArrayList<>(), 3);
                 }
         }
 
         private void updateFacultyAllocationCount(Faculty faculty) {
-            int currentCount = (int) studentRepository.countByAllocatedFaculty(faculty);
-            faculty.setAllocatedStudents(currentCount);
-            facultyRepository.save(faculty);
+                int currentCount = (int) studentRepository.countByAllocatedFaculty(faculty);
+                faculty.setAllocatedStudents(currentCount);
+                facultyRepository.save(faculty);
         }
 }

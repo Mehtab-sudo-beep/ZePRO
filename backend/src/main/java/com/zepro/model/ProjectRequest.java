@@ -1,6 +1,7 @@
 package com.zepro.model;
 
 import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
 public class ProjectRequest {
@@ -24,6 +25,23 @@ public class ProjectRequest {
     @Column(length = 500)
     private String rejectionReason;
 
+    // ✅ NEW: Individual team member details (JSON stored as string)
+    @Column(columnDefinition = "LONGTEXT")
+    private String teamMembersNames;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String teamMembersRollNumbers;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String teamMembersCgpas;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String teamMembersResumeLinks;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String teamMembersMakeSheetLinks;
+
+    // Getters and Setters
     public Long getRequestId() {
         return requestId;
     }
@@ -70,5 +88,46 @@ public class ProjectRequest {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    // ✅ NEW: Individual team member details getters and setters
+    public String getTeamMembersNames() {
+        return teamMembersNames;
+    }
+
+    public void setTeamMembersNames(String teamMembersNames) {
+        this.teamMembersNames = teamMembersNames;
+    }
+
+    public String getTeamMembersRollNumbers() {
+        return teamMembersRollNumbers;
+    }
+
+    public void setTeamMembersRollNumbers(String teamMembersRollNumbers) {
+        this.teamMembersRollNumbers = teamMembersRollNumbers;
+    }
+
+    public String getTeamMembersCgpas() {
+        return teamMembersCgpas;
+    }
+
+    public void setTeamMembersCgpas(String teamMembersCgpas) {
+        this.teamMembersCgpas = teamMembersCgpas;
+    }
+
+    public String getTeamMembersResumeLinks() {
+        return teamMembersResumeLinks;
+    }
+
+    public void setTeamMembersResumeLinks(String teamMembersResumeLinks) {
+        this.teamMembersResumeLinks = teamMembersResumeLinks;
+    }
+
+    public String getTeamMembersMakeSheetLinks() {
+        return teamMembersMakeSheetLinks;
+    }
+
+    public void setTeamMembersMakeSheetLinks(String teamMembersMakeSheetLinks) {
+        this.teamMembersMakeSheetLinks = teamMembersMakeSheetLinks;
     }
 }
