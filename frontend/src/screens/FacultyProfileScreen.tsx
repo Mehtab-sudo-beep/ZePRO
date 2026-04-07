@@ -65,27 +65,19 @@ const FacultyProfileScreen: React.FC = () => {
   // ✅ LOAD PROFILE
   useEffect(() => {
     const loadProfile = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-
-    console.log('🔥 TOKEN:', token);
-
-    const data = await getFacultyProfile(token!);
-
-    console.log('✅ PROFILE RESPONSE:', data);
-
-    setProfile(data);
-
-  } catch (err) {
-    console.log('❌ PROFILE ERROR:', err);
-    Alert.alert('Error', 'Failed to load profile');
-  } finally {
-    setLoading(false);
-  }
-};
-
+      try {
+        if (!user?.token) return;
+        const data = await getFacultyProfile(user.token);
+        setProfile(data);
+      } catch (err) {
+        console.log('❌ PROFILE ERROR:', err);
+        Alert.alert('Error', 'Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadProfile();
-  }, []);
+  }, [user]);
 
   const openEdit = (key: string, label: string, value: string) => {
     setEditField({ key, label });
@@ -95,40 +87,34 @@ const FacultyProfileScreen: React.FC = () => {
 
   // ✅ UPDATE PROFILE
   const saveEdit = async () => {
-  if (!editValue.trim()) {
-    Alert.alert('Error', 'Field cannot be empty.');
-    return;
-  }
-
-  try {
-    const token = await AsyncStorage.getItem('token');
-
-    const updated = {
-      ...profile,
-      [editField.key]: editValue.trim(),
-    };
-
-    console.log('🔥 SENDING UPDATE:', updated);
-
-    const data = await updateFacultyProfile(updated, token!);
-
-    console.log('✅ UPDATED RESPONSE:', data);
-
-    setProfile(data);
-
-    if (editField.key === 'name') {
-      setUser({ ...user, name: data.name });
+    if (!editValue.trim()) {
+      Alert.alert('Error', 'Field cannot be empty.');
+      return;
     }
 
-    Alert.alert('Success', 'Profile updated successfully.');
+    try {
+      if (!user?.token) return;
 
-  } catch (err) {
-    console.log('❌ UPDATE ERROR:', err);
-    Alert.alert('Error', 'Update failed');
-  }
+      const updated = {
+        ...profile,
+        [editField.key]: editValue.trim(),
+      };
 
-  setEditModal(false);
-};
+      const data = await updateFacultyProfile(updated, user.token);
+      setProfile(data);
+
+      if (editField.key === 'name') {
+        setUser({ ...user, name: data.name });
+      }
+
+      Alert.alert('Success', 'Profile updated successfully.');
+    } catch (err) {
+      console.log('❌ UPDATE ERROR:', err);
+      Alert.alert('Error', 'Update failed');
+    }
+
+    setEditModal(false);
+  };
 
   if (loading) {
     return (
@@ -178,11 +164,28 @@ const FacultyProfileScreen: React.FC = () => {
 
           <View style={[styles.deptBadge, { backgroundColor: colors.primary + '18' }]}>
             <Text style={[styles.deptBadgeText, { color: colors.primary }]}>
-              {profile.department}
+              {profile.department || 'No Department'}
             </Text>
           </View>
         </View>
-        
+
+        {/* Stats Row */}
+        <View style={[styles.statsRow, { backgroundColor: colors.card }]}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{profile.totalCreatedSlots || 0}</Text>
+            <Text style={[styles.statLbl, { color: colors.subText }]}>Created Slots</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.primary }]}>{profile.allocatedStudents || 0}</Text>
+            <Text style={[styles.statLbl, { color: colors.subText }]}>Allocated</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, { color: colors.text }]}>{profile.maxStudentsPerFaculty || 6}</Text>
+            <Text style={[styles.statLbl, { color: colors.subText }]}>Max Capacity</Text>
+          </View>
+        </View>
 
         {/* Personal */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -260,17 +263,25 @@ const FacultyProfileScreen: React.FC = () => {
             <TextInput
               value={editValue}
               onChangeText={setEditValue}
-              style={[styles.input, { color: colors.text }]}
+              style={[styles.input, { color: colors.text, borderColor: colors.border }]}
               autoFocus
+              placeholder="Enter value..."
+              placeholderTextColor={colors.subText}
             />
 
             <View style={styles.modalBtns}>
-              <TouchableOpacity onPress={() => setEditModal(false)}>
-                <Text>Cancel</Text>
+              <TouchableOpacity 
+                style={[styles.cancelBtn, { borderColor: colors.border }]} 
+                onPress={() => setEditModal(false)}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={saveEdit}>
-                <Text>Save</Text>
+              <TouchableOpacity 
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]} 
+                onPress={saveEdit}
+              >
+                <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
 

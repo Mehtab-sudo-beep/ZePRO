@@ -7,33 +7,48 @@ import jakarta.persistence.*;
 public class AllocationRules {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id = 1L;
 
     @Column(name = "max_team_size", nullable = false)
-    private int maxTeamSize=3;
+    private int maxTeamSize;
 
     @Column(name = "max_students_per_faculty", nullable = false)
-    private int maxStudentsPerFaculty=6;
+    private int maxStudentsPerFaculty;
 
     @Column(name = "max_projects_per_faculty", nullable = false)
-    private int maxProjectsPerFaculty=3;
+    private int maxProjectsPerFaculty;
 
-    // ─── Getters & Setters ───────────────────────────────────────────────────
+    @Column(name = "max_slots_per_project", nullable = false)
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // ─── Getters & Setters ─────────────────────────────────
 
-    public int getMaxTeamSize() { return maxTeamSize; }
-    public void setMaxTeamSize(int maxTeamSize) { this.maxTeamSize = maxTeamSize; }
+    public Long getId() {
+        return id;
+    }
 
-    public int getMaxStudentsPerFaculty() { return maxStudentsPerFaculty; }
+    public int getMaxTeamSize() {
+        return maxTeamSize;
+    }
+
+    public void setMaxTeamSize(int maxTeamSize) {
+        this.maxTeamSize = maxTeamSize;
+    }
+
+    public int getMaxStudentsPerFaculty() {
+        return maxStudentsPerFaculty;
+    }
+
     public void setMaxStudentsPerFaculty(int maxStudentsPerFaculty) {
         this.maxStudentsPerFaculty = maxStudentsPerFaculty;
     }
 
-    public int getMaxProjectsPerFaculty() { return maxProjectsPerFaculty; }
+    public int getMaxProjectsPerFaculty() {
+        return maxProjectsPerFaculty;
+    }
+
     public void setMaxProjectsPerFaculty(int maxProjectsPerFaculty) {
         this.maxProjectsPerFaculty = maxProjectsPerFaculty;
     }
+
+    
 }

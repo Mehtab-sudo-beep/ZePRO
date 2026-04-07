@@ -5,12 +5,12 @@ import com.zepro.dto.faculty.ProjectResponse;
 import com.zepro.model.*;
 import com.zepro.repository.*;
 import org.springframework.transaction.annotation.Transactional;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Service
 public class FacultyService {
 
@@ -21,83 +21,140 @@ public class FacultyService {
     private final SubDomainRepository subDomainRepository;
     private final ProjectRequestRepository projectRequestRepository;
     private final ProjectDomainRepository projectDomainRepository;
-private final ProjectSubDomainRepository projectSubDomainRepository;
-private final StudentRepository studentRepository;
+    private final ProjectSubDomainRepository projectSubDomainRepository;
+    private final StudentRepository studentRepository;
+    private final AllocationRulesRepository allocationRulesRepository;
 
     public FacultyService(ProjectRepository projectRepository,
-                      FacultyRepository facultyRepository,
-                      TeamRepository teamRepository,
-                      DomainRepository domainRepository,
-                      SubDomainRepository subDomainRepository,
-                      ProjectRequestRepository projectRequestRepository,
-                      ProjectDomainRepository projectDomainRepository,
-                      ProjectSubDomainRepository projectSubDomainRepository,
-    StudentRepository studentRepository) {
+            FacultyRepository facultyRepository,
+            TeamRepository teamRepository,
+            DomainRepository domainRepository,
+            SubDomainRepository subDomainRepository,
+            ProjectRequestRepository projectRequestRepository,
+            ProjectDomainRepository projectDomainRepository,
+            ProjectSubDomainRepository projectSubDomainRepository,
+            StudentRepository studentRepository,
+            AllocationRulesRepository allocationRulesRepository) {
 
-    this.projectRepository = projectRepository;
-    this.facultyRepository = facultyRepository;
-    this.teamRepository = teamRepository;
-    this.domainRepository = domainRepository;
-    this.subDomainRepository = subDomainRepository;
-    this.projectRequestRepository = projectRequestRepository;
-    this.projectDomainRepository = projectDomainRepository;
-    this.projectSubDomainRepository = projectSubDomainRepository;
-    this.studentRepository = studentRepository;
-}
+        this.projectRepository = projectRepository;
+        this.facultyRepository = facultyRepository;
+        this.teamRepository = teamRepository;
+        this.domainRepository = domainRepository;
+        this.subDomainRepository = subDomainRepository;
+        this.projectRequestRepository = projectRequestRepository;
+        this.projectDomainRepository = projectDomainRepository;
+        this.projectSubDomainRepository = projectSubDomainRepository;
+        this.studentRepository = studentRepository;
+        this.allocationRulesRepository = allocationRulesRepository;
+    }
 
     public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
-    Project project = new Project();
+        // ✅ GET RULES
+        AllocationRules rules = allocationRulesRepository.findById(1L)
+                .orElse(new AllocationRules());
 
-    project.setTitle(request.getTitle());
-    project.setDescription(request.getDescription());
-    project.setStudentSlots(request.getStudentSlots());
-    project.setFaculty(faculty);
-    project.setStatus("OPEN");
+        // ✅ VALIDATE SLOTS
+        int slots = request.getStudentSlots() != null ? request.getStudentSlots() : 0;
+        if (slots <= 0 || slots > rules.getMaxTeamSize()) {
+            throw new RuntimeException(
+                "Student slots must be between 1 and " + rules.getMaxTeamSize());
+        }
 
-    Project saved = projectRepository.save(project);
+        // ✅ CHECK PROJECT LIMIT
+        List<Project> openProjects = projectRepository.findByFacultyFacultyIdAndStatus(
+                faculty.getFacultyId(), "OPEN");
+        Project project = new Project();
+        if (openProjects.size() >= rules.getMaxProjectsPerFaculty()) {
+            
+            project.setTitle(request.getTitle());
+            project.setDescription(request.getDescription());       
+            project.setFaculty(faculty);
+            project.setStudentSlots(slots); // ✅ SET SLOTS
+            project.setStatus("CLOSE"); // ✅ Mark as REQUESTED
+            project.setIsActive(false);
+            Project saved = projectRepository.save(project);
+            
+            Domain domain = domainRepository.findById(request.getDomainId())
+                .orElseThrow(() -> new RuntimeException("Domain not found"));
 
-    // get domain
-    Domain domain = domainRepository.findById(request.getDomainId())
-            .orElseThrow(() -> new RuntimeException("Domain not found"));
+            // get subdomain
+            SubDomain subDomain = subDomainRepository.findById(request.getSubDomainId())
+                .orElseThrow(() -> new RuntimeException("Subdomain not found"));
 
-    // get subdomain
-    SubDomain subDomain = subDomainRepository.findById(request.getSubDomainId())
-            .orElseThrow(() -> new RuntimeException("Subdomain not found"));
+            // insert into project_domain table
+            ProjectDomain projectDomain = new ProjectDomain();
+            projectDomain.setProject(saved);
+            projectDomain.setDomain(domain);
+            projectDomainRepository.save(projectDomain);
 
-    // insert into project_domain table
-    ProjectDomain projectDomain = new ProjectDomain();
-    projectDomain.setProject(saved);
-    projectDomain.setDomain(domain);
-    projectDomainRepository.save(projectDomain);
+            // insert into project_sub_domain table
+            ProjectSubDomain projectSubDomain = new ProjectSubDomain();
+            projectSubDomain.setProject(saved);
+            projectSubDomain.setSubDomain(subDomain);
+            projectSubDomainRepository.save(projectSubDomain);
 
-    // insert into project_sub_domain table
-    ProjectSubDomain projectSubDomain = new ProjectSubDomain();
-    projectSubDomain.setProject(saved);
-    projectSubDomain.setSubDomain(subDomain);
-    projectSubDomainRepository.save(projectSubDomain);
+            ProjectResponse response = getProjectResponse(saved);
+            // ✅ SET presentSlots to the created studentSlots
+            response.setPresentSlots(slots);
+            return response;
+        }
+        else{
+        
+        project.setTitle(request.getTitle());
+        project.setDescription(request.getDescription());
+        project.setFaculty(faculty);
+        project.setStudentSlots(slots); // ✅ SET SLOTS
+        project.setStatus("OPEN"); // ✅ First project is OPEN
+        project.setIsActive(true);}
 
-    return new ProjectResponse(
-            saved.getProjectId(),
-            saved.getTitle(),
-            saved.getDescription(),
-            saved.getStatus(),
-            domain.getName(),
-            subDomain.getName(),
-            saved.getIsActive()
-    );
-}
+        Project saved = projectRepository.save(project);
+
+        // get domain
+        Domain domain = domainRepository.findById(request.getDomainId())
+                .orElseThrow(() -> new RuntimeException("Domain not found"));
+
+        // get subdomain
+        SubDomain subDomain = subDomainRepository.findById(request.getSubDomainId())
+                .orElseThrow(() -> new RuntimeException("Subdomain not found"));
+
+        // insert into project_domain table
+        ProjectDomain projectDomain = new ProjectDomain();
+        projectDomain.setProject(saved);
+        projectDomain.setDomain(domain);
+        projectDomainRepository.save(projectDomain);
+
+        // insert into project_sub_domain table
+        ProjectSubDomain projectSubDomain = new ProjectSubDomain();
+        projectSubDomain.setProject(saved);
+        projectSubDomain.setSubDomain(subDomain);
+        projectSubDomainRepository.save(projectSubDomain);
+
+        ProjectResponse response = getProjectResponse(saved);
+        // ✅ SET presentSlots to the created studentSlots
+        response.setPresentSlots(slots);
+        return response;
+    }
 
     public ProjectResponse updateProject(Long projectId, CreateProjectRequest request) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
-        
-        project.setTitle(request.getTitle());
-        project.setDescription(request.getDescription());
+
+        AllocationRules rules = allocationRulesRepository.findById(1L)
+                .orElse(new AllocationRules());
         
         if (request.getStudentSlots() != null) {
-            project.setStudentSlots(request.getStudentSlots());
+            int slots = request.getStudentSlots();
+            if (slots <= 0 || slots > rules.getMaxTeamSize()) {
+                throw new RuntimeException(
+                    "Student slots must be between 1 and " + rules.getMaxTeamSize());
+            }
+            project.setStudentSlots(slots); // ✅ UPDATE SLOTS
         }
+
+        project.setTitle(request.getTitle());
+        project.setDescription(request.getDescription());
+
         Project saved = projectRepository.save(project);
 
         if (request.getDomainId() != null) {
@@ -128,60 +185,68 @@ private final StudentRepository studentRepository;
             }
         }
 
-        return new ProjectResponse(
-                saved.getProjectId(),
-                saved.getTitle(),
-                saved.getDescription(),
-                saved.getStatus(),
-                "", "",
-                saved.getIsActive()
-        );
+        ProjectResponse response = getProjectResponse(saved);
+        // ✅ SET presentSlots to the updated studentSlots value
+        response.setPresentSlots(saved.getStudentSlots());
+        return response;
     }
 
     public List<ProjectResponse> getProjects(Long facultyId) {
 
-        return projectRepository.findByFacultyFacultyId(facultyId)
-                .stream()
-                .map(p -> {
-                    String domainStr = "";
-                    String subdomainStr = "";
-
-                    var pDomains = projectDomainRepository
-                            .findByProjectProjectId(p.getProjectId());
-                    if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
-                        domainStr = pDomains.get(0).getDomain().getName();
-                    }
-
-                    var pSubDomains = projectSubDomainRepository
-                            .findByProjectProjectId(p.getProjectId());
-                    if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
-                        subdomainStr = pSubDomains.get(0).getSubDomain().getName();
-                    }
-
-                    return new ProjectResponse(
-                            p.getProjectId(),
-                            p.getTitle(),
-                            p.getDescription(),
-                            p.getStatus(),
-                            domainStr,
-                            subdomainStr,
-                            p.getIsActive());
-                })
+        List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId);
+        return projects.stream()
+                .map(this::getProjectResponse)
                 .collect(Collectors.toList());
     }
 
+    public List<ProjectResponse> getProjectsByEmail(String email) {
+        Faculty faculty = facultyRepository.findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        return getProjects(faculty.getFacultyId());
+    }
+
     public ProjectResponse activateProject(Long projectId) {
+        
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        AllocationRules rules = allocationRulesRepository.findById(1L)
+                .orElse(new AllocationRules());
+
+        List<Project> activeProjects = projectRepository
+                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "OPEN");
+
+        
+        if (activeProjects.size() >= rules.getMaxProjectsPerFaculty()) {
+            throw new RuntimeException(
+                "Cannot activate this project. You have reached the maximum limit of " +
+                rules.getMaxProjectsPerFaculty() + " active projects. " +
+                "Please deactivate one project before activating another.");
+        }
+
         project.setIsActive(true);
+        project.setStatus("OPEN");
         Project saved = projectRepository.save(project);
-        return getProjectResponse(saved);
+
+        ProjectResponse response = getProjectResponse(saved);
+        response.setPresentSlots(saved.getStudentSlots());
+        
+        System.out.println("✅ Project " + projectId + " activated successfully");
+        
+        return response;
     }
 
     public ProjectResponse deactivateProject(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
+        
+        // ✅ CANNOT CLOSE IF ASSIGNED
+        if ("ASSIGNED".equals(project.getStatus())) {
+            throw new RuntimeException("Cannot close an assigned project");
+        }
+
         project.setIsActive(false);
+        project.setStatus("CLOSE");
         Project saved = projectRepository.save(project);
         return getProjectResponse(saved);
     }
@@ -190,17 +255,28 @@ private final StudentRepository studentRepository;
         String domainStr = "";
         String subdomainStr = "";
         var pDomains = projectDomainRepository.findByProjectProjectId(p.getProjectId());
-        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) domainStr = pDomains.get(0).getDomain().getName();
+        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null)
+            domainStr = pDomains.get(0).getDomain().getName();
         var pSubDomains = projectSubDomainRepository.findByProjectProjectId(p.getProjectId());
-        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) subdomainStr = pSubDomains.get(0).getSubDomain().getName();
-        return new ProjectResponse(p.getProjectId(), p.getTitle(), p.getDescription(), p.getStatus(), domainStr, subdomainStr, p.getIsActive());
+        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null)
+            subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+            
+        AllocationRules rules = allocationRulesRepository.findById(1L).orElse(new AllocationRules());
+        int maxTeamSize = rules.getMaxTeamSize();
+
+        int projectAssigned = (p.getTeam() != null && p.getTeam().getMembers() != null) ? p.getTeam().getMembers().size() : 0;
+        int maxSlots = p.getStudentSlots();
+        int remainingSlots = Math.max(0, maxSlots - projectAssigned);
+
+        return new ProjectResponse(p.getProjectId(), p.getTitle(), p.getDescription(), p.getStatus(), domainStr,
+                subdomainStr, p.getIsActive(), projectAssigned, maxSlots, remainingSlots);
     }
 
     @Transactional
     public void assignProject(Long projectId, Long teamId) {
         Project project = projectRepository.findById(projectId).orElseThrow();
 
-        if(!project.getStatus().equals("REQUESTED")){
+        if (!project.getStatus().equals("REQUESTED")) {
             throw new RuntimeException("Project not requested yet");
         }
 
@@ -237,42 +313,41 @@ private final StudentRepository studentRepository;
         projectRequestRepository.save(request);
     }
 
- public List<ProjectResponse> getPendingRequests(Long facultyId) {
+    public List<ProjectResponse> getPendingRequests(Long facultyId) {
 
-    List<ProjectRequest> requests =
-            projectRequestRepository.findByStatusAndProjectFacultyFacultyId(
-                    RequestStatus.PENDING,
-                    facultyId
-            );
+        List<ProjectRequest> requests = projectRequestRepository.findByStatusAndProjectFacultyFacultyId(
+                RequestStatus.PENDING,
+                facultyId);
 
-    return requests.stream().map(request -> {
+        return requests.stream().map(request -> {
 
-        ProjectResponse response = new ProjectResponse();
+            ProjectResponse response = new ProjectResponse();
 
-        response.setRequestId(request.getRequestId());
+            response.setRequestId(request.getRequestId());
 
-        Team team = request.getTeam();
+            Team team = request.getTeam();
 
-        if (team != null) {
-            response.setTeamId(team.getTeamId());
-            response.setTeamName(team.getTeamName());
+            if (team != null) {
+                response.setTeamId(team.getTeamId());
+                response.setTeamName(team.getTeamName());
 
-            // 🔥 ADD MEMBERS
-            List<String> members = team.getMembers()
-                    .stream()
-                    .map(s -> s.getUser().getName())
-                    .toList();
+                // 🔥 ADD MEMBERS
+                List<String> members = team.getMembers()
+                        .stream()
+                        .map(s -> s.getUser().getName())
+                        .toList();
 
-            response.setMembers(members);
-        }
+                response.setMembers(members);
+            }
 
-        response.setStatus(request.getStatus().name());
+            response.setStatus(request.getStatus().name());
 
-        return response;
+            return response;
 
-    }).toList();
-}
-  public SubDomain createSubDomain(String name, Long domainId) {
+        }).toList();
+    }
+
+    public SubDomain createSubDomain(String name, Long domainId) {
 
         Domain domain = domainRepository.findById(domainId)
                 .orElseThrow(() -> new RuntimeException("Domain not found"));
@@ -286,11 +361,10 @@ private final StudentRepository studentRepository;
 
     public ProjectRequest cancelRequest(Long requestId) {
 
-    ProjectRequest request =
-            projectRequestRepository.findById(requestId).orElseThrow();
+        ProjectRequest request = projectRequestRepository.findById(requestId).orElseThrow();
 
-    request.setStatus(RequestStatus.CANCELLED);
+        request.setStatus(RequestStatus.CANCELLED);
 
-    return projectRequestRepository.save(request);
-}
+        return projectRequestRepository.save(request);
+    }
 }

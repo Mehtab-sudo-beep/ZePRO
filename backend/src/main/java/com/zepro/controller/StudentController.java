@@ -10,6 +10,7 @@ import com.zepro.repository.ProjectRepository;
 
 @RestController
 @RequestMapping("/student")
+@CrossOrigin
 public class StudentController {
 
     private final StudentService studentService;

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import {
   getPendingRequests,
   getFacultyProjects,
   getAllMeetings,
+  getFacultyProfile,
 } from '../api/facultyApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'FacultyHome'>;
@@ -110,6 +112,7 @@ const FacultyHomeScreen: React.FC = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -123,13 +126,16 @@ const FacultyHomeScreen: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('🔥 [HOME] Fetching profile & projects...');
       const req = await getPendingRequests(user!.token);
-      if (!user?.facultyId) return;
-      
-      const proj = await getFacultyProjects(Number(user.facultyId), user!.token);
+      const prof = await getFacultyProfile(user!.token);
+      const proj = await getFacultyProjects(user!.token);
       const meet = await getAllMeetings(user!.token);
 
+      console.log('✅ [HOME] Data fetched. Rules Max Slots:', prof?.maxStudentsPerFaculty);
+
       setRequests(req || []);
+      setProfile(prof);
       setProjects(proj || []);
       setMeetings(meet || []);
     } catch (err: any) {
@@ -182,6 +188,26 @@ const FacultyHomeScreen: React.FC = () => {
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           
+          {/* Quick Stats Summary */}
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View style={[styles.card, { backgroundColor: colors.card, flex: 1, padding: 16 }]}>
+              <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>RES. CAPACITY (SLOTS)</Text>
+              <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800', marginTop: 4 }}>
+                {profile?.totalCreatedSlots || 0} <Text style={{ fontSize: 12, color: colors.subText }}>/ {profile?.maxStudentsPerFaculty || 6}</Text>
+              </Text>
+              <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
+                <View style={{ height: '100%', width: `${Math.min(100, ((profile?.totalCreatedSlots || 0) / (profile?.maxStudentsPerFaculty || 6)) * 100)}%`, backgroundColor: colors.primary }} />
+              </View>
+            </View>
+            <View style={[styles.card, { backgroundColor: colors.card, flex: 1, padding: 16 }]}>
+               <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ACTIVE PROJECTS</Text>
+               <Text style={{ color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4 }}>
+                 {projects.filter(p => p.isActive).length}
+               </Text>
+               <Text style={{ color: colors.subText, fontSize: 10, marginTop: 4 }}>Out of {projects.length} total</Text>
+            </View>
+          </View>
+
           <SectionLabel label="Requests" colors={colors} />
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <ActionRow

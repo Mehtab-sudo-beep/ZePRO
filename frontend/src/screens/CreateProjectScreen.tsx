@@ -95,8 +95,8 @@ const CreateProjectScreen = () => {
     }
 
     const slotCount = parseInt(slots);
-    if (isNaN(slotCount) || slotCount < 1 || slotCount > 3) {
-      Alert.alert('Invalid Slots', 'Slots must be between 1 and 3');
+    if (isNaN(slotCount) || slotCount < 1 || slotCount > 10) {
+      Alert.alert('Invalid Slots', 'Slots must be between 1 and 10');
       return;
     }
 

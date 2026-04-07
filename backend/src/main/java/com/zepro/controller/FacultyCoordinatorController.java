@@ -20,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/coordinator")
+@CrossOrigin
 public class FacultyCoordinatorController {
 
     private final CoordinatorService coordinatorService;

@@ -31,6 +31,7 @@ public class StudentService {
         private final com.zepro.repository.ProjectDomainRepository projectDomainRepository;
         private final com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository;
         private final com.zepro.repository.AllocationRulesRepository allocationRulesRepository;
+
         public StudentService(StudentRepository studentRepository,
                         TeamRepository teamRepository,
                         TeamJoinRequestRepository joinRequestRepository,
@@ -108,7 +109,7 @@ public class StudentService {
                 Team team = teamRepository.findById(request.getTeamId())
                                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
-                int maxTeamSize = allocationRulesRepository.findMaxTeamSize().orElse(3);
+                int maxTeamSize = allocationRulesRepository.findById(1L).get().getMaxTeamSize();
                 if (team.getMembers().size() >= maxTeamSize) {
                         throw new RuntimeException("Limit reached in the current team");
                 }
@@ -125,14 +126,30 @@ public class StudentService {
         public List<ProjectResponse> getAllProjects(String email) {
 
                 Student student = studentRepository.findByUser_Email(email)
-                        .orElseThrow(() -> new RuntimeException("Student not found"));
-
-                int teamSize = (student.getTeam() != null) ? student.getTeam().getMembers().size() : 1;
+                                .orElseThrow(() -> new RuntimeException("Student not found"));
 
                 List<Project> projects = projectRepository.findAll();
+                int teamMemberSize = (student.getTeam() != null && student.getTeam().getMembers() != null) 
+                        ? student.getTeam().getMembers().size() 
+                        : 0;
 
                 return projects.stream()
-                                .filter(p -> p.getStudentSlots() != null && p.getStudentSlots() == teamSize && p.getStatus().equals("OPEN") && p.getIsActive())
+                                .filter(p -> {
+                                        // ✅ FILTER: only OPEN projects
+                                        if (!"OPEN".equals(p.getStatus())) {
+                                                return false;
+                                        }
+                                        // ✅ FILTER: only active projects
+                                        if (!p.getIsActive()) {
+                                                return false;
+                                        }
+                                        // ✅ FILTER: slots > team member size
+                                        int availableSlots = p.getStudentSlots() - 
+                                                (p.getTeam() != null && p.getTeam().getMembers() != null 
+                                                        ? p.getTeam().getMembers().size() 
+                                                        : 0);
+                                        return availableSlots > teamMemberSize;
+                                })
                                 .map(project -> {
                                         String domainStr = "";
                                         String subdomainStr = "";
@@ -149,14 +166,25 @@ public class StudentService {
                                                 subdomainStr = pSubDomains.get(0).getSubDomain().getName();
                                         }
 
+                                        int maxTeamSize = allocationRulesRepository.findById(1L)
+                                                        .orElse(new com.zepro.model.AllocationRules()).getMaxTeamSize();
+                                        int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null) 
+                                                ? project.getTeam().getMembers().size() 
+                                                : 0;
+                                        int maxSlots = project.getStudentSlots(); // ✅ USE PROJECT SLOTS
+                                        int remainingSlots = Math.max(0, maxSlots - projectAssigned); // ✅ CALCULATE REMAINING SLOTS BASED ON MAX TEAM SIZE
+
                                         return new ProjectResponse(
-                                                        project.getProjectId(),
-                                                        project.getTitle(),
-                                                        project.getDescription(),
-                                                        project.getFaculty().getUser().getName(),
-                                                        project.getStudentSlots(), 
-                                                        domainStr,
-                                                        subdomainStr);
+                                                project.getProjectId(),
+                                                project.getTitle(),
+                                                project.getDescription(),
+                                                project.getStatus(),
+                                                domainStr,
+                                                subdomainStr,
+                                                project.getIsActive(),
+                                                projectAssigned,
+                                                maxSlots,
+                                                remainingSlots);
                                 })
                                 .toList();
         }
@@ -166,88 +194,152 @@ public class StudentService {
 
         public String requestProject(ProjectRequestDTO request) {
 
-                Student student = studentRepository.findById(request.getStudentId())
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(request.getStudentId())
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                if (!student.isTeamLead()) {
-                        throw new RuntimeException("Only team lead can send project request");
+            if (!student.isTeamLead()) {
+                throw new RuntimeException("Only team lead can send project request");
+            }
+
+            Team team = student.getTeam();
+
+            Project allocatedProject = projectRepository.findByTeam(team);
+            if (allocatedProject != null) {
+                throw new RuntimeException("Your team is already assigned to a project");
+            }
+
+            Project project = projectRepository.findById(request.getProjectId())
+                    .orElseThrow(() -> new RuntimeException("Project not found"));
+
+            boolean alreadyRequested = projectRequestRepository.existsByTeamTeamIdAndProjectProjectId(
+                    team.getTeamId(),
+                    project.getProjectId());
+
+            if (alreadyRequested) {
+                throw new RuntimeException("Your team already requested this project");
+            }
+
+            // ✅ BUILD INDIVIDUAL ARRAYS FROM DTO OR FROM TEAM MEMBERS
+            List<ProjectRequestDTO.TeamMemberDTO> teamMembersFromDTO = request.getTeamMembers();
+            List<Student> teamMembers = team.getMembers();
+
+            StringBuilder names = new StringBuilder("[");
+            StringBuilder rollNumbers = new StringBuilder("[");
+            StringBuilder cgpas = new StringBuilder("[");
+            StringBuilder resumeLinks = new StringBuilder("[");
+            StringBuilder makeSheetLinks = new StringBuilder("[");
+
+            // Use DTO if provided, otherwise use team members from database
+            List<?> membersToProcess = (teamMembersFromDTO != null && !teamMembersFromDTO.isEmpty()) 
+                ? teamMembersFromDTO 
+                : teamMembers;
+
+            for (int i = 0; i < membersToProcess.size(); i++) {
+                String name = "";
+                String rollNumber = "";
+                Double cgpa = 0.0;
+                String resumeLink = "";
+                String makeSheetLink = "";
+
+                if (membersToProcess.get(i) instanceof ProjectRequestDTO.TeamMemberDTO) {
+                    ProjectRequestDTO.TeamMemberDTO member = (ProjectRequestDTO.TeamMemberDTO) membersToProcess.get(i);
+                    name = member.getName() != null ? member.getName() : "";
+                    rollNumber = member.getRollNumber() != null ? member.getRollNumber() : "";
+                    cgpa = member.getCgpa() != null ? member.getCgpa() : 0.0;
+                    resumeLink = member.getResumeLink() != null ? member.getResumeLink() : "";
+                    makeSheetLink = member.getMakeSheetLink() != null ? member.getMakeSheetLink() : "";
+                } else if (membersToProcess.get(i) instanceof Student) {
+                    Student member = (Student) membersToProcess.get(i);
+                    name = member.getName() != null ? member.getName() : "";
+                    rollNumber = member.getRollNumber() != null ? member.getRollNumber() : "";
+                    cgpa = member.getCgpa() != 0.0 ? member.getCgpa() : 0.0;
+                    resumeLink = member.getResumeLink() != null ? member.getResumeLink() : "";
+                    makeSheetLink = member.getMarksheetLink() != null ? member.getMarksheetLink() : "";
                 }
 
-                Team team = student.getTeam();
+                names.append("\"").append(name).append("\"");
+                rollNumbers.append("\"").append(rollNumber).append("\"");
+                cgpas.append(cgpa);
+                resumeLinks.append("\"").append(resumeLink).append("\"");
+                makeSheetLinks.append("\"").append(makeSheetLink).append("\"");
 
-                Project allocatedProject = projectRepository.findByTeam(team);
-                if (allocatedProject != null) {
-                        throw new RuntimeException("Your team is already assigned to a project");
+                if (i < membersToProcess.size() - 1) {
+                    names.append(",");
+                    rollNumbers.append(",");
+                    cgpas.append(",");
+                    resumeLinks.append(",");
+                    makeSheetLinks.append(",");
                 }
+            }
 
-                // Fetch project entity from repository (this fixes any potential getFaculty IDE
-                // caching issues)
-                Project project = projectRepository.findById(request.getProjectId())
-                                .orElseThrow(() -> new RuntimeException("Project not found"));
+            names.append("]");
+            rollNumbers.append("]");
+            cgpas.append("]");
+            resumeLinks.append("]");
+            makeSheetLinks.append("]");
 
-                boolean alreadyRequested = projectRequestRepository.existsByTeamTeamIdAndProjectProjectId(
-                                team.getTeamId(),
-                                project.getProjectId());
+            ProjectRequest req = new ProjectRequest();
+            req.setTeam(team);
+            req.setProject(project);
+            req.setFaculty(project.getFaculty());
+            req.setStatus(RequestStatus.PENDING);
+            
+            // ✅ SET INDIVIDUAL FIELDS
+            req.setTeamMembersNames(names.toString());
+            req.setTeamMembersRollNumbers(rollNumbers.toString());
+            req.setTeamMembersCgpas(cgpas.toString());
+            req.setTeamMembersResumeLinks(resumeLinks.toString());
+            req.setTeamMembersMakeSheetLinks(makeSheetLinks.toString());
 
-                if (alreadyRequested) {
-                        throw new RuntimeException("Your team already requested this project");
-                }
+            projectRequestRepository.save(req);
 
-                ProjectRequest req = new ProjectRequest();
-                req.setTeam(team);
-                req.setProject(project);
-                req.setFaculty(project.getFaculty());
-                req.setStatus(RequestStatus.PENDING);
-
-                projectRequestRepository.save(req);
-
-                return "Project request sent";
+            return "Project request sent";
         }
 
         public List<Long> getRequestedProjects(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow();
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow();
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        return List.of();
-                }
+            if (team == null) {
+                return List.of();
+            }
 
-                List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+            List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
 
-                return requests.stream()
-                                .map(req -> req.getProject().getProjectId())
-                                .toList();
+            return requests.stream()
+                    .map(req -> req.getProject().getProjectId())
+                    .toList();
         }
 
         public List<ProjectRequestHistoryResponse> getProjectRequestsHistory(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                // Only team lead can view sent requests
-                if (!student.isTeamLead()) {
-                        throw new RuntimeException("Only team lead can view project requests");
-                }
+            // Only team lead can view sent requests
+            if (!student.isTeamLead()) {
+                throw new RuntimeException("Only team lead can view project requests");
+            }
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        throw new RuntimeException("Student is not in a team");
-                }
+            if (team == null) {
+                throw new RuntimeException("Student is not in a team");
+            }
 
-                List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+            List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
 
-                return requests.stream()
-                                .map(req -> new ProjectRequestHistoryResponse(
-                                                req.getRequestId(),
-                                                req.getProject().getTitle(),
-                                                req.getProject().getFaculty().getUser().getName(),
-                                                req.getStatus() != null ? req.getStatus().name() : null,
-                                                req.getRejectionReason()))
-                                .toList();
+            return requests.stream()
+                    .map(req -> new ProjectRequestHistoryResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            req.getStatus() != null ? req.getStatus().name() : null,
+                            req.getRejectionReason()))
+                    .toList();
         }
 
         // ------------------------------------------------
@@ -256,32 +348,32 @@ public class StudentService {
 
         public AssignedProjectResponse getAssignedProject(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        throw new RuntimeException("Student is not in a team");
-                }
+            if (team == null) {
+                throw new RuntimeException("Student is not in a team");
+            }
 
-                AssignedProjectResponse response = new AssignedProjectResponse();
-                response.setTeamName(team.getTeamName());
+            AssignedProjectResponse response = new AssignedProjectResponse();
+            response.setTeamName(team.getTeamName());
 
-                Project project = projectRepository.findByTeam(team);
-                
-                if (project != null) {
-                        response.setProjectId(project.getProjectId());
-                        response.setTitle(project.getTitle());
-                        response.setProjectTitle(project.getTitle());
-                        response.setDescription(project.getDescription());
-                        response.setFacultyName(project.getFaculty().getUser().getName());
-                        response.setStatus(project.getStatus());
-                } else {
-                        response.setProjectTitle("Project not assigned yet");
-                }
+            Project project = projectRepository.findByTeam(team);
 
-                return response;
+            if (project != null) {
+                response.setProjectId(project.getProjectId());
+                response.setTitle(project.getTitle());
+                response.setProjectTitle(project.getTitle());
+                response.setDescription(project.getDescription());
+                response.setFacultyName(project.getFaculty().getUser().getName());
+                response.setStatus(project.getStatus());
+            } else {
+                response.setProjectTitle("Project not assigned yet");
+            }
+
+            return response;
         }
 
         // ------------------------------------------------
@@ -290,96 +382,96 @@ public class StudentService {
 
         public ProjectRequestStatusResponse getProjectRequestsStatus(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        throw new RuntimeException("Student is not in a team");
+            if (team == null) {
+                throw new RuntimeException("Student is not in a team");
+            }
+
+            List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+
+            List<UpcomingRequestResponse> upcoming = new ArrayList<>();
+            List<CompletedRequestResponse> completed = new ArrayList<>();
+
+            for (ProjectRequest req : requests) {
+
+                String status = req.getStatus() != null ? req.getStatus().name() : "";
+
+                // ✅ ACCEPTED — goes to completed
+                if (status.equals("ACCEPTED")) {
+                    completed.add(new CompletedRequestResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "ACCEPTED",
+                            req.getRejectionReason()));
+                    continue;
                 }
 
-                List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
-
-                List<UpcomingRequestResponse> upcoming = new ArrayList<>();
-                List<CompletedRequestResponse> completed = new ArrayList<>();
-
-                for (ProjectRequest req : requests) {
-
-                        String status = req.getStatus() != null ? req.getStatus().name() : "";
-
-                        // ✅ ACCEPTED — goes to completed
-                        if (status.equals("ACCEPTED")) {
-                                completed.add(new CompletedRequestResponse(
-                                                req.getRequestId(),
-                                                req.getProject().getTitle(),
-                                                req.getProject().getFaculty().getUser().getName(),
-                                                "ACCEPTED",
-                                                req.getRejectionReason()));
-                                continue;
-                        }
-
-                        // ✅ REJECTED — goes to completed
-                        if (status.equals("REJECTED")) {
-                                completed.add(new CompletedRequestResponse(
-                                                req.getRequestId(),
-                                                req.getProject().getTitle(),
-                                                req.getProject().getFaculty().getUser().getName(),
-                                                "REJECTED",
-                                                req.getRejectionReason()));
-                                continue;
-                        }
-
-                        // ✅ Check meeting for this request
-                        java.util.Optional<Meeting> meetingOpt = meetingRepository
-                                        .findByRequestRequestId(req.getRequestId());
-
-                        if (meetingOpt.isPresent()) {
-                                Meeting meeting = meetingOpt.get();
-
-                                // ✅ SCHEDULED meeting → upcoming
-                                if (meeting.getStatus() == com.zepro.model.MeetingStatus.SCHEDULED) {
-                                        upcoming.add(new UpcomingRequestResponse(
-                                                        req.getRequestId(),
-                                                        req.getProject().getTitle(),
-                                                        req.getProject().getFaculty().getUser().getName(),
-                                                        meeting.getMeetingTime(),
-                                                        meeting.getLocation(),
-                                                        meeting.getMeetingLink()));
-                                }
-
-                                // ✅ DONE meeting but no accept/reject yet → completed
-                                if (meeting.getStatus() == com.zepro.model.MeetingStatus.DONE) {
-                                        completed.add(new CompletedRequestResponse(
-                                                        req.getRequestId(),
-                                                        req.getProject().getTitle(),
-                                                        req.getProject().getFaculty().getUser().getName(),
-                                                        "MEETING COMPLETED", null));
-                                }
-
-                                // ✅ CANCELLED meeting → completed
-                                if (meeting.getStatus() == com.zepro.model.MeetingStatus.CANCELLED) {
-                                        completed.add(new CompletedRequestResponse(
-                                                        req.getRequestId(),
-                                                        req.getProject().getTitle(),
-                                                        req.getProject().getFaculty().getUser().getName(),
-                                                        "CANCELLED", null));
-                                }
-                        }
+                // ✅ REJECTED — goes to completed
+                if (status.equals("REJECTED")) {
+                    completed.add(new CompletedRequestResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "REJECTED",
+                            req.getRejectionReason()));
+                    continue;
                 }
 
-                // ✅ Sort upcoming by meetingTime ascending
-                upcoming.sort((a, b) -> {
-                        if (a.getMeetingTime() == null || b.getMeetingTime() == null)
-                                return 0;
-                        return a.getMeetingTime().compareTo(b.getMeetingTime());
-                });
+                // ✅ Check meeting for this request
+                java.util.Optional<Meeting> meetingOpt = meetingRepository
+                        .findByRequestRequestId(req.getRequestId());
 
-                ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
-                response.setUpcomingRequests(upcoming);
-                response.setCompletedRequests(completed);
+                if (meetingOpt.isPresent()) {
+                    Meeting meeting = meetingOpt.get();
 
-                return response;
+                    // ✅ SCHEDULED meeting → upcoming
+                    if (meeting.getStatus() == com.zepro.model.MeetingStatus.SCHEDULED) {
+                        upcoming.add(new UpcomingRequestResponse(
+                                req.getRequestId(),
+                                req.getProject().getTitle(),
+                                req.getProject().getFaculty().getUser().getName(),
+                                meeting.getMeetingTime(),
+                                meeting.getLocation(),
+                                meeting.getMeetingLink()));
+                    }
+
+                    // ✅ DONE meeting but no accept/reject yet → completed
+                    if (meeting.getStatus() == com.zepro.model.MeetingStatus.DONE) {
+                        completed.add(new CompletedRequestResponse(
+                                req.getRequestId(),
+                                req.getProject().getTitle(),
+                                req.getProject().getFaculty().getUser().getName(),
+                                "MEETING COMPLETED", null));
+                    }
+
+                    // ✅ CANCELLED meeting → completed
+                    if (meeting.getStatus() == com.zepro.model.MeetingStatus.CANCELLED) {
+                        completed.add(new CompletedRequestResponse(
+                                req.getRequestId(),
+                                req.getProject().getTitle(),
+                                req.getProject().getFaculty().getUser().getName(),
+                                "CANCELLED", null));
+                    }
+                }
+            }
+
+            // ✅ Sort upcoming by meetingTime ascending
+            upcoming.sort((a, b) -> {
+                if (a.getMeetingTime() == null || b.getMeetingTime() == null)
+                    return 0;
+                return a.getMeetingTime().compareTo(b.getMeetingTime());
+            });
+
+            ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
+            response.setUpcomingRequests(upcoming);
+            response.setCompletedRequests(completed);
+
+            return response;
         }
 
         // ------------------------------------------------
@@ -388,221 +480,221 @@ public class StudentService {
 
         public TeamInfoResponse getTeamInfo(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        throw new RuntimeException("Student is not in a team");
-                }
+            if (team == null) {
+                throw new RuntimeException("Student is not in a team");
+            }
 
-                TeamInfoResponse response = new TeamInfoResponse();
+            TeamInfoResponse response = new TeamInfoResponse();
 
-                response.setTeamId(team.getTeamId());
-                response.setTeamName(team.getTeamName());
-                response.setTeamLead(team.getTeamLead().getName());
-                response.setTeamLeadId(team.getTeamLead().getStudentId());
-                List<String> members = new ArrayList<>();
+            response.setTeamId(team.getTeamId());
+            response.setTeamName(team.getTeamName());
+            response.setTeamLead(team.getTeamLead().getName());
+            response.setTeamLeadId(team.getTeamLead().getStudentId());
+            List<String> members = new ArrayList<>();
 
-                for (Student s : team.getMembers()) {
-                        members.add(s.getName());
-                }
+            for (Student s : team.getMembers()) {
+                members.add(s.getName());
+            }
 
-                response.setMembers(members);
+            response.setMembers(members);
 
-                return response;
+            return response;
         }
 
         public String sendJoinRequest(Long studentId, Long teamId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                Team team = teamRepository.findById(teamId)
-                                .orElseThrow(() -> new RuntimeException("Team not found"));
-                // 🔴 prevent duplicate request
-                if (student.getTeam() != null) {
-                        throw new RuntimeException("You are already in a team");
-                }
-                boolean alreadyRequested = joinRequestRepository
-                                .existsByStudentStudentIdAndTeamTeamId(studentId, teamId);
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new RuntimeException("Team not found"));
+            // 🔴 prevent duplicate request
+            if (student.getTeam() != null) {
+                throw new RuntimeException("You are already in a team");
+            }
+            boolean alreadyRequested = joinRequestRepository
+                    .existsByStudentStudentIdAndTeamTeamId(studentId, teamId);
 
-                if (alreadyRequested) {
-                        throw new RuntimeException("You have already sent a request to this team");
-                }
+            if (alreadyRequested) {
+                throw new RuntimeException("You have already sent a request to this team");
+            }
 
-                TeamJoinRequest request = new TeamJoinRequest();
-                request.setStudent(student);
-                request.setTeam(team);
-                request.setStatus("PENDING");
+            TeamJoinRequest request = new TeamJoinRequest();
+            request.setStudent(student);
+            request.setTeam(team);
+            request.setStatus("PENDING");
 
-                joinRequestRepository.save(request);
+            joinRequestRepository.save(request);
 
-                return "Join request sent successfully";
+            return "Join request sent successfully";
         }
 
         public List<JoinRequestResponse> getTeamJoinRequests(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                if (!student.isTeamLead()) {
-                        throw new RuntimeException("Only team lead can view requests");
-                }
+            if (!student.isTeamLead()) {
+                throw new RuntimeException("Only team lead can view requests");
+            }
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                List<TeamJoinRequest> requests = joinRequestRepository.findByTeamTeamId(team.getTeamId());
+            List<TeamJoinRequest> requests = joinRequestRepository.findByTeamTeamId(team.getTeamId());
 
-                return requests.stream()
-                                .map(req -> new JoinRequestResponse(
-                                                req.getRequestId(),
-                                                req.getStudent().getStudentId(),
-                                                req.getStudent().getUser().getName(),
-                                                req.getStatus(),
-                                                req.getRejectionReason()))
-                                .toList();
+            return requests.stream()
+                    .map(req -> new JoinRequestResponse(
+                            req.getRequestId(),
+                            req.getStudent().getStudentId(),
+                            req.getStudent().getUser().getName(),
+                            req.getStatus(),
+                            req.getRejectionReason()))
+                    .toList();
         }
 
         @Transactional
         public String approveJoinRequest(Long requestId) {
 
-                TeamJoinRequest request = joinRequestRepository.findById(requestId)
-                                .orElseThrow(() -> new RuntimeException("Request not found"));
+            TeamJoinRequest request = joinRequestRepository.findById(requestId)
+                    .orElseThrow(() -> new RuntimeException("Request not found"));
 
-                Student student = request.getStudent();
-                Team team = request.getTeam();
+            Student student = request.getStudent();
+            Team team = request.getTeam();
 
-                if (student.getTeam() != null) {
-                        throw new RuntimeException("Student already belongs to a team");
-                }
+            if (student.getTeam() != null) {
+                throw new RuntimeException("Student already belongs to a team");
+            }
 
-                int maxTeamSize = allocationRulesRepository.findMaxTeamSize().orElse(3);
-                if (team.getMembers().size() >= maxTeamSize) {
-                        throw new RuntimeException("Limit reached in the current team");
-                }
+            int maxTeamSize = allocationRulesRepository.findById(1L).get().getMaxTeamSize();
+            if (team.getMembers().size() >= maxTeamSize) {
+                throw new RuntimeException("Limit reached in the current team");
+            }
 
-                // add student
-                student.setTeam(team);
-                student.setInTeam(true);
-                student.setTeamLead(false);
+            // add student
+            student.setTeam(team);
+            student.setInTeam(true);
+            student.setTeamLead(false);
 
-                team.getMembers().add(student);
+            team.getMembers().add(student);
 
-                studentRepository.save(student);
-                teamRepository.save(team);
+            studentRepository.save(student);
+            teamRepository.save(team);
 
-                // delete ALL requests in one SQL
-                joinRequestRepository.deleteAllByStudentId(student.getStudentId());
+            // delete ALL requests in one SQL
+            joinRequestRepository.deleteAllByStudentId(student.getStudentId());
 
-                return "Student added to team successfully";
+            return "Student added to team successfully";
         }
 
         public String rejectJoinRequest(Long requestId, String reason) {
 
-                TeamJoinRequest request = joinRequestRepository.findById(requestId)
-                                .orElseThrow(() -> new RuntimeException("Request not found"));
+            TeamJoinRequest request = joinRequestRepository.findById(requestId)
+                    .orElseThrow(() -> new RuntimeException("Request not found"));
 
-                request.setStatus("REJECTED");
-                request.setRejectionReason(reason != null ? reason : "");
-                joinRequestRepository.save(request);
+            request.setStatus("REJECTED");
+            request.setRejectionReason(reason != null ? reason : "");
+            joinRequestRepository.save(request);
 
-                return "Request rejected";
+            return "Request rejected";
         }
 
         public List<TeamListResponse> getAllTeams(Long studentId) {
 
-                List<Team> teams = teamRepository.findAll();
+            List<Team> teams = teamRepository.findAll();
 
-                return teams.stream()
-                                .map(team -> {
+            return teams.stream()
+                    .map(team -> {
 
-                                        boolean alreadyRequested = joinRequestRepository
-                                                        .existsByStudentStudentIdAndTeamTeamId(studentId,
-                                                                        team.getTeamId());
+                            boolean alreadyRequested = joinRequestRepository
+                                    .existsByStudentStudentIdAndTeamTeamId(studentId,
+                                                    team.getTeamId());
 
-                                        List<String> members = team.getMembers()
-                                                        .stream()
-                                                        .map(s -> s.getUser().getName())
-                                                        .toList();
+                            List<String> members = team.getMembers()
+                                    .stream()
+                                    .map(s -> s.getUser().getName())
+                                    .toList();
 
-                                        return new TeamListResponse(
-                                                        team.getTeamId(),
-                                                        team.getTeamName(),
-                                                        team.getDescription(),
-                                                        team.getTeamLead().getUser().getName(),
-                                                        members,
-                                                        alreadyRequested);
+                            return new TeamListResponse(
+                                    team.getTeamId(),
+                                    team.getTeamName(),
+                                    team.getDescription(),
+                                    team.getTeamLead().getUser().getName(),
+                                    members,
+                                    alreadyRequested);
 
-                                })
-                                .toList();
+                    })
+                    .toList();
         }
 
         public List<SentRequestResponse> getSentRequests(Long studentId) {
 
-                List<TeamJoinRequest> requests = joinRequestRepository.findByStudentStudentId(studentId);
+            List<TeamJoinRequest> requests = joinRequestRepository.findByStudentStudentId(studentId);
 
-                return requests.stream()
-                                .map(req -> new SentRequestResponse(
-                                                req.getRequestId(),
-                                                req.getTeam().getTeamName(),
-                                                req.getTeam().getTeamLead().getUser().getName(),
-                                                req.getStatus(),
-                                                req.getRejectionReason()))
-                                .toList();
+            return requests.stream()
+                    .map(req -> new SentRequestResponse(
+                            req.getRequestId(),
+                            req.getTeam().getTeamName(),
+                            req.getTeam().getTeamLead().getUser().getName(),
+                            req.getStatus(),
+                            req.getRejectionReason()))
+                    .toList();
         }
 
         public MeetingDetailsResponse getMeetingDetails(Long requestId) {
 
-                ProjectRequest request = projectRequestRepository.findById(requestId)
-                                .orElseThrow(() -> new RuntimeException("Request not found"));
+            ProjectRequest request = projectRequestRepository.findById(requestId)
+                    .orElseThrow(() -> new RuntimeException("Request not found"));
 
-                Meeting meeting = meetingRepository
-                                .findByRequestRequestId(requestId)
-                                .stream()
-                                .findFirst()
-                                .orElseThrow(() -> new RuntimeException("Meeting not found"));
+            Meeting meeting = meetingRepository
+                    .findByRequestRequestId(requestId)
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Meeting not found"));
 
-                Project project = request.getProject();
-                Team team = request.getTeam();
+            Project project = request.getProject();
+            Team team = request.getTeam();
 
-                MeetingDetailsResponse response = new MeetingDetailsResponse();
+            MeetingDetailsResponse response = new MeetingDetailsResponse();
 
-                response.setTitle(meeting.getTitle());
-                response.setFaculty(project.getFaculty().getUser().getName());
-                response.setProjectName(project.getTitle());
+            response.setTitle(meeting.getTitle());
+            response.setFaculty(project.getFaculty().getUser().getName());
+            response.setProjectName(project.getTitle());
 
-                response.setLocation(meeting.getLocation());
+            response.setLocation(meeting.getLocation());
 
-                response.setDate(meeting.getMeetingTime().toLocalDate().toString());
-                response.setTime(meeting.getMeetingTime().toLocalTime().toString());
+            response.setDate(meeting.getMeetingTime().toLocalDate().toString());
+            response.setTime(meeting.getMeetingTime().toLocalTime().toString());
 
-                // Fetch domain
-                String domainStr = "";
-                var pDomains = projectDomainRepository.findByProjectProjectId(project.getProjectId());
-                if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
-                        domainStr = pDomains.get(0).getDomain().getName();
-                }
+            // Fetch domain
+            String domainStr = "";
+            var pDomains = projectDomainRepository.findByProjectProjectId(project.getProjectId());
+            if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
+                domainStr = pDomains.get(0).getDomain().getName();
+            }
 
-                // Fetch subdomain
-                String subdomainStr = "";
-                var pSubDomains = projectSubDomainRepository.findByProjectProjectId(project.getProjectId());
-                if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
-                        subdomainStr = pSubDomains.get(0).getSubDomain().getName();
-                }
+            // Fetch subdomain
+            String subdomainStr = "";
+            var pSubDomains = projectSubDomainRepository.findByProjectProjectId(project.getProjectId());
+            if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
+                subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+            }
 
-                response.setDomain(domainStr);
-                response.setSubDomain(subdomainStr);
+            response.setDomain(domainStr);
+            response.setSubDomain(subdomainStr);
 
-                List<String> members = team.getMembers()
-                                .stream()
-                                .map(s -> s.getUser().getName())
-                                .toList();
+            List<String> members = team.getMembers()
+                    .stream()
+                    .map(s -> s.getUser().getName())
+                    .toList();
 
-                response.setMembers(members);
+            response.setMembers(members);
 
-                return response;
+            return response;
         }
 
         // ------------------------------------------------
@@ -610,25 +702,25 @@ public class StudentService {
         // ------------------------------------------------
         public List<TeamProjectRequestResponse> getTeamProjectRequests(Long studentId) {
 
-                Student student = studentRepository.findById(studentId)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                Team team = student.getTeam();
+            Team team = student.getTeam();
 
-                if (team == null) {
-                        throw new RuntimeException("Student is not in a team");
-                }
+            if (team == null) {
+                throw new RuntimeException("Student is not in a team");
+            }
 
-                List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+            List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
 
-                return requests.stream()
-                                .map(req -> new TeamProjectRequestResponse(
-                                                req.getRequestId(),
-                                                req.getProject().getTitle(),
-                                                req.getProject().getFaculty().getUser().getName(),
-                                                req.getStatus() != null ? req.getStatus().name() : null,
-                                                req.getRejectionReason()))
-                                .toList();
+            return requests.stream()
+                    .map(req -> new TeamProjectRequestResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            req.getStatus() != null ? req.getStatus().name() : null,
+                            req.getRejectionReason()))
+                    .toList();
         }
 
 }

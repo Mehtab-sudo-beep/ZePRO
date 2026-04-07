@@ -7,21 +7,26 @@ public class CoordinatorFacultyResponse {
     private String department;      // Faculty.department.departmentName
     private int    maxStudents;     // Faculty.maxStudents
     private int    allocatedStudents; // Faculty.allocatedStudents
+    private int    totalCreatedSlots; // ✅ Total slots across all projects
     private String specialization;  // Faculty.specialization
  
     public CoordinatorFacultyResponse() {}
  
     public CoordinatorFacultyResponse(Long facultyId, String name, String email,
                                        String department, int maxStudents,
-                                       int allocatedStudents, String specialization) {
+                                       int allocatedStudents, int totalCreatedSlots, String specialization) {
         this.facultyId         = facultyId;
         this.name              = name;
         this.email             = email;
         this.department        = department;
         this.maxStudents       = maxStudents;
         this.allocatedStudents = allocatedStudents;
+        this.totalCreatedSlots = totalCreatedSlots;
         this.specialization    = specialization;
     }
+ 
+    public int    getTotalCreatedSlots() { return totalCreatedSlots; }
+    public void setTotalCreatedSlots(int v) { this.totalCreatedSlots = v; }
  
     public Long   getFacultyId()         { return facultyId; }
     public String getName()              { return name; }

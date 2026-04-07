@@ -1,266 +1,11 @@
-// import React, { useContext, useEffect, useState } from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   ScrollView,
-//   TouchableOpacity,
-//   Image,
-//   ActivityIndicator,
-// } from 'react-native';
-
-// import { SafeAreaView } from 'react-native-safe-area-context';
-// import { AuthContext } from '../context/AuthContext';
-// import { ThemeContext } from '../theme/ThemeContext';
-// import { useNavigation } from '@react-navigation/native';
-
-// import { getFacultyProjects } from '../api/facultyApi';
-
-// const FacultyProjectsScreen = () => {
-//   const { user } = useContext(AuthContext);
-//   const { colors } = useContext(ThemeContext);
-//   const navigation: any = useNavigation();
-
-//   const [projects, setProjects] = useState<any[]>([]);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     if (user && user!.token && user.facultyId) {
-//       loadProjects();
-//     }
-//   }, [user]);
-
-//   const loadProjects = async () => {
-//     try {
-//       setLoading(true);
-
-//       console.log('USER:', user);
-//       console.log('FACULTY ID:', user?.facultyId);
-//       console.log('TOKEN:', user?.token);
-
-//       const data = await getFacultyProjects(user.facultyId, user!.token);
-
-//       console.log('PROJECT RESPONSE:', data);
-
-//       if (Array.isArray(data)) {
-//         setProjects(data);
-//       } else if (data?.projects) {
-//         setProjects(data.projects);
-//       } else {
-//         setProjects([]);
-//       }
-//     } catch (error: any) {
-//       console.log('PROJECT API ERROR:', error?.response?.status);
-//       console.log('PROJECT API ERROR DATA:', error?.response?.data);
-//       setProjects([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (!user) {
-//     return null;
-//   }
-
-//   return (
-//     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-//       <View style={styles.container}>
-//         {/* Header */}
-//         <View style={[styles.header, { backgroundColor: colors.card }]}>
-//           <Text style={[styles.headerTitle, { color: colors.text }]}>
-//             My Projects
-//           </Text>
-//         </View>
-
-//         {/* Content */}
-//         <ScrollView contentContainerStyle={styles.content}>
-//           {loading && <ActivityIndicator size="large" color={colors.primary} />}
-
-//           {!loading && projects.length === 0 && (
-//             <Text style={[styles.empty, { color: colors.subText }]}>
-//               No projects created yet
-//             </Text>
-//           )}
-
-//           {!loading &&
-//             projects.map((p: any) => (
-//               <View
-//                 key={p.projectId}
-//                 style={[styles.card, { backgroundColor: colors.card }]}
-//               >
-//                 <Text style={[styles.cardTitle, { color: colors.text }]}>
-//                   {p.title}
-//                 </Text>
-
-//                 <Text style={[styles.item, { color: colors.subText }]}>
-//                   {p.description}
-//                 </Text>
-
-//                 {(p.domain || p.subdomain) && (
-//                   <View style={styles.domainWrapper}>
-//                     <Text style={[styles.badge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>
-//                       {p.domain}
-//                     </Text>
-//                     {p.subdomain ? (
-//                       <Text style={[styles.badge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>
-//                         {p.subdomain}
-//                       </Text>
-//                     ) : null}
-//                   </View>
-//                 )}
-
-//                 <Text style={[styles.status, { color: colors.primary }]}>
-//                   Status: {p.status}
-//                 </Text>
-//               </View>
-//             ))}
-//         </ScrollView>
-
-//         {/* Bottom Navigation */}
-//         <View
-//           style={[
-//             styles.bottomTab,
-//             { backgroundColor: colors.card, borderColor: colors.border },
-//           ]}
-//         >
-//           <TouchableOpacity
-//             style={styles.tabItem}
-//             onPress={() => navigation.navigate('FacultyHome')}
-//           >
-//             <Image
-//               source={require('../assets/home.png')}
-//               style={styles.tabIcon}
-//             />
-//             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
-//           </TouchableOpacity>
-
-//           <TouchableOpacity
-//             style={styles.tabItem}
-//             onPress={() => navigation.navigate('CreateProject')}
-//           >
-//             <Image
-//               source={require('../assets/create.png')}
-//               style={styles.tabIcon}
-//             />
-//             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
-//           </TouchableOpacity>
-
-//           <TouchableOpacity
-//             style={styles.tabItem}
-//             onPress={() => navigation.navigate('FacultyMore')}
-//           >
-//             <Image
-//               source={require('../assets/more.png')}
-//               style={styles.tabIcon}
-//             />
-//             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
-//           </TouchableOpacity>
-//         </View>
-//       </View>
-//     </SafeAreaView>
-//   );
-// };
-
-// export default FacultyProjectsScreen;
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1 },
-
-//   header: {
-//     height: 60,
-//     paddingHorizontal: 16,
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     elevation: 4,
-//   },
-
-//   headerTitle: {
-//     fontSize: 18,
-//     fontWeight: '500',
-//   },
-
-//   content: {
-//     padding: 16,
-//   },
-
-//   card: {
-//     borderRadius: 12,
-//     padding: 16,
-//     marginBottom: 16,
-//     elevation: 3,
-//   },
-
-//   cardTitle: {
-//     fontSize: 16,
-//     fontWeight: '600',
-//     marginBottom: 6,
-//   },
-
-//   item: {
-//     fontSize: 14,
-//     marginBottom: 6,
-//   },
-
-//   domainWrapper: {
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     gap: 8,
-//     marginTop: 6,
-//     marginBottom: 4,
-//   },
-
-//   badge: {
-//     paddingHorizontal: 10,
-//     paddingVertical: 4,
-//     borderRadius: 12,
-//     fontSize: 12,
-//     fontWeight: '600',
-//     overflow: 'hidden',
-//   },
-
-//   status: {
-//     fontSize: 13,
-//     fontWeight: '500',
-//     marginTop: 6,
-//   },
-
-//   empty: {
-//     textAlign: 'center',
-//     marginTop: 20,
-//   },
-
-//   bottomTab: {
-//     height: 60,
-//     borderTopWidth: 1,
-//     flexDirection: 'row',
-//     justifyContent: 'space-around',
-//     alignItems: 'center',
-//   },
-
-//   tabItem: {
-//     alignItems: 'center',
-//   },
-
-//   tabIcon: {
-//     width: 22,
-//     height: 22,
-//     marginBottom: 4,
-//     resizeMode: 'contain',
-//   },
-
-//   tab: {
-//     fontSize: 12,
-//   },
-// });
-
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
+
   ActivityIndicator,
   Modal,
   TextInput,
@@ -271,9 +16,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
-import { getFacultyProjects, updateProject, getDomains, getSubDomains, activateProjectStatus, deactivateProjectStatus } from '../api/facultyApi';
+import {
+  getFacultyProjects,
+  updateProject,
+  getDomains,
+  getSubDomains,
+  activateProjectStatus,
+  deactivateProjectStatus
+} from '../api/facultyApi';
 
 const FacultyProjectsScreen = () => {
   const { user } = useContext(AuthContext);
@@ -283,17 +35,17 @@ const FacultyProjectsScreen = () => {
 
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activatingId, setActivatingId] = useState<Long | null>(null);
 
-  // Edit State
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSlots, setEditSlots] = useState('');
-  
+
   const [domains, setDomains] = useState<any[]>([]);
   const [subDomains, setSubDomains] = useState<any[]>([]);
-  
+
   const [editDomainId, setEditDomainId] = useState<number | null>(null);
   const [editSubDomainId, setEditSubDomainId] = useState<number | null>(null);
   const [editDomainName, setEditDomainName] = useState('');
@@ -303,81 +55,47 @@ const FacultyProjectsScreen = () => {
   const [subDomainModal, setSubDomainModal] = useState(false);
 
   useEffect(() => {
-    getDomains().then(d => setDomains(d || [])).catch(()=>console.log("No domains"));
+    getDomains().then(d => setDomains(d || [])).catch(() => console.log("No domains"));
   }, []);
 
   useEffect(() => {
     if (editDomainId) {
-      getSubDomains(editDomainId).then(d => setSubDomains(d || [])).catch(()=>console.log("No subdomains"));
+      getSubDomains(editDomainId).then(d => setSubDomains(d || [])).catch(() => console.log("No subdomains"));
     }
   }, [editDomainId]);
 
-  useEffect(() => {
-    console.log('USE EFFECT TRIGGERED');
-    console.log('USER IN USE EFFECT:', user);
-
-    if (user && user!.token && user.facultyId) {
-      loadProjects();
-    } else {
-      console.log('USER NOT READY YET');
-      console.log('FACULTY ID:', user?.facultyId);
-
-      setLoading(false); // prevent infinite spinner
-    }
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.token) loadProjects();
+    }, [user])
+  );
 
   const loadProjects = async () => {
     try {
       setLoading(true);
+      const data: any = await getFacultyProjects(user!.token);
 
-      console.log('==============================');
-      console.log('LOADING PROJECTS STARTED');
-      console.log('USER:', user);
-      console.log('FACULTY ID:', user?.facultyId);
-      console.log('TOKEN:', user?.token);
+      if (Array.isArray(data)) setProjects(data);
+      else if (data?.projects) setProjects(data.projects);
+      else setProjects([]);
 
-      // ⛔ Timeout protection (VERY IMPORTANT)
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
-      if (!user?.facultyId) return;
-      const apiCall = getFacultyProjects(Number(user.facultyId), user!.token);
-
-      const data: any = await Promise.race([apiCall, timeout]);
-
-      console.log('PROJECT RESPONSE:', data);
-
-      if (Array.isArray(data)) {
-        console.log('SETTING PROJECT ARRAY');
-        setProjects(data);
-      } else if (data?.projects) {
-        console.log('SETTING PROJECT FROM data.projects');
-        setProjects(data.projects);
-      } else {
-        console.log('NO PROJECTS FOUND IN RESPONSE');
-        setProjects([]);
-      }
     } catch (error: any) {
-      console.log('==============================');
-      console.log('PROJECT API ERROR:', error?.response?.status || error?.message);
-      console.log('PROJECT API ERROR DATA:', error?.response?.data || error);
+      Alert.alert('Error', 'Failed to load projects');
       setProjects([]);
     } finally {
-      console.log('LOADING FINISHED');
-      console.log('==============================');
       setLoading(false);
     }
   };
 
   const handleEditSubmit = async () => {
     if (!editTitle.trim()) {
-      showAlert('Error', 'Title is required');
+      showAlert('Error', 'Title required');
       return;
     }
+
     const slotCount = parseInt(editSlots);
-    if (isNaN(slotCount) || slotCount < 1 || slotCount > 3) {
-      showAlert('Error', 'Slots must be between 1 and 3');
+    if (isNaN(slotCount) || slotCount < 1 || slotCount > 10) {
+      showAlert('Error', 'Slots must be between 1 and 10');
       return;
     }
 
@@ -393,19 +111,64 @@ const FacultyProjectsScreen = () => {
         },
         user!.token
       );
+
       setEditModalVisible(false);
-      loadProjects(); // reload to get fresh data
-    } catch (err) {
-      showAlert('Error', 'Failed to update project');
+      loadProjects();
+
+    } catch {
+      showAlert('Error', 'Update failed');
     }
   };
 
-  if (!user || !user!.token) {
-    console.log('USER STILL NULL → SHOWING LOADER');
+  const handleToggleStatus = async (projectId: Long, isCurrentlyActive: boolean) => {
+    try {
+      setActivatingId(projectId);
+
+      if (isCurrentlyActive) {
+        // Deactivating
+        await deactivateProjectStatus(projectId, user!.token);
+        showAlert('Success', 'Project deactivated');
+      } else {
+        // Activating
+        await activateProjectStatus(projectId, user!.token);
+        showAlert('Success', 'Project activated');
+      }
+
+      await loadProjects();
+
+    } catch (error: any) {
+      // ✅ CHECK FOR 403 ERROR AND SHOW FRIENDLY MESSAGE
+      const errorCode = error?.response?.status;
+      const errorMessage = error?.response?.data?.message;
+
+      if (errorCode === 403) {
+        showAlert(
+          'Cannot Activate Project',
+          'You have reached the maximum number of active projects. Please deactivate one project first to activate this project.',
+          [{ text: 'OK', onPress: () => {} }]
+        );
+      } else {
+        const userFriendlyMsg = errorMessage || error?.message || 'Failed to update project status';
+        showAlert('Error', userFriendlyMsg);
+      }
+    } finally {
+      setActivatingId(null);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toUpperCase()) {
+      case 'OPEN': return '#10B981';
+      case 'ASSIGNED': return '#3B82F6';
+      case 'CLOSE': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
+  if (!user?.token) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text>Initializing user...</Text>
       </View>
     );
   }
@@ -413,291 +176,264 @@ const FacultyProjectsScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
-        {/* Header */}
+
+        {/* HEADER */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             My Projects
           </Text>
         </View>
 
-        {/* Content */}
+        {/* CONTENT */}
         <ScrollView contentContainerStyle={styles.content}>
-          {loading && (
-            <View style={{ marginTop: 20 }}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={{ textAlign: 'center', marginTop: 10 }}>
-                Loading projects...
-              </Text>
-            </View>
-          )}
+
+          {loading && <ActivityIndicator size="large" />}
 
           {!loading && projects.length === 0 && (
-            <Text style={[styles.empty, { color: colors.subText }]}>
+            <Text style={{ textAlign: 'center', color: colors.subText, marginTop: 20 }}>
               No projects created yet
             </Text>
           )}
 
-          {!loading &&
-            projects.map((p: any) => (
-              <View
-                key={p.projectId}
-                style={[styles.card, { backgroundColor: colors.card }]}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={[styles.cardTitle, { color: colors.text, flex: 1 }]}>
-                    {p.title}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setEditingProject(p);
-                      setEditTitle(p.title);
-                      setEditDesc(p.description);
-                      setEditSlots(p.slots ? p.slots.toString() : '3');
-                      setEditDomainId(p.domainId || null);
-                      setEditSubDomainId(p.subDomainId || null);
-                      setEditDomainName(p.domain || '');
-                      setEditSubDomainName(p.subdomain || '');
-                      setEditModalVisible(true);
-                    }}
-                  >
-                    <Text style={{ color: colors.primary, fontWeight: '600' }}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
+          {!loading && projects.map((p: any) => (
 
-                <Text style={[styles.item, { color: colors.subText }]}>
-                  {p.description}
+            <View key={p.projectId} style={[styles.card, { backgroundColor: colors.card }]}>
+
+              {/* TITLE AND EDIT ROW */}
+              <View style={styles.titleRow}>
+                <Text style={[styles.cardTitle, { color: colors.text, flex: 1 }]} numberOfLines={2}>
+                  {p.title}
                 </Text>
 
-                {(p.domain || p.subdomain) && (
-                  <View style={styles.domainWrapper}>
-                    <Text
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: colors.primary + '20',
-                          color: colors.primary,
-                        },
-                      ]}
-                    >
-                      {p.domain}
-                    </Text>
+                <TouchableOpacity onPress={() => {
+                  setEditingProject(p);
+                  setEditTitle(p.title);
+                  setEditDesc(p.description);
+                  setEditSlots(p.maxSlots ? p.maxSlots.toString() : '3');
+                  setEditDomainId(p.domainId || null);
+                  setEditSubDomainId(p.subDomainId || null);
+                  setEditDomainName(p.domain || '');
+                  setEditSubDomainName(p.subdomain || '');
+                  setEditModalVisible(true);
+                }} style={styles.editButton}>
+                  <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>Edit</Text>
+                </TouchableOpacity>
+              </View>
 
-                    {p.subdomain ? (
-                      <Text
-                        style={[
-                          styles.badge,
-                          {
-                            backgroundColor: colors.primary + '20',
-                            color: colors.primary,
-                          },
-                        ]}
-                      >
-                        {p.subdomain}
-                      </Text>
-                    ) : null}
-                    
-                    <Text
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: '#10B98120',
-                          color: '#10B981',
-                        },
-                      ]}
-                    >
-                      Slots: {p.studentSlots || p.slots || 3}
+              {/* DESCRIPTION */}
+              <Text style={[styles.description, { color: colors.subText }]} numberOfLines={2}>
+                {p.description || 'No description'}
+              </Text>
+
+              {/* DIVIDER */}
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* INFO GRID - VERTICAL */}
+              <View style={styles.verticalInfoGrid}>
+
+                {/* Domain and SubDomain */}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Domain</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                    {p.domain || '-'}
+                  </Text>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Sub Domain</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                    {p.subdomain || '-'}
+                  </Text>
+                </View>
+
+                {/* Assigned Students */}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Assigned Students</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {p.assignedStudents || 0}
+                  </Text>
+                </View>
+
+                {/* Max Slots */}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Max Slots</Text>
+                  <Text style={[styles.infoValue, { color: '#10B981' }]}>
+                    {p.maxSlots || 0}
+                  </Text>
+                </View>
+
+                {/* Present Slots (Available) */}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Available Slots</Text>
+                  <Text style={[
+                    styles.infoValue,
+                    { color: p.presentSlots === 0 ? '#EF4444' : '#10B981' }
+                  ]}>
+                    {p.presentSlots || 0}
+                  </Text>
+                </View>
+
+                {/* Status */}
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>Status</Text>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(p.status) + '20' }
+                  ]}>
+                    <Text style={[
+                      styles.statusText,
+                      { color: getStatusColor(p.status) }
+                    ]}>
+                      {p.status}
                     </Text>
                   </View>
-                )}
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={[styles.status, { color: colors.primary }]}>
-                    Status: {p.status}
-                  </Text>
-                  
-                  {/* Activation Toggle */}
-                  <TouchableOpacity
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 12,
-                      backgroundColor: p.isActive ? '#10B981' : '#EF4444'
-                    }}
-                    onPress={async () => {
-                      try {
-                        if (p.isActive) {
-                          await deactivateProjectStatus(p.projectId, user!.token);
-                        } else {
-                          await activateProjectStatus(p.projectId, user!.token);
-                        }
-                        loadProjects();
-                      } catch (error) {
-                        showAlert('Error', 'Failed to toggle project status');
-                      }
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
-                      {p.isActive ? 'Active' : 'Inactive'}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
+
               </View>
-            ))}
+
+              {/* DIVIDER */}
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              {/* FOOTER - ACTION BUTTON */}
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  { backgroundColor: p.isActive ? '#10B981' : '#EF4444' }
+                ]}
+                onPress={() => handleToggleStatus(p.projectId, p.isActive)}
+                disabled={activatingId === p.projectId}
+              >
+                {activatingId === p.projectId ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.toggleText}>
+                    {p.isActive ? '✓ Active' : '✕ Inactive'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+            </View>
+          ))}
+
         </ScrollView>
+      </View>
 
-        {/* Edit Modal */}
-        <Modal visible={editModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Project</Text>
-              
-              <Text style={[styles.label, { color: colors.text }]}>Title</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                value={editTitle}
-                onChangeText={setEditTitle}
-              />
+      {/* EDIT MODAL */}
+      <Modal visible={editModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Project</Text>
 
-              <Text style={[styles.label, { color: colors.text }]}>Description</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                value={editDesc}
-                onChangeText={setEditDesc}
-              />
+            <Text style={[styles.label, { color: colors.text }]}>Title</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholderTextColor={colors.subText}
+            />
 
-              <Text style={[styles.label, { color: colors.text }]}>Student Slots (Max 3)</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-                keyboardType="numeric"
-                value={editSlots}
-                onChangeText={setEditSlots}
-              />
+            <Text style={[styles.label, { color: colors.text }]}>Description</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              value={editDesc}
+              onChangeText={setEditDesc}
+              multiline
+              placeholderTextColor={colors.subText}
+            />
 
-              <Text style={[styles.label, { color: colors.text }]}>Domain</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Max Student Slots</Text>
+            <TextInput
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]}
+              keyboardType="numeric"
+              value={editSlots}
+              onChangeText={setEditSlots}
+              placeholderTextColor={colors.subText}
+            />
+
+            <Text style={[styles.label, { color: colors.text }]}>Domain</Text>
+            <TouchableOpacity
+              style={[styles.picker, { borderColor: colors.border }]}
+              onPress={() => setDomainModal(true)}
+            >
+              <Text style={{ color: colors.text }}>{editDomainName || 'Select Domain'}</Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.label, { color: colors.text }]}>Sub Domain</Text>
+            <TouchableOpacity
+              style={[styles.picker, { borderColor: colors.border }]}
+              onPress={() => setSubDomainModal(true)}
+            >
+              <Text style={{ color: colors.text }}>{editSubDomainName || 'Select Sub Domain'}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={{ borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}
-                onPress={() => setDomainModal(true)}
+                style={[styles.modalButton, { backgroundColor: '#9CA3AF' }]}
+                onPress={() => setEditModalVisible(false)}
               >
-                <Text style={{ color: colors.text }}>{editDomainName || 'Select Domain'}</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-
-              <Text style={[styles.label, { color: colors.text }]}>Sub Domain</Text>
               <TouchableOpacity
-                style={{ borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 12, marginBottom: 16 }}
-                onPress={() => setSubDomainModal(true)}
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleEditSubmit}
               >
-                <Text style={{ color: colors.text }}>{editSubDomainName || 'Select Sub Domain'}</Text>
+                <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#9CA3AF' }]}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                  onPress={handleEditSubmit}
-                >
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
-        </Modal>
-
-        {/* DOMAIN MODAL */}
-        <Modal visible={domainModal} animationType="slide" transparent>
-          <TouchableOpacity style={styles.modalOverlay} onPress={() => setDomainModal(false)} activeOpacity={1}>
-            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Domain</Text>
-              <ScrollView>
-                {domains.map((item) => (
-                  <TouchableOpacity
-                    key={item.domainId}
-                    style={{ padding: 15, borderBottomWidth: 1, borderColor: colors.border }}
-                    onPress={() => {
-                      setEditDomainId(item.domainId);
-                      setEditDomainName(item.name);
-                      setEditSubDomainId(null);
-                      setEditSubDomainName('');
-                      setDomainModal(false);
-                    }}
-                  >
-                    <Text style={{ color: colors.text }}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* SUBDOMAIN MODAL */}
-        <Modal visible={subDomainModal} animationType="slide" transparent>
-          <TouchableOpacity style={styles.modalOverlay} onPress={() => setSubDomainModal(false)} activeOpacity={1}>
-            <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Sub Domain</Text>
-              <ScrollView>
-                {subDomains.map((item) => (
-                  <TouchableOpacity
-                    key={item.subDomainId}
-                    style={{ padding: 15, borderBottomWidth: 1, borderColor: colors.border }}
-                    onPress={() => {
-                      setEditSubDomainId(item.subDomainId);
-                      setEditSubDomainName(item.name);
-                      setSubDomainModal(false);
-                    }}
-                  >
-                    <Text style={{ color: colors.text }}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        {/* Bottom Navigation */}
-        <View
-          style={[
-            styles.bottomTab,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('FacultyHome')}
-          >
-            <Image
-              source={require('../assets/home.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('CreateProject')}
-          >
-            <Image
-              source={require('../assets/create.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('FacultyMore')}
-          >
-            <Image
-              source={require('../assets/more.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </Modal>
+
+      {/* DOMAIN MODAL */}
+      <Modal visible={domainModal} animationType="slide" transparent>
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setDomainModal(false)} activeOpacity={1}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Domain</Text>
+            <ScrollView>
+              {domains.map((item) => (
+                <TouchableOpacity
+                  key={item.domainId}
+                  style={[styles.modalItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setEditDomainId(item.domainId);
+                    setEditDomainName(item.name);
+                    setEditSubDomainId(null);
+                    setEditSubDomainName('');
+                    setDomainModal(false);
+                  }}
+                >
+                  <Text style={{ color: colors.text }}>{item.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* SUBDOMAIN MODAL */}
+      <Modal visible={subDomainModal} animationType="slide" transparent>
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setSubDomainModal(false)} activeOpacity={1}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Sub Domain</Text>
+            <ScrollView>
+              {subDomains.map((item) => (
+                <TouchableOpacity
+                  key={item.subDomainId}
+                  style={[styles.modalItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setEditSubDomainId(item.subDomainId);
+                    setEditSubDomainName(item.name);
+                    setSubDomainModal(false);
+                  }}
+                >
+                  <Text style={{ color: colors.text }}>{item.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -705,19 +441,25 @@ const FacultyProjectsScreen = () => {
 export default FacultyProjectsScreen;
 
 const styles = StyleSheet.create({
+
   container: { flex: 1 },
+
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
 
   header: {
     height: 60,
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
+    elevation: 3,
   },
 
   headerTitle: {
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 
   content: {
@@ -725,120 +467,152 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 16,
-    elevation: 3,
+    marginBottom: 12,
+    elevation: 4,
+  },
+
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
   },
 
   cardTitle: {
     fontSize: 16,
+    fontWeight: '700',
+  },
+
+  editButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+
+  description: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+
+  divider: {
+    height: 1,
+    marginVertical: 8,
+  },
+
+  verticalInfoGrid: {
+    gap: 6,
+  },
+
+  infoItem: {
+    paddingVertical: 4,
+  },
+
+  infoLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+
+  infoValue: {
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 6,
+  },
+
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+
+  statusText: {
+    fontWeight: '600',
+    fontSize: 11,
+  },
+
+  toggleButton: {
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+
+  toggleText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+
+  // MODAL STYLES
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    maxHeight: '90%',
+  },
+
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
   },
 
   label: {
-    fontSize: 14,
-    marginBottom: 6,
+    fontSize: 12,
     fontWeight: '600',
+    marginBottom: 4,
   },
 
   input: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 15,
-    marginBottom: 16,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 10,
+    fontSize: 14,
   },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  modalSheet: {
-    width: '90%',
-    padding: 20,
-    borderRadius: 16,
-    elevation: 5,
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
+  picker: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginBottom: 10,
   },
 
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
+    gap: 8,
+    marginTop: 12,
   },
-  
+
   modalButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 5,
   },
 
-  item: {
-    fontSize: 14,
-    marginBottom: 6,
-  },
-
-  domainWrapper: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
+  modalButtonText: {
+    color: '#fff',
     fontWeight: '600',
-    overflow: 'hidden',
-  },
-
-  status: {
     fontSize: 13,
-    fontWeight: '500',
-    marginTop: 6,
   },
 
-  empty: {
-    textAlign: 'center',
-    marginTop: 20,
+  modalItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
   },
 
-  bottomTab: {
-    height: 60,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-
-  tabItem: {
-    alignItems: 'center',
-  },
-
-  tabIcon: {
-    width: 22,
-    height: 22,
-    marginBottom: 4,
-    resizeMode: 'contain',
-  },
-
-  tab: {
-    fontSize: 12,
-  },
 });

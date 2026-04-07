@@ -44,7 +44,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const [faculties, setFaculties] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [team, setteam] = useState<any[]>([]);
-  const [rules, setRules] = useState<any>({ maxTeamSize: 4, maxStudentsPerFaculty: 10, maxProjectsPerFaculty: 3 });
+  const [rules, setRules] = useState<any>({ maxTeamSize: 3, maxStudentsPerFaculty: 6, maxProjectsPerFaculty: 2 });
   const [tempRules, setTempRules] = useState(rules);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'faculties' | 'students' | 'download' | 'rules'>('overview');
@@ -157,22 +157,38 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   };
 
   const handleSaveRules = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/rules`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: JSON.stringify(tempRules),
-      });
-      if (res.ok) {
-        setRules(tempRules);
-        showLocalMsg("Rules updated successfully!", "success");
-      } else {
-        showLocalMsg("Failed to save rules", "error");
-      }
-    } catch {
-      showLocalMsg("Network error", "error");
+  try {
+
+    const computedRules = {
+      ...tempRules,
+      maxStudentsPerFaculty:
+        tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
+    };
+
+    const res = await fetch(`${BASE_URL}/rules`, {
+      method: 'POST',
+      headers: authHeader(),
+      body: JSON.stringify(computedRules),
+    });
+
+    if (res.ok) {
+
+      // ✅ ONLY NOW update UI
+      setRules(computedRules);
+
+      showLocalMsg("Rules updated successfully!", "success");
+
+      // ❌ REMOVE THIS → NO AUTO REFRESH
+      // fetchAll();
+
+    } else {
+      showLocalMsg("Failed to save rules", "error");
     }
-  };
+
+  } catch {
+    showLocalMsg("Network error", "error");
+  }
+};
 
   const handleDownloadReport = async () => {
     try {
@@ -285,7 +301,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
                 <View>
                   <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>Allocation Status</Text>
-                  <Text style={{ color: colors.subText, fontSize: 12 }}>Overall progress of student-guide assignment</Text>
+                  <Text style={{ color: colors.subText, fontSize: 12 }}>Overall progress based on {rules.maxStudentsPerFaculty} slots per faculty</Text>
                 </View>
                 <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>{allocationRate}%</Text>
               </View>
@@ -300,7 +316,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                   <Text style={{ color: '#D97706', fontSize: 16, fontWeight: '700' }}>{stats?.unallocatedStudents || 0}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>AVAILABLE SLOTS</Text>
+                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>REMAINING CAPACITY</Text>
                   <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}>{stats?.availableSlots || 0}</Text>
                 </View>
               </View>
@@ -322,7 +338,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   const renderFaculties = () => (
     <>
-      <SearchBox value={facultySearchQuery} setValue={setSearchQuery(setFacultySearchQuery)} />
+      <SearchBox value={facultySearchQuery} setValue={setFacultySearchQuery} />
       {faculties.filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase())).map(f => {
         const usage = f.maxStudents > 0 ? (f.allocatedStudents / f.maxStudents) * 100 : 0;
         const isFull = f.allocatedStudents >= f.maxStudents;
@@ -343,11 +359,20 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
             <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: divider, paddingTop: 12 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>SLOT UTILIZATION</Text>
-                <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{f.allocatedStudents} / {f.maxStudents}</Text>
+                <View>
+                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>SLOT UTILIZATION</Text>
+                  <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
+                    Created: <Text style={{fontWeight: '800', color: colors.primary}}>{f.totalCreatedSlots || 0}</Text> | 
+                    Given: <Text style={{fontWeight: '800'}}>{f.allocatedStudents}</Text> | 
+                    Max: <Text style={{fontWeight: '800'}}>{rules.maxStudentsPerFaculty}</Text>
+                  </Text>
+                </View>
+                <Text style={{ color: isFull ? '#ef4444' : colors.primary, fontSize: 16, fontWeight: '800' }}>
+                  {Math.min(100, Math.round((f.allocatedStudents / rules.maxStudentsPerFaculty) * 100))}%
+                </Text>
               </View>
               <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
-                <View style={{ height: '100%', width: `${usage}%`, backgroundColor: isFull ? '#ef4444' : colors.primary }} />
+                <View style={{ height: '100%', width: `${Math.min(100, (f.allocatedStudents / rules.maxStudentsPerFaculty) * 100)}%`, backgroundColor: isFull ? '#ef4444' : colors.primary }} />
               </View>
             </View>
 
@@ -365,7 +390,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     </>
   );
 
-  const setSearchQuery = (setter: any) => (val: string) => setter(val);
 
   const renderStudents = () => (
     <>
@@ -426,7 +450,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         <View style={[styles.tableHeader, { backgroundColor: accentSoft, borderBottomColor: colors.border }]}>
           <Text style={[styles.columnHeader, { color: colors.subText, flex: 2 }]}>TEAM NAME</Text>
           <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>PROJECT TITLE</Text>
-          <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>DOWNLOAD INFO</Text>
+          <Text style={[styles.columnHeader, { color: colors.subText, flex: 1, textAlign: 'center' }]}>SLOTS</Text>
+          <Text style={[styles.columnHeader, { color: colors.subText, flex: 2.5 }]}>DOWNLOAD INFO</Text>
         </View>
 
         {team.length === 0 ? (
@@ -442,12 +467,15 @@ const FacultyCoordinatorDashboard: React.FC = () => {
               <Text style={[styles.cellText, { color: colors.text, flex: 3 }]} numberOfLines={2}>
                 {t.projectTitle || 'No Project'}
               </Text>
-              <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.cellText, { color: colors.primary, flex: 1, textAlign: 'center', fontWeight: '800' }]}>
+                {t.slots || 3}
+              </Text>
+              <View style={{ flex: 2.5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                  <View style={{ padding: 4, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 4 }}>
                     <Icon name="download" size={12} />
                  </View>
-                 <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '600' }} numberOfLines={1}>
-                    {t.teamName} - {t.projectTitle ? (t.projectTitle.length > 15 ? t.projectTitle.substring(0,12)+'...' : t.projectTitle) : 'N/A'}
+                 <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
+                    {t.teamName} | {t.projectTitle ? (t.projectTitle.length > 12 ? t.projectTitle.substring(0,10)+'...' : t.projectTitle) : 'N/A'}
                  </Text>
               </View>
             </View>
@@ -458,32 +486,139 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   );
 
   const renderRules = () => (
-    <Card>
-      <Text style={{ color: colors.text, fontWeight: '700', marginBottom: 12 }}>Allocation Rules</Text>
+    <View style={{ gap: 16 }}>
+      {/* Configuration Section */}
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <View style={{ padding: 6, backgroundColor: colors.primary, borderRadius: 8 }}>
+            <Icon name="rules" size={14} />
+          </View>
+          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>Rule Configuration</Text>
+        </View>
 
-      <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 4 }}>Max Team Size</Text>
-      <TextInput
-        style={[styles.input, { color: colors.text, borderColor: divider }]}
-        keyboardType="numeric"
-        value={String(tempRules.maxTeamSize)}
-        onChangeText={v => setTempRules({ ...tempRules, maxTeamSize: parseInt(v) || 0 })}
-      />
+        {/* MAX TEAM SIZE */}
 
-      <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 4, marginTop: 12 }}>Max Students per Faculty</Text>
-      <TextInput
-        style={[styles.input, { color: colors.text, borderColor: divider }]}
-        keyboardType="numeric"
-        value={String(tempRules.maxStudentsPerFaculty)}
-        onChangeText={v => setTempRules({ ...tempRules, maxStudentsPerFaculty: parseInt(v) || 0 })}
-      />
+<View>
+  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+    MAX TEAM SIZE
+  </Text>
+  <TextInput
+    style={[styles.input, { color: colors.text, borderColor: divider }]}
+    keyboardType="numeric"
+    value={tempRules.maxTeamSize ?? ""}
+    onChangeText={v => {
+  if (/^\d*$/.test(v)) {
 
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
-        onPress={handleSaveRules}
-      >
-        <Text style={{ color: '#fff', fontWeight: '700' }}>Save Rules</Text>
-      </TouchableOpacity>
-    </Card>
+    setTempRules(prev => {
+      const teamSize = v;
+      const projects = prev.maxProjectsPerFaculty || "0";
+
+      const computed =
+        parseInt(teamSize || "0") *
+        parseInt(projects || "0");
+
+      return {
+        ...prev,
+        maxTeamSize: teamSize,
+        maxStudentsPerFaculty: computed
+      };
+    });
+
+  }
+}}
+  />
+</View>
+
+
+<View>
+  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+    MAX PROJECTS PER FACULTY
+  </Text>
+  <TextInput
+    style={[styles.input, { color: colors.text, borderColor: divider }]}
+    keyboardType="numeric"
+    value={tempRules.maxProjectsPerFaculty ?? ""}
+    onChangeText={v => {
+  if (/^\d*$/.test(v)) {
+
+    setTempRules(prev => {
+      const projects = v;
+      const teamSize = prev.maxTeamSize || "0";
+
+      const computed =
+        parseInt(teamSize || "0") *
+        parseInt(projects || "0");
+
+      return {
+        ...prev,
+        maxProjectsPerFaculty: projects,
+        maxStudentsPerFaculty: computed
+      };
+    });
+
+  }
+}}
+  />
+</View>
+
+<View>
+  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+    MAX STUDENTS PER FACULTY (AUTO)
+  </Text>
+
+  <View
+    style={[
+      styles.input,
+      {
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.05)'
+      }
+    ]}
+  >
+    <Text style={{ color: colors.text, fontWeight: '700' }}>
+      {tempRules.maxStudentsPerFaculty || 0}
+    </Text>
+  </View>
+</View>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
+          onPress={handleSaveRules}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Save Changes</Text>
+        </TouchableOpacity>
+      </Card>
+
+      {/* Active Rules Display (Visualizing Current System State) */}
+      <SectionLabel label="Currently Active Rules" />
+      <View style={[styles.activeRulesContainer, { backgroundColor: isDark ? 'rgba(31,41,55,0.5)' : '#f8fafc', borderColor: colors.border }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>PARAMETER</Text>
+          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>ACTIVE VALUE</Text>
+        </View>
+        
+        <View style={styles.activeRuleRow}>
+          <Text style={{ color: colors.text, fontSize: 13 }}>Team Max Size</Text>
+          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxTeamSize}</Text></View>
+        </View>
+        
+        <View style={styles.activeRuleRow}>
+          <Text style={{ color: colors.text, fontSize: 13 }}>Faculty Student Limit</Text>
+          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxStudentsPerFaculty}</Text></View>
+        </View>
+
+        <View style={styles.activeRuleRow}>
+          <Text style={{ color: colors.text, fontSize: 13 }}>Faculty Project Limit</Text>
+          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxProjectsPerFaculty}</Text></View>
+        </View>
+
+        <View style={{ padding: 12, backgroundColor: accentSoft, alignItems: 'center' }}>
+          <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500' }}>
+            System Version: <Text style={{ fontWeight: '800' }}>v{rules.version || 1}</Text>
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 
   const renderModal = (isOverride: boolean) => (
@@ -779,5 +914,30 @@ const styles = StyleSheet.create({
   },
   cellText: {
     fontSize: 13,
+  },
+  activeRulesContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  activeRuleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  activeBadge: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  activeBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   }
 });

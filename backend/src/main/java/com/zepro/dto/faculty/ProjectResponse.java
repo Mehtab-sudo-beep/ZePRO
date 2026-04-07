@@ -21,12 +21,15 @@ public class ProjectResponse {
 
     private String domain;
     private String subdomain;
-
+    private int assignedStudents;
+    private int maxSlots;
+    private int presentSlots;
     public ProjectResponse() {}
 
     // 🔥 Constructor for projects
     public ProjectResponse(Long projectId, String title, String description,
-                           String status, String domain, String subdomain, boolean isActive) {
+                           String status, String domain, String subdomain, boolean isActive, 
+                           int assignedStudents, int maxSlots,int presentSlots) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
@@ -34,13 +37,17 @@ public class ProjectResponse {
         this.domain = domain;
         this.subdomain = subdomain;
         this.isActive = isActive;
+        this.assignedStudents = assignedStudents;
+        this.maxSlots = maxSlots;
+        this.presentSlots = presentSlots;
     }
 
     // 🔥 Optional full constructor
     public ProjectResponse(Long projectId, Long requestId, String title, String description,
                            String status, Long teamId, String teamName,
                            String teamLead, List<String> members,
-                           String domain, String subdomain) {
+                           String domain, String subdomain, 
+                           int assignedStudents, int maxSlots,int presentSlots) {
 
         this.projectId = projectId;
         this.requestId = requestId;
@@ -53,9 +60,21 @@ public class ProjectResponse {
         this.members = members;
         this.domain = domain;
         this.subdomain = subdomain;
+        this.assignedStudents = assignedStudents;
+        this.maxSlots = maxSlots;
+        this.presentSlots = presentSlots;
     }
 
     // ---------------- GETTERS & SETTERS ----------------
+    
+    public int getAssignedStudents() { return assignedStudents; }
+    public void setAssignedStudents(int assignedStudents) { this.assignedStudents = assignedStudents; }
+
+    public int getMaxSlots() { return maxSlots; }
+    public void setMaxSlots(int maxSlots) { this.maxSlots = maxSlots; }
+
+    public int getPresentSlots() { return presentSlots; }
+    public void setPresentSlots(int presentSlots) { this.presentSlots = presentSlots; }
 
     public Long getProjectId() { return projectId; }
     public void setProjectId(Long projectId) { this.projectId = projectId; }

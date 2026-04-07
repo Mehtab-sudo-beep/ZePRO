@@ -12,5 +12,8 @@ public interface ProjectRepository extends JpaRepository<Project,Long>{
     List<Project> findByStatus(String status);
 
     Project findByTeam(Team team);
+    
     List<Project> findByFacultyFacultyIdAndProjectId(Long facultyId, Long projectId);
+    
+    List<Project> findByFacultyFacultyIdAndStatus(Long facultyId, String status); // ✅ NEW
 }
