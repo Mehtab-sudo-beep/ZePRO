@@ -256,4 +256,21 @@ public class MeetingService {
 
         System.out.println("Project REJECTED with reason: " + rejectionReason);
     }
+    public MeetingResponse rescheduleMeeting(Long requestId, CreateMeetingRequest req) {
+
+        Meeting meeting = meetingRepository.findByRequestRequestId(requestId)
+                .orElseThrow(() -> new RuntimeException("Meeting not found for request"));
+
+        meeting.setMeetingLink(req.getMeetingLink());
+        meeting.setMeetingTime(req.getMeetingTime());
+        meeting.setLocation(req.getLocation());
+        meeting.setTitle(req.getTitle());
+        meeting.setStatus(MeetingStatus.SCHEDULED);
+
+        meetingRepository.save(meeting);
+
+        System.out.println("Meeting RESCHEDULED successfully");
+
+        return mapToResponse(meeting);
+    }
 }

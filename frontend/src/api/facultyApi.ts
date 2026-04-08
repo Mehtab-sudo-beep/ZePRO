@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
+
 
 const API = 'http://localhost:8080';
 
@@ -180,5 +180,28 @@ export const promoteToFC = async (token: string) => {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
+};
+
+export const rescheduleMeeting = async (
+  requestId: number,
+  meetingTime: string,
+  meetingLink: string,
+  location: string,
+  title: string,
+  token: string,
+) => {
+  return axios.put(
+    `${API}/faculty/meetings/request/${requestId}/reschedule`,
+    {
+      requestId,
+      meetingTime,
+      meetingLink,
+      location,
+      title,
+    },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  ).then(res => res.data);
 };
 

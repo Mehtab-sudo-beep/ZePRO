@@ -125,68 +125,79 @@ public class StudentService {
 
         public List<ProjectResponse> getAllProjects(String email) {
 
-                Student student = studentRepository.findByUser_Email(email)
-                                .orElseThrow(() -> new RuntimeException("Student not found"));
+            Student student = studentRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                List<Project> projects = projectRepository.findAll();
-                int teamMemberSize = (student.getTeam() != null && student.getTeam().getMembers() != null) 
-                        ? student.getTeam().getMembers().size() 
-                        : 0;
+            List<Project> projects = projectRepository.findAll();
+            int teamMemberSize = (student.getTeam() != null && student.getTeam().getMembers() != null) 
+                    ? student.getTeam().getMembers().size() 
+                    : 0;
 
-                return projects.stream()
-                                .filter(p -> {
-                                        // ✅ FILTER: only OPEN projects
-                                        if (!"OPEN".equals(p.getStatus())) {
-                                                return false;
-                                        }
-                                        // ✅ FILTER: only active projects
-                                        if (!p.getIsActive()) {
-                                                return false;
-                                        }
-                                        // ✅ FILTER: slots > team member size
-                                        int availableSlots = p.getStudentSlots() - 
-                                                (p.getTeam() != null && p.getTeam().getMembers() != null 
-                                                        ? p.getTeam().getMembers().size() 
-                                                        : 0);
-                                        return availableSlots > teamMemberSize;
-                                })
-                                .map(project -> {
-                                        String domainStr = "";
-                                        String subdomainStr = "";
+            return projects.stream()
+                    .filter(p -> {
+                        // ✅ FILTER: only OPEN projects
+                        if (!"OPEN".equals(p.getStatus())) {
+                            return false;
+                        }
+                        // ✅ FILTER: only active projects
+                        if (!p.getIsActive()) {
+                            return false;
+                        }
+                        // ✅ FILTER: slots > team member size
+                        int availableSlots = p.getStudentSlots() - 
+                                (p.getTeam() != null && p.getTeam().getMembers() != null 
+                                        ? p.getTeam().getMembers().size() 
+                                        : 0);
+                        return availableSlots >= teamMemberSize;
+                    })
+                    .map(project -> {
+                        String domainStr = "";
+                        String subdomainStr = "";
 
-                                        var pDomains = projectDomainRepository
-                                                        .findByProjectProjectId(project.getProjectId());
-                                        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
-                                                domainStr = pDomains.get(0).getDomain().getName();
-                                        }
+                        var pDomains = projectDomainRepository
+                                .findByProjectProjectId(project.getProjectId());
+                        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
+                            domainStr = pDomains.get(0).getDomain().getName();
+                        }
 
-                                        var pSubDomains = projectSubDomainRepository
-                                                        .findByProjectProjectId(project.getProjectId());
-                                        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
-                                                subdomainStr = pSubDomains.get(0).getSubDomain().getName();
-                                        }
+                        var pSubDomains = projectSubDomainRepository
+                                .findByProjectProjectId(project.getProjectId());
+                        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
+                            subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+                        }
 
-                                        int maxTeamSize = allocationRulesRepository.findById(1L)
-                                                        .orElse(new com.zepro.model.AllocationRules()).getMaxTeamSize();
-                                        int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null) 
-                                                ? project.getTeam().getMembers().size() 
-                                                : 0;
-                                        int maxSlots = project.getStudentSlots(); // ✅ USE PROJECT SLOTS
-                                        int remainingSlots = Math.max(0, maxSlots - projectAssigned); // ✅ CALCULATE REMAINING SLOTS BASED ON MAX TEAM SIZE
+                        int maxTeamSize = allocationRulesRepository.findById(1L)
+                                .orElse(new com.zepro.model.AllocationRules()).getMaxTeamSize();
+                        int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null) 
+                                ? project.getTeam().getMembers().size() 
+                                : 0;
+                        int maxSlots = project.getStudentSlots();
+                        int remainingSlots = Math.max(0, maxSlots - projectAssigned);
 
-                                        return new ProjectResponse(
-                                                project.getProjectId(),
-                                                project.getTitle(),
-                                                project.getDescription(),
-                                                project.getStatus(),
-                                                domainStr,
-                                                subdomainStr,
-                                                project.getIsActive(),
-                                                projectAssigned,
-                                                maxSlots,
-                                                remainingSlots);
-                                })
-                                .toList();
+                        // ✅ NEW: Get faculty name
+                        String facultyName = (project.getFaculty() != null && project.getFaculty().getUser() != null)
+                                ? project.getFaculty().getUser().getName()
+                                : "N/A";
+                        
+                        Long facultyId = (project.getFaculty() != null)
+                                ? project.getFaculty().getFacultyId()
+                                : null;
+
+                        return new ProjectResponse(
+                                project.getProjectId(),
+                                project.getTitle(),
+                                project.getDescription(),
+                                project.getStatus(),
+                                domainStr,
+                                subdomainStr,
+                                project.getIsActive(),
+                                projectAssigned,
+                                maxSlots,
+                                remainingSlots,
+                                facultyName,      // ✅ NEW
+                                facultyId);        // ✅ NEW
+                    })
+                    .toList();
         }
         // ------------------------------------------------
         // REQUEST PROJECT

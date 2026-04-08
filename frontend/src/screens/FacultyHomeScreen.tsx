@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -193,7 +192,7 @@ const FacultyHomeScreen: React.FC = () => {
             <View style={[styles.card, { backgroundColor: colors.card, flex: 1, padding: 16 }]}>
               <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>RES. CAPACITY (SLOTS)</Text>
               <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800', marginTop: 4 }}>
-                {profile?.totalCreatedSlots || 0} <Text style={{ fontSize: 12, color: colors.subText }}>/ {profile?.maxStudentsPerFaculty || 6}</Text>
+                {profile?.totalCreatedSlots} <Text style={{ fontSize: 12, color: colors.subText }}>/ {profile?.maxStudentsPerFaculty}</Text>
               </Text>
               <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 2, marginTop: 10, overflow: 'hidden' }}>
                 <View style={{ height: '100%', width: `${Math.min(100, ((profile?.totalCreatedSlots || 0) / (profile?.maxStudentsPerFaculty || 6)) * 100)}%`, backgroundColor: colors.primary }} />

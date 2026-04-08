@@ -24,6 +24,14 @@ public class ProjectResponse {
     private int assignedStudents;
     private int maxSlots;
     private int presentSlots;
+
+    private List<TeamMemberDetailDTO> teamMemberDetails;
+    private String teamMembersNames;
+    private String teamMembersRollNumbers;
+    private String teamMembersCgpas;
+    private String teamMembersResumeLinks;
+    private String teamMembersMakeSheetLinks;
+
     public ProjectResponse() {}
 
     // 🔥 Constructor for projects
@@ -112,4 +120,22 @@ public class ProjectResponse {
 
     public String getSubdomain() { return subdomain; }
     public void setSubdomain(String subdomain) { this.subdomain = subdomain; }
+
+    public List<TeamMemberDetailDTO> getTeamMemberDetails() { return teamMemberDetails; }
+    public void setTeamMemberDetails(List<TeamMemberDetailDTO> teamMemberDetails) { this.teamMemberDetails = teamMemberDetails; }
+
+    public String getTeamMembersNames() { return teamMembersNames; }
+    public void setTeamMembersNames(String teamMembersNames) { this.teamMembersNames = teamMembersNames; }
+
+    public String getTeamMembersRollNumbers() { return teamMembersRollNumbers; }
+    public void setTeamMembersRollNumbers(String teamMembersRollNumbers) { this.teamMembersRollNumbers = teamMembersRollNumbers; }
+
+    public String getTeamMembersCgpas() { return teamMembersCgpas; }
+    public void setTeamMembersCgpas(String teamMembersCgpas) { this.teamMembersCgpas = teamMembersCgpas; }
+
+    public String getTeamMembersResumeLinks() { return teamMembersResumeLinks; }
+    public void setTeamMembersResumeLinks(String teamMembersResumeLinks) { this.teamMembersResumeLinks = teamMembersResumeLinks; }
+
+    public String getTeamMembersMakeSheetLinks() { return teamMembersMakeSheetLinks; }
+    public void setTeamMembersMakeSheetLinks(String teamMembersMakeSheetLinks) { this.teamMembersMakeSheetLinks = teamMembersMakeSheetLinks; }
 }

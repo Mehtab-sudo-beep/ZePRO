@@ -157,38 +157,38 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   };
 
   const handleSaveRules = async () => {
-  try {
+    try {
 
-    const computedRules = {
-      ...tempRules,
-      maxStudentsPerFaculty:
-        tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
-    };
+      const computedRules = {
+        ...tempRules,
+        maxStudentsPerFaculty:
+          tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
+      };
 
-    const res = await fetch(`${BASE_URL}/rules`, {
-      method: 'POST',
-      headers: authHeader(),
-      body: JSON.stringify(computedRules),
-    });
+      const res = await fetch(`${BASE_URL}/rules`, {
+        method: 'POST',
+        headers: authHeader(),
+        body: JSON.stringify(computedRules),
+      });
 
-    if (res.ok) {
+      if (res.ok) {
 
-      // ✅ ONLY NOW update UI
-      setRules(computedRules);
+        // ✅ ONLY NOW update UI
+        setRules(computedRules);
 
-      showLocalMsg("Rules updated successfully!", "success");
+        showLocalMsg("Rules updated successfully!", "success");
 
-      // ❌ REMOVE THIS → NO AUTO REFRESH
-      // fetchAll();
+        // ❌ REMOVE THIS → NO AUTO REFRESH
+        // fetchAll();
 
-    } else {
-      showLocalMsg("Failed to save rules", "error");
+      } else {
+        showLocalMsg("Failed to save rules", "error");
+      }
+
+    } catch {
+      showLocalMsg("Network error", "error");
     }
-
-  } catch {
-    showLocalMsg("Network error", "error");
-  }
-};
+  };
 
   const handleDownloadReport = async () => {
     try {
@@ -239,7 +239,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   );
 
   const SearchBox = ({ value, setValue }: any) => (
-    <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}> 
       <Icon name="search" />
       <TextInput
         value={value}
@@ -263,32 +263,32 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           <>
             {/* Main Stats Grid */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}> 
                   <Icon name="students" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalStudents || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Total Students</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(16,185,129,0.1)' }]}> 
                   <Icon name="faculty" />
                 </View>
                 <Text style={[styles.statNum, { color: '#059669' }]}>{stats?.allocatedStudents || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Allocated</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(99,102,241,0.1)' }]}>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(99,102,241,0.1)' }]}> 
                   <Icon name="team" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalTeams || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Active Teams</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239,68,68,0.1)' }]}> 
                   <Icon name="faculty" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalFaculty || 0}</Text>
@@ -340,7 +340,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     <>
       <SearchBox value={facultySearchQuery} setValue={setFacultySearchQuery} />
       {faculties.filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase())).map(f => {
-        const usage = f.maxStudents > 0 ? (f.allocatedStudents / f.maxStudents) * 100 : 0;
         const isFull = f.allocatedStudents >= f.maxStudents;
         
         return (
@@ -446,8 +445,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         <Text style={{ color: '#fff', fontWeight: '700' }}>Export All Teams (PDF)</Text>
       </TouchableOpacity>
 
-      <View style={[styles.tableContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.tableHeader, { backgroundColor: accentSoft, borderBottomColor: colors.border }]}>
+      <View style={[styles.tableContainer, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+        <View style={[styles.tableHeader, { backgroundColor: accentSoft, borderBottomColor: colors.border }]}> 
           <Text style={[styles.columnHeader, { color: colors.subText, flex: 2 }]}>TEAM NAME</Text>
           <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>PROJECT TITLE</Text>
           <Text style={[styles.columnHeader, { color: colors.subText, flex: 1, textAlign: 'center' }]}>SLOTS</Text>
@@ -460,14 +459,14 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           </View>
         ) : (
           team.map((t, idx) => (
-            <View key={t.id} style={[styles.tableRow, { borderBottomColor: colors.border, backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }]}>
+            <View key={t.id} style={[styles.tableRow, { borderBottomColor: colors.border, backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }]}> 
               <Text style={[styles.cellText, { color: colors.text, fontWeight: '700', flex: 2 }]} numberOfLines={2}>
                 {t.teamName || t.name || 'Unnamed'}
               </Text>
               <Text style={[styles.cellText, { color: colors.text, flex: 3 }]} numberOfLines={2}>
                 {t.projectTitle || 'No Project'}
               </Text>
-              <Text style={[styles.cellText, { color: colors.primary, flex: 1, textAlign: 'center', fontWeight: '800' }]}>
+              <Text style={[styles.cellText, { color: colors.primary, flex: 1, textAlign: 'center', fontWeight: '800' }]}> 
                 {t.slots || 3}
               </Text>
               <View style={{ flex: 2.5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -507,25 +506,25 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     keyboardType="numeric"
     value={tempRules.maxTeamSize ?? ""}
     onChangeText={v => {
-  if (/^\d*$/.test(v)) {
+      if (/^\d*$/.test(v)) {
 
-    setTempRules(prev => {
-      const teamSize = v;
-      const projects = prev.maxProjectsPerFaculty || "0";
+        setTempRules(prev => {
+          const teamSize = v;
+          const projects = prev.maxProjectsPerFaculty || "0";
 
-      const computed =
-        parseInt(teamSize || "0") *
-        parseInt(projects || "0");
+          const computed =
+            parseInt(teamSize || "0") *
+            parseInt(projects || "0");
 
-      return {
-        ...prev,
-        maxTeamSize: teamSize,
-        maxStudentsPerFaculty: computed
-      };
-    });
+          return {
+            ...prev,
+            maxTeamSize: teamSize,
+            maxStudentsPerFaculty: computed
+          };
+        });
 
-  }
-}}
+      }
+    }}
   />
 </View>
 
@@ -539,25 +538,25 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     keyboardType="numeric"
     value={tempRules.maxProjectsPerFaculty ?? ""}
     onChangeText={v => {
-  if (/^\d*$/.test(v)) {
+      if (/^\d*$/.test(v)) {
 
-    setTempRules(prev => {
-      const projects = v;
-      const teamSize = prev.maxTeamSize || "0";
+        setTempRules(prev => {
+          const projects = v;
+          const teamSize = prev.maxTeamSize || "0";
 
-      const computed =
-        parseInt(teamSize || "0") *
-        parseInt(projects || "0");
+          const computed =
+            parseInt(teamSize || "0") *
+            parseInt(projects || "0");
 
-      return {
-        ...prev,
-        maxProjectsPerFaculty: projects,
-        maxStudentsPerFaculty: computed
-      };
-    });
+          return {
+            ...prev,
+            maxProjectsPerFaculty: projects,
+            maxStudentsPerFaculty: computed
+          };
+        });
 
-  }
-}}
+      }
+    }}
   />
 </View>
 
@@ -591,7 +590,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
       {/* Active Rules Display (Visualizing Current System State) */}
       <SectionLabel label="Currently Active Rules" />
-      <View style={[styles.activeRulesContainer, { backgroundColor: isDark ? 'rgba(31,41,55,0.5)' : '#f8fafc', borderColor: colors.border }]}>
+      <View style={[styles.activeRulesContainer, { backgroundColor: isDark ? 'rgba(31,41,55,0.5)' : '#f8fafc', borderColor: colors.border }]}> 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>PARAMETER</Text>
           <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>ACTIVE VALUE</Text>
@@ -624,7 +623,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const renderModal = (isOverride: boolean) => (
     <Modal visible={isOverride ? showOverrideModal : showAllocationModal} transparent animationType="fade">
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}> 
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 }}>
             {isOverride ? 'Override' : 'Manual'} Allocation
           </Text>
@@ -670,7 +669,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* HEADER */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}> 
         <View>
           <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>DASHBOARD</Text>
           <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>
@@ -691,7 +690,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]}
                 onPress={() => { setMsg(null); setActiveTab(tab as any); }}
               >
-                <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}>
+                <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}> 
                   <Icon name={tab === 'faculties' ? 'faculty' : tab} size={16} />
                 </View>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: activeTab === tab ? colors.primary : colors.subText, marginTop: 4 }}>
@@ -716,7 +715,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       {renderModal(true)}
 
       {/* BOTTOM TAB */}
-      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}>
+      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}> 
         <View style={styles.tabItem}>
           <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
           <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700', marginTop: 2 }}>Home</Text>

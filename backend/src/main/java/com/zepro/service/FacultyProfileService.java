@@ -64,7 +64,7 @@ public class FacultyProfileService {
         // ✅ COUNT ONLY PROJECTS WITH STATUS "OPEN" OR "ASSIGNED" AND isActive = true
         List<Project> activeProjects = projectRepository.findByFacultyFacultyId(faculty.getFacultyId())
                 .stream()
-                .filter(project -> ("OPEN".equals(project.getStatus()) || "ASSIGNED".equals(project.getStatus()))
+                .filter(project -> ("OPEN".equals(project.getStatus()) || "ASSIGNED".equals(project.getStatus()) || "IN_PROGRESS".equals(project.getStatus()))
                         && project.getIsActive())
                 .collect(Collectors.toList());
 
