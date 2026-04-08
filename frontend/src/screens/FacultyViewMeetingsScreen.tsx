@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Alert,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
 import {
@@ -18,22 +18,11 @@ import {
   cancelMeeting,
   completeMeeting,
   acceptProject,
-  rejectProject
+  rejectProject,
+  rescheduleMeeting,
 } from '../api/facultyApi';
-interface Meeting {
-  id: string;
-  title: string;
-  faculty: string;
-  projectName: string;
-  domain: string;
-  subDomain: string;
-  location: string;
-  date: string;
-  time: string;
-  members: string[];
-  status: 'upcoming' | 'completed' | 'cancelled';
-}
 import { AlertContext } from '../context/AlertContext';
+
 const FacultyViewMeetingsScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
@@ -44,17 +33,25 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [editForm, setEditForm] = useState<Partial<any>>({});
+  const [rescheduleForm, setRescheduleForm] = useState<Partial<any>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
+  
+  // ✅ NEW: Separate date/time states for reschedule modal
+  const [scheduledDate, setScheduledDate] = useState(new Date());
+  const [hasSelectedScheduledDate, setHasSelectedScheduledDate] = useState(false);
+  const [showScheduledDate, setShowScheduledDate] = useState(false);
+  const [showScheduledTime, setShowScheduledTime] = useState(false);
 
-  React.useEffect(() => {
-    if (user?.token) {
-      loadMeetings();
-    }
-  }, [user?.token]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.token) {
+        loadMeetings();
+      }
+    }, [user?.token])
+  );
 
   const loadMeetings = async () => {
     try {
@@ -84,42 +81,77 @@ const FacultyViewMeetingsScreen: React.FC = () => {
     return activeFilter === 'upcoming' ? timeA - timeB : timeB - timeA;
   });
 
-  const openDetail = (meeting: Meeting) => {
+  const openDetail = (meeting: any) => {
     setSelectedMeeting(meeting);
     setShowDetailModal(true);
   };
 
-  const openEdit = (meeting: Meeting) => {
+  const openReschedule = (meeting: any) => {
     setSelectedMeeting(meeting);
-    setEditForm({
-      title: meeting.title,
-      location: meeting.location,
-      date: meeting.date,
-      time: meeting.time,
-      projectName: meeting.projectName,
-      domain: meeting.domain,
-      subDomain: meeting.subDomain,
+    const meetingDate = new Date(meeting.meetingTime);
+    setScheduledDate(meetingDate);
+    setRescheduleForm({
+      title: meeting.title || '',
+      meetingLink: meeting.meetingLink || '',
+      location: meeting.location || '',
     });
+    setHasSelectedScheduledDate(true);
     setShowDetailModal(false);
-    setShowEditModal(true);
+    setShowRescheduleModal(true);
   };
 
-  const handleSaveEdit = () => {
-    if (!editForm.date || !editForm.time || !editForm.location || !editForm.title) {
+  // ✅ Format date helper
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString();
+  };
+
+  // ✅ Format time helper
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleForm.title || !rescheduleForm.location) {
       showAlert('Error', 'Please fill in all required fields');
       return;
     }
-    const timeRegex = /^([01]?\d|2[0-3]):?([0-5]\d)$/;
-    if (!timeRegex.test(editForm.time)) {
-      showAlert('Error', 'Time must be in 24-hour format (e.g. 14:30).');
+
+    if (!hasSelectedScheduledDate) {
+      showAlert('Error', 'Please select a date and time');
       return;
     }
-    setMeetings(meetings.map(m =>
-      m.id === selectedMeeting?.id ? { ...m, ...editForm } : m
-    ));
-    setShowEditModal(false);
-    setSelectedMeeting(null);
-    showAlert('Success', 'Meeting updated successfully!');
+
+    try {
+      if (!user?.token || !selectedMeeting?.requestId) return;
+
+      const year = scheduledDate.getFullYear();
+      const month = String(scheduledDate.getMonth() + 1).padStart(2, '0');
+      const day = String(scheduledDate.getDate()).padStart(2, '0');
+      const hours = String(scheduledDate.getHours()).padStart(2, '0');
+      const minutes = String(scheduledDate.getMinutes()).padStart(2, '0');
+      const seconds = '00';
+
+      const formattedTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+
+      await rescheduleMeeting(
+        selectedMeeting.requestId,
+        formattedTime,
+        rescheduleForm.meetingLink || '',
+        rescheduleForm.location,
+        rescheduleForm.title,
+        user!.token
+      );
+
+      setShowRescheduleModal(false);
+      setSelectedMeeting(null);
+      setRescheduleForm({});
+      setHasSelectedScheduledDate(false);
+      showAlert('Success', 'Meeting rescheduled successfully!');
+      loadMeetings();
+    } catch (err) {
+      console.log('Error rescheduling:', err);
+      showAlert('Error', 'Failed to reschedule meeting');
+    }
   };
 
   const handleCancelMeeting = (meeting: any) => {
@@ -153,7 +185,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
     if (s === 'done' || s === 'completed') return { bg: '#DBEAFE', text: '#2563EB' };
     if (s === 'accepted') return { bg: '#EDE9FE', text: '#7C3AED' };
     if (s === 'rejected') return { bg: '#FEF3C7', text: '#D97706' };
-    return { bg: '#FEE2E2', text: '#DC2626' }; // cancelled
+    return { bg: '#FEE2E2', text: '#DC2626' };
   };
 
   /* ── Detail Modal ─────────────────────────────────────── */
@@ -165,7 +197,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
 
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Meeting Details
@@ -176,7 +207,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Status Badge */}
               <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
                 <Text style={[styles.statusText, { color: sc.text }]}>
                   {selectedMeeting.status.toUpperCase()}
@@ -193,7 +223,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
               <DetailRow label="SubDomain" value={selectedMeeting.subDomain || 'N/A'} colors={colors} />
               <DetailRow label="Location" value={selectedMeeting.location || 'Online'} colors={colors} />
               <DetailRow label="Date" value={selectedMeeting.meetingTime ? new Date(selectedMeeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
-              <DetailRow label="Time" value={selectedMeeting.meetingTime ? new Date(selectedMeeting.meetingTime).toLocaleTimeString() : 'TBD'} colors={colors} />
+              <DetailRow label="Time" value={selectedMeeting.meetingTime ? new Date(selectedMeeting.meetingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'} colors={colors} />
               <DetailRow label="Link" value={selectedMeeting.meetingLink || 'N/A'} colors={colors} />
 
               {/* Action Buttons */}
@@ -201,9 +231,9 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                 <View style={styles.actionColumn}>
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-                    onPress={() => openEdit(selectedMeeting)}
+                    onPress={() => openReschedule(selectedMeeting)}
                   >
-                    <Text style={styles.actionBtnText}>Edit / Reschedule</Text>
+                    <Text style={styles.actionBtnText}>Reschedule Meeting</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -231,7 +261,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               )}
-              {/* ✅ ACCEPT / REJECT — only when DONE and not yet decided */}
+
+              {/* ✅ ACCEPT / REJECT */}
               {selectedMeeting.status === 'DONE' &&
                 selectedMeeting.requestStatus !== 'ACCEPTED' &&
                 selectedMeeting.requestStatus !== 'REJECTED' && (
@@ -265,7 +296,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   </View>
                 )}
 
-              {/* 🔒 Read-only outcome banner — shown once decision is final */}
+              {/* 🔒 Read-only outcome banner */}
               {(selectedMeeting.requestStatus === 'ACCEPTED' ||
                 selectedMeeting.requestStatus === 'REJECTED') && (
                   <View style={{
@@ -298,89 +329,155 @@ const FacultyViewMeetingsScreen: React.FC = () => {
     );
   };
 
-  /* ── Edit / Reschedule Modal ──────────────────────────── */
-  const renderEditModal = () => (
-    <Modal visible={showEditModal} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+  /* ── ✅ Reschedule Modal with Date/Time Pickers ────────────────────────────────────── */
+  const renderRescheduleModal = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Edit / Reschedule
-            </Text>
-            <TouchableOpacity onPress={() => setShowEditModal(false)}>
-              <Text style={[styles.closeBtn, { color: colors.subText }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
+    return (
+      <Modal visible={showRescheduleModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <EditField
-              label="Meeting Title"
-              value={editForm.title || ''}
-              onChangeText={v => setEditForm({ ...editForm, title: v })}
-              colors={colors}
-            />
-            <EditField
-              label="Location"
-              value={editForm.location || ''}
-              onChangeText={v => setEditForm({ ...editForm, location: v })}
-              colors={colors}
-            />
-
-            {/* Reschedule Section */}
-            <View style={[styles.rescheduleBox, { borderColor: colors.primary + '44', backgroundColor: colors.primary + '0D' }]}>
-              <Text style={[styles.rescheduleLabel, { color: colors.primary }]}>
-                Reschedule
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Reschedule Meeting
               </Text>
-              <EditField
-                label="New Date  (YYYY-MM-DD)"
-                value={editForm.date || ''}
-                onChangeText={v => setEditForm({ ...editForm, date: v })}
-                colors={colors}
-                placeholder="e.g. 2025-03-15"
-              />
-              <EditField
-                label="New Time"
-                value={editForm.time || ''}
-                onChangeText={v => setEditForm({ ...editForm, time: v })}
-                colors={colors}
-                placeholder="e.g. 14:30"
-              />
+              <TouchableOpacity onPress={() => setShowRescheduleModal(false)}>
+                <Text style={[styles.closeBtn, { color: colors.subText }]}>✕</Text>
+              </TouchableOpacity>
             </View>
 
-            <EditField
-              label="Domain"
-              value={editForm.domain || ''}
-              onChangeText={v => setEditForm({ ...editForm, domain: v })}
-              colors={colors}
-            />
-            <EditField
-              label="Sub-Domain"
-              value={editForm.subDomain || ''}
-              onChangeText={v => setEditForm({ ...editForm, subDomain: v })}
-              colors={colors}
-            />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Meeting Title */}
+              <View style={styles.fieldWrapper}>
+                <Text style={[styles.fieldLabel, { color: colors.subText }]}>Meeting Title</Text>
+                <TextInput
+                  style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                  value={rescheduleForm.title || ''}
+                  onChangeText={v => setRescheduleForm({ ...rescheduleForm, title: v })}
+                  placeholder="Enter meeting title"
+                  placeholderTextColor={colors.subText}
+                />
+              </View>
 
-            {/* Save Button */}
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-              onPress={handleSaveEdit}
-            >
-              <Text style={styles.saveBtnText}>Save Changes</Text>
-            </TouchableOpacity>
+              {/* Meeting Link */}
+              <View style={styles.fieldWrapper}>
+                <Text style={[styles.fieldLabel, { color: colors.subText }]}>Meeting Link</Text>
+                <TextInput
+                  style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                  value={rescheduleForm.meetingLink || ''}
+                  onChangeText={v => setRescheduleForm({ ...rescheduleForm, meetingLink: v })}
+                  placeholder="e.g. https://meet.google.com/..."
+                  placeholderTextColor={colors.subText}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.discardBtn, { borderColor: colors.border }]}
-              onPress={() => setShowEditModal(false)}
-            >
-              <Text style={[styles.discardBtnText, { color: colors.subText }]}>Discard</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              {/* Location */}
+              <View style={styles.fieldWrapper}>
+                <Text style={[styles.fieldLabel, { color: colors.subText }]}>Location</Text>
+                <TextInput
+                  style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                  value={rescheduleForm.location || ''}
+                  onChangeText={v => setRescheduleForm({ ...rescheduleForm, location: v })}
+                  placeholder="e.g. Room 401 or Online"
+                  placeholderTextColor={colors.subText}
+                />
+              </View>
+
+              {/* ✅ Date & Time Picker Section */}
+              <View style={[styles.rescheduleBox, { borderColor: colors.border, backgroundColor: colors.primary + '0D' }]}>
+                <Text style={[styles.rescheduleLabel, { color: colors.primary }]}>
+                  📅 New Date & Time
+                </Text>
+
+                {/* Date Picker Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.picker,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                  onPress={() => setShowScheduledDate(true)}
+                >
+                  <Text style={[styles.pickerText, { color: colors.text }]}>
+                    {hasSelectedScheduledDate ? formatDate(scheduledDate) : 'Select Meeting Date'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Time Picker Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.picker,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                      marginTop: 10,
+                    },
+                  ]}
+                  onPress={() => setShowScheduledTime(true)}
+                >
+                  <Text style={[styles.pickerText, { color: colors.text }]}>
+                    {hasSelectedScheduledDate ? formatTime(scheduledDate) : 'Select Meeting Time'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Date Picker Modal */}
+                {showScheduledDate && (
+                  <DateTimePicker
+                    value={scheduledDate}
+                    mode="date"
+                    minimumDate={today}
+                    onChange={(event, selectedDate) => {
+                      setShowScheduledDate(false);
+                      if (selectedDate) {
+                        setScheduledDate(selectedDate);
+                        setHasSelectedScheduledDate(true);
+                      }
+                    }}
+                  />
+                )}
+
+                {/* Time Picker Modal */}
+                {showScheduledTime && (
+                  <DateTimePicker
+                    value={scheduledDate}
+                    mode="time"
+                    is24Hour={true}
+                    onChange={(event, selectedDate) => {
+                      setShowScheduledTime(false);
+                      if (selectedDate) {
+                        setScheduledDate(selectedDate);
+                        setHasSelectedScheduledDate(true);
+                      }
+                    }}
+                  />
+                )}
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: '#10B981' }]}
+                onPress={handleReschedule}
+              >
+                <Text style={styles.saveBtnText}>Save & Reschedule</Text>
+              </TouchableOpacity>
+
+              {/* Cancel Button */}
+              <TouchableOpacity
+                style={[styles.discardBtn, { borderColor: colors.border }]}
+                onPress={() => setShowRescheduleModal(false)}
+              >
+                <Text style={[styles.discardBtnText, { color: colors.subText }]}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   /* ── Reject Modal ──────────────────────────────────────── */
   const renderRejectModal = () => (
@@ -429,7 +526,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
 
-        {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
@@ -437,7 +533,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
           <Text style={[styles.headerTitle, { color: colors.text }]}>My Meetings</Text>
         </View>
 
-        {/* Filter Tabs */}
         <View style={[styles.filterRow, { backgroundColor: colors.card }]}>
           {(['all', 'upcoming', 'completed', 'cancelled'] as const).map(f => (
             <TouchableOpacity
@@ -458,7 +553,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
           ))}
         </View>
 
-        {/* Meeting Cards */}
         <ScrollView contentContainerStyle={styles.listContent}>
           {filteredMeetings.length === 0 ? (
             <View style={[styles.emptyBox, { backgroundColor: colors.card }]}>
@@ -474,7 +568,6 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   onPress={() => openDetail(meeting)}
                   activeOpacity={0.85}
                 >
-                  {/* Card Top Row */}
                   <View style={styles.cardTopRow}>
                     <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
                       {meeting.title || `Meeting with ${meeting.teamName || 'Team'}`}
@@ -496,30 +589,23 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                     Domain: {meeting.domain || 'N/A'}
                   </Text>
 
-                  <Text style={[styles.cardProject, { color: colors.subText }]}>
-                    SubDomain: {meeting.subDomain || 'N/A'}
-                  </Text>
-
-                  {/* Date / Time / Location */}
                   <View style={styles.cardMeta}>
-                    <MetaChip icon="" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
-                    <MetaChip icon="" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleTimeString() : 'TBD'} colors={colors} />
-                    <MetaChip icon="" text={meeting.location || 'Online'} colors={colors} />
+                    <MetaChip icon="📅" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
+                    <MetaChip icon="⏰" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'} colors={colors} />
+                    <MetaChip icon="📍" text={meeting.location || 'Online'} colors={colors} />
                   </View>
 
-                  {/* Members */}
                   <Text style={[styles.cardMembers, { color: colors.subText }]}>
                     {meeting.meetingLink ? `Link: ${meeting.meetingLink}` : ''}
                   </Text>
 
-                  {/* Quick Edit Button for upcoming */}
                   {(meeting.status === 'SCHEDULED' || meeting.status === 'PENDING') && (
                     <TouchableOpacity
                       style={[styles.quickEditBtn, { borderColor: colors.primary }]}
-                      onPress={() => openEdit(meeting)}
+                      onPress={() => openReschedule(meeting)}
                     >
                       <Text style={[styles.quickEditText, { color: colors.primary }]}>
-                        Edit / Reschedule
+                        ↻ Reschedule
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -530,7 +616,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
         </ScrollView>
 
         {renderDetailModal()}
-        {renderEditModal()}
+        {renderRescheduleModal()}
         {renderRejectModal()}
       </View>
     </SafeAreaView>
@@ -548,31 +634,6 @@ const DetailRow = ({ label, value, colors }: { label: string; value: string; col
   </View>
 );
 
-const EditField = ({
-  label,
-  value,
-  onChangeText,
-  colors,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  colors: any;
-  placeholder?: string;
-}) => (
-  <View style={styles.fieldWrapper}>
-    <Text style={[styles.fieldLabel, { color: colors.subText }]}>{label}</Text>
-    <TextInput
-      style={[styles.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder || ''}
-      placeholderTextColor={colors.subText}
-    />
-  </View>
-);
-
 const MetaChip = ({ icon, text, colors }: { icon: string; text: string; colors: any }) => (
   <View style={[styles.metaChip, { backgroundColor: colors.background }]}>
     <Text style={[styles.metaChipText, { color: colors.subText }]}>{icon} {text}</Text>
@@ -583,8 +644,6 @@ const MetaChip = ({ icon, text, colors }: { icon: string; text: string; colors: 
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
-  // Header
   header: {
     height: 60,
     flexDirection: 'row',
@@ -595,8 +654,6 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: 8 },
   backArrow: { fontSize: 32, lineHeight: 36 },
   headerTitle: { fontSize: 20, fontWeight: '600' },
-
-  // Filter
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: 12,
@@ -609,17 +666,11 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: 'transparent',
   },
   filterBtnText: { fontSize: 11, fontWeight: '600' },
-
-  // List
   listContent: { padding: 16, paddingBottom: 32 },
-
   emptyBox: { borderRadius: 12, padding: 40, alignItems: 'center' },
   emptyText: { fontSize: 15 },
-
-  // Card
   card: {
     borderRadius: 14,
     padding: 16,
@@ -630,12 +681,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', flex: 1, marginRight: 8 },
   cardBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   cardBadgeText: { fontSize: 11, fontWeight: '600' },
-  cardProject: { fontSize: 13, marginBottom: 10 },
+  cardProject: { fontSize: 13, marginBottom: 8 },
   cardMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   metaChip: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   metaChipText: { fontSize: 12 },
@@ -648,8 +699,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   quickEditText: { fontSize: 13, fontWeight: '600' },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -669,8 +718,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: '700' },
   closeBtn: { fontSize: 22 },
-
-  // Detail Modal
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
@@ -683,22 +730,15 @@ const styles = StyleSheet.create({
   detailRow: { marginBottom: 12 },
   detailLabel: { fontSize: 12 },
   detailValue: { fontSize: 15, fontWeight: '500', marginTop: 2 },
-  membersTitle: { fontSize: 16, fontWeight: '600', marginTop: 20, marginBottom: 8 },
-  memberItem: { fontSize: 14, marginBottom: 4 },
   actionColumn: { marginTop: 24, gap: 12 },
-  actionRow: { marginTop: 24, flexDirection: 'row', gap: 12 },
   actionBtn: {
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
-  actionBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
+  actionBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
   actionBtnOutline: {
     paddingVertical: 14,
     borderRadius: 12,
@@ -707,15 +747,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: 'transparent',
   },
-  actionBtnOutlineText: { fontWeight: '700', fontSize: 16, letterSpacing: 0.5 },
-
-  // Edit Modal
+  actionBtnOutlineText: { fontWeight: '700', fontSize: 16 },
   rescheduleBox: {
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 4,
-    marginTop: 4,
+    marginBottom: 12,
+    marginTop: 12,
   },
   rescheduleLabel: { fontSize: 14, fontWeight: '700', marginBottom: 10 },
   fieldWrapper: { marginBottom: 14 },
@@ -727,8 +765,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
   },
+  picker: {
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 8,
+  },
+  pickerText: { fontSize: 14 },
   saveBtn: {
-    marginTop: 8,
+    marginTop: 16,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',

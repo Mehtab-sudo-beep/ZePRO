@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  Linking,
 } from 'react-native';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -31,6 +32,7 @@ const FacultyRequestsScreen = () => {
 
   const [requests, setRequests] = useState<any[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<number | null>(null);
+  const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
 
   const [meetingLink, setMeetingLink] = useState('');
   const [location, setLocation] = useState('');
@@ -128,6 +130,20 @@ const FacultyRequestsScreen = () => {
     }
   };
 
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString();
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const openLink = (url: string) => {
+    if (url && url !== 'N/A') {
+      Linking.openURL(url).catch(() => showAlert('Error', 'Could not open link'));
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
 
@@ -170,6 +186,7 @@ const FacultyRequestsScreen = () => {
         ) : (
           requests.map(r => {
             const isSelected = selectedRequest === r.requestId;
+            const isTeamExpanded = expandedTeam === r.teamId;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -181,14 +198,87 @@ const FacultyRequestsScreen = () => {
                   { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
               >
-                {/* Team name */}
-                <Text style={[styles.team, { color: colors.text }]}>
-                  {r.teamName || `Team ${r.teamId}`}
-                </Text>
+                {/* ✅ Team name with expand button */}
+                <TouchableOpacity
+                  onPress={() => setExpandedTeam(isTeamExpanded ? null : r.teamId)}
+                  style={styles.teamHeaderRow}
+                >
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.team, { color: colors.text }]}>
+                      {r.teamName || `Team ${r.teamId}`}
+                    </Text>
+                    <Text style={{ marginLeft: 8, fontSize: 16, color: colors.subText }}>
+                      {isTeamExpanded ? '▼' : '▶'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
 
-                {/* Members */}
-                {r.members && r.members.length > 0 && (
-                  <Text style={{ fontSize: 12, color: colors.subText, marginBottom: 4 }}>
+                {/* ✅ Team details (expandable) */}
+                {isTeamExpanded && r.teamMemberDetails && r.teamMemberDetails.length > 0 && (
+                  <View style={[styles.teamDetailsBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                      Team Members Details
+                    </Text>
+
+                    {r.teamMemberDetails.map((member: any, idx: number) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.memberCard,
+                          { borderColor: colors.border }
+                        ]}
+                      >
+                        <View style={styles.memberHeader}>
+                          <Text style={[styles.memberName, { color: colors.text }]}>
+                            {member.name}
+                            {member.isTeamLead && <Text style={styles.leadBadge}> ★ LEAD</Text>}
+                          </Text>
+                        </View>
+
+                        <View style={styles.memberRow}>
+                          <Text style={[styles.label, { color: colors.subText }]}>Roll No:</Text>
+                          <Text style={[styles.value, { color: colors.text }]}>{member.rollNo}</Text>
+                        </View>
+
+                        <View style={styles.memberRow}>
+                          <Text style={[styles.label, { color: colors.subText }]}>Email:</Text>
+                          <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
+                            {member.email}
+                          </Text>
+                        </View>
+
+                        <View style={styles.memberRow}>
+                          <Text style={[styles.label, { color: colors.subText }]}>CGPA:</Text>
+                          <Text style={[styles.value, { color: colors.text }]}>
+                            {member.cgpa ? member.cgpa.toFixed(2) : 'N/A'}
+                          </Text>
+                        </View>
+
+                        {member.resumeLink && member.resumeLink !== 'N/A' && (
+                          <TouchableOpacity
+                            style={[styles.linkButton, { marginTop: 6 }]}
+                            onPress={() => openLink(member.resumeLink)}
+                          >
+                            <Text style={styles.linkText}>📄 View Resume</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {member.marksheetLink && member.marksheetLink !== 'N/A' && (
+                          <TouchableOpacity
+                            style={[styles.linkButton, { marginTop: 4 }]}
+                            onPress={() => openLink(member.marksheetLink)}
+                          >
+                            <Text style={styles.linkText}>📋 View Mark Sheet</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Members (collapsed view) */}
+                {!isTeamExpanded && r.members && r.members.length > 0 && (
+                  <Text style={{ fontSize: 12, color: colors.subText, marginBottom: 8 }}>
                     Members: {r.members.join(', ')}
                   </Text>
                 )}
@@ -267,7 +357,7 @@ const FacultyRequestsScreen = () => {
                       onPress={() => setShowDate(true)}
                     >
                       <Text style={[styles.pickerText, { color: colors.text }]}>
-                        Select Meeting Date
+                        {hasSelectedDate ? formatDate(date) : 'Select Meeting Date'}
                       </Text>
                     </TouchableOpacity>
 
@@ -282,15 +372,9 @@ const FacultyRequestsScreen = () => {
                       onPress={() => setShowTime(true)}
                     >
                       <Text style={[styles.pickerText, { color: colors.text }]}>
-                        Select Meeting Time
+                        {hasSelectedDate ? formatTime(date) : 'Select Meeting Time'}
                       </Text>
                     </TouchableOpacity>
-
-                    {hasSelectedDate && (
-                      <Text style={[styles.helper, { color: colors.subText }]}>
-                        Selected: {date.toLocaleString()}
-                      </Text>
-                    )}
 
                     {showDate && (
                       <DateTimePicker
@@ -398,10 +482,83 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  teamHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
   team: {
     fontSize: 17,
     fontWeight: '700',
     marginBottom: 4,
+  },
+
+  teamDetailsBox: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+
+  memberCard: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 6,
+  },
+
+  memberHeader: {
+    marginBottom: 6,
+  },
+
+  memberName: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  leadBadge: {
+    color: '#F59332',
+    fontWeight: '700',
+    fontSize: 10,
+  },
+
+  memberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  value: {
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+
+  linkButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: '#6366F1',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+
+  linkText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
 
   request: {
@@ -440,11 +597,6 @@ const styles = StyleSheet.create({
 
   form: {
     marginTop: 10,
-  },
-
-  label: {
-    fontWeight: '600',
-    marginBottom: 4,
   },
 
   input: {

@@ -67,4 +67,9 @@ public void rejectProject(@PathVariable("requestId") Long requestId, @RequestBod
     String reason = (body != null && body.containsKey("reason")) ? body.get("reason") : "";
     meetingService.rejectProject(requestId, reason);
 }
+
+@PutMapping("/request/{requestId}/reschedule")
+public MeetingResponse rescheduleMeeting(@PathVariable("requestId") Long requestId, @RequestBody CreateMeetingRequest request) {
+    return meetingService.rescheduleMeeting(requestId, request);
+}
 }

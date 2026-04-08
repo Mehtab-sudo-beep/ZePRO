@@ -40,7 +40,7 @@ import CreateDomainScreen from '../screens/CreateDomainScreen';
 import CreateSubDomainScreen from '../screens/CreateSubDomainScreen';
 import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
 import AllocatedProjectScreen from '../screens/AllocatedProjectScreen';
-
+import DeadlineDetailScreen from '../screens/DeadlinedetailsScreen';
 export type RootStackParamList = {
   Login: undefined;
   StudentHome: undefined;
@@ -92,6 +92,7 @@ export type RootStackParamList = {
   CreateSubDomain: undefined;
   TeamProjectRequests: undefined;
   AllocatedProject: undefined;
+  DeadlineDetail: { deadlineId: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -159,7 +160,7 @@ const AppNavigator = () => {
       <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
       <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen}/>
-      
+      <Stack.Screen name="DeadlineDetail" component={DeadlineDetailScreen} />
     </Stack.Navigator>
   );
 };

@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
-
+import java.util.ArrayList;
+import com.zepro.dto.faculty.TeamMemberDetailDTO;
 @Service
 public class FacultyService {
 
@@ -331,13 +332,37 @@ public class FacultyService {
                 response.setTeamId(team.getTeamId());
                 response.setTeamName(team.getTeamName());
 
-                // 🔥 ADD MEMBERS
+                // ✅ ADD COMPLETE TEAM MEMBER DETAILS
                 List<String> members = team.getMembers()
                         .stream()
                         .map(s -> s.getUser().getName())
                         .toList();
 
                 response.setMembers(members);
+                
+                // ✅ NEW: Add full team member info
+                List<TeamMemberDetailDTO> teamMemberDetails = team.getMembers()
+                        .stream()
+                        .map(s -> new TeamMemberDetailDTO(
+                                s.getStudentId(),
+                                s.getUser().getName(),
+                                s.getRollNumber() != null ? s.getRollNumber() : "N/A",
+                                s.getUser().getEmail(),
+                                s.getCgpa() != 0.0 ? s.getCgpa() : 0.0,
+                                s.getResumeLink() != null ? s.getResumeLink() : "N/A",
+                                s.getMarksheetLink() != null ? s.getMarksheetLink() : "N/A",
+                                s.isTeamLead()
+                        ))
+                        .toList();
+
+                response.setTeamMemberDetails(teamMemberDetails);
+                
+                // ✅ NEW: Add parsed team member data from ProjectRequest
+                response.setTeamMembersNames(request.getTeamMembersNames());
+                response.setTeamMembersRollNumbers(request.getTeamMembersRollNumbers());
+                response.setTeamMembersCgpas(request.getTeamMembersCgpas());
+                response.setTeamMembersResumeLinks(request.getTeamMembersResumeLinks());
+                response.setTeamMembersMakeSheetLinks(request.getTeamMembersMakeSheetLinks());
             }
 
             response.setStatus(request.getStatus().name());

@@ -29,7 +29,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @Query("SELECT s FROM Student s WHERE " +
             "LOWER(s.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(s.rollNo) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(s.rollNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(s.user.email) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Student> searchStudents(@Param("query") String query);
 
