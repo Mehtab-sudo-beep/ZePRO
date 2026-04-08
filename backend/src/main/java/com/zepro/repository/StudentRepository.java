@@ -25,6 +25,10 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByIsAllocatedTrue(); // ✅ ADD THIS — used by getAllocatedStudents()
 
     List<Student> findByAllocatedFacultyFacultyId(Long facultyId);
+        List<Student> findByDepartment_DepartmentId(Long departmentId);
+
+
+    List<Student> findByDepartment_DepartmentIdAndIsAllocatedFalse(Long departmentId);
     long countByAllocatedFaculty(Faculty faculty);
 
     @Query("SELECT s FROM Student s WHERE " +

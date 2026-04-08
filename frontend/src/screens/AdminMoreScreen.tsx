@@ -6,22 +6,23 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Alert,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlertContext } from '../context/AlertContext';
 
 const AdminMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const { showAlert } = useContext(AlertContext);
 
+  // ✅ LOGOUT WITH ALERT CONTEXT
   const handleLogout = () => {
-    Alert.alert(
+    showAlert(
       'Confirm Logout',
       'Are you sure you want to log out?',
       [
@@ -29,19 +30,16 @@ const AdminMoreScreen: React.FC = () => {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('role');
+          onPress: () => {
             setUser(null);
             navigation.replace('Login');
           },
         },
-      ],
-      { cancelable: true },
+      ]
     );
   };
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'ADMIN')) return null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -84,14 +82,14 @@ const AdminMoreScreen: React.FC = () => {
           contentContainerStyle={{ paddingBottom: 20 }}
         >
           <MenuItem
-            title="Add Institute"
-            onPress={() => navigation.navigate('AddInstitute')}
+            title="Institutes"
+            onPress={() => navigation.navigate('InstituteList')}
             colors={colors}
           />
 
           <MenuItem
-            title="Add Department"
-            onPress={() => navigation.navigate('AddDepartment')}
+            title="Add Institute"
+            onPress={() => navigation.navigate('AddInstitute')}
             colors={colors}
           />
 
@@ -121,7 +119,7 @@ const AdminMoreScreen: React.FC = () => {
           />
         </ScrollView>
 
-        {/* Bottom Tab */}
+        {/* ✅ UPDATED Bottom Tab - Removed Logs */}
         <View
           style={[
             styles.bottomTab,
@@ -133,7 +131,7 @@ const AdminMoreScreen: React.FC = () => {
         >
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate('InstituteList')}
+            onPress={() => navigation.goBack()}
           >
             <Image
               source={require('../assets/home.png')}
@@ -141,19 +139,6 @@ const AdminMoreScreen: React.FC = () => {
             />
             <Text style={[styles.tab, { color: colors.subText }]}>
               Home
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tabItem}
-            onPress={() => navigation.navigate('Logs')}
-          >
-            <Image
-              source={require('../assets/time.png')}
-              style={styles.tabIcon}
-            />
-            <Text style={[styles.tab, { color: colors.subText }]}>
-              Logs
             </Text>
           </TouchableOpacity>
 
@@ -195,7 +180,7 @@ const MenuItem = ({
     <Text
       style={[
         styles.itemText,
-        { color: danger ? colors.error || colors.primary : colors.text },
+        { color: danger ? '#DC2626' : colors.text },
       ]}
     >
       {title}
@@ -284,6 +269,7 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
   },
 
   tabIcon: {

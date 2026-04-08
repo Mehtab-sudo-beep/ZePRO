@@ -11,7 +11,7 @@ import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
-import AdminDashboardScreen from '../screens/AdminHomeScreen';
+
 import AuditLogsScreen from '../screens/LogsScreen';
 import AdminMoreScreen from '../screens/AdminMoreScreen';
 import FacultyCoordinatorDashboard from '../screens/FacultyCoordinatorScreen';
@@ -41,6 +41,8 @@ import CreateSubDomainScreen from '../screens/CreateSubDomainScreen';
 import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
 import AllocatedProjectScreen from '../screens/AllocatedProjectScreen';
 import DeadlineDetailScreen from '../screens/DeadlinedetailsScreen';
+import DepartmentDetailsScreen from '../screens/DepartmentDetailsScreen';
+
 export type RootStackParamList = {
   Login: undefined;
   StudentHome: undefined;
@@ -56,14 +58,12 @@ export type RootStackParamList = {
   JoinTeam: undefined;
   CreateTeam: undefined;
   More: undefined;
-  AdminHome:
-    | {
-        departmentId?: string;
-        departmentName?: string;
-        instituteId?: string;
-        instituteName?: string;
-      }
-    | undefined;
+  DepartmentDetails: {
+    departmentId?: string;
+    departmentName?: string;
+    instituteId?: string;
+    instituteName?: string;
+  } | undefined;
 
   Logs: undefined;
   AdminMore: undefined;
@@ -93,6 +93,12 @@ export type RootStackParamList = {
   TeamProjectRequests: undefined;
   AllocatedProject: undefined;
   DeadlineDetail: { deadlineId: number };
+  AdminHome: {
+    departmentId: string;
+    departmentName: string;
+    instituteId: string;
+    instituteName: string;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -113,7 +119,7 @@ const AppNavigator = () => {
       <Stack.Screen name="JoinTeam" component={JoinTeamScreen} />
       <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
       <Stack.Screen name="More" component={MoreScreen} />
-      <Stack.Screen name="AdminHome" component={AdminDashboardScreen} />
+      <Stack.Screen name="DepartmentDetails" component={DepartmentDetailsScreen} />
       <Stack.Screen name="Logs" component={AuditLogsScreen} />
       <Stack.Screen name="AdminMore" component={AdminMoreScreen} />
       <Stack.Screen
@@ -149,6 +155,7 @@ const AppNavigator = () => {
       />
       <Stack.Screen name="InstituteList" component={InstituteListScreen} />
       <Stack.Screen name="DepartmentList" component={DepartmentListScreen} />
+      <Stack.Screen name="AdminHome" component={DepartmentDetailsScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="CreateProject" component={CreateProjectScreen} />

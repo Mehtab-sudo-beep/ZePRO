@@ -1,11 +1,10 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -97,7 +96,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         navigation.replace('FacultyHome');
       }
       else if (role === 'ADMIN') {
-        navigation.replace('AddInstitute');
+        navigation.replace('InstituteList');
       }
 
     } catch (error: any) {
