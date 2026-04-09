@@ -2,10 +2,11 @@ package com.zepro.repository;
 
 import com.zepro.model.AllocationRules;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
-@Repository
 public interface AllocationRulesRepository extends JpaRepository<AllocationRules, Long> {
-
-       // Since ID is always 1, this is enough
+    // ✅ GET RULES FOR SPECIFIC DEPARTMENT & INSTITUTE
+    Optional<AllocationRules> findByDepartment_DepartmentIdAndInstitute_InstituteId(
+            Long departmentId, Long instituteId);
+    Optional<AllocationRules> findByDepartment_DepartmentId(Long departmentId);
 }

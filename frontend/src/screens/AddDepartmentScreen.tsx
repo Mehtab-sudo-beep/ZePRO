@@ -14,12 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { addDepartment } from '../api/departmentApi';
-import { AlertContext } from '../context/AlertContext';  // ✅ IMPORT
-import { ThemeContext } from '../theme/ThemeContext';  // ✅ IMPORT
+import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 type RouteP = RouteProp<RootStackParamList, 'AddDepartment'>;
 
-/* ✅ FIELD PROPS TYPE */
 interface FieldProps {
   label: string;
   placeholder: string;
@@ -35,10 +34,9 @@ interface FieldProps {
 const AddDepartmentScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteP>();
-  const { showAlert } = useContext(AlertContext);  // ✅ USE CONTEXT
-  const { isDarkMode } = useContext(ThemeContext);  // ✅ GET THEME
+  const { showAlert } = useContext(AlertContext);
+  const { theme, colors } = useContext(ThemeContext); // ✅ FIXED: Use theme & colors
 
-  // ✅ FIXED: Provide default values
   const { instituteName = '', instituteId = null } = route.params || {};
 
   const [form, setForm] = useState({
@@ -51,7 +49,23 @@ const AddDepartmentScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  /* VALIDATION */
+  const handleCodeChange = (value: string) => {
+    const uppercased = value.toUpperCase();
+    setForm(prev => ({ ...prev, code: uppercased }));
+
+    if (errors.code) {
+      setErrors(prev => ({ ...prev, code: '' }));
+    }
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
@@ -75,7 +89,6 @@ const AddDepartmentScreen: React.FC = () => {
       return;
     }
 
-    // ✅ FIXED: Check if instituteId exists
     if (!instituteId) {
       console.log('[AddDepartment] ❌ Institute ID missing');
       showAlert('Error', 'Institute ID is missing. Please go back and try again.');
@@ -120,22 +133,14 @@ const AddDepartmentScreen: React.FC = () => {
     }
   };
 
-  const handleChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Image
             source={
-              isDarkMode
+              theme === 'dark'
                 ? require('../assets/angle-white.png')  // ✅ DARK THEME
                 : require('../assets/angle.png')        // ✅ LIGHT THEME
             }
@@ -143,14 +148,14 @@ const AddDepartmentScreen: React.FC = () => {
           />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Add Department</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Add Department</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* BASIC INFO */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
 
           <Field
             label="Department Name *"
@@ -158,15 +163,17 @@ const AddDepartmentScreen: React.FC = () => {
             value={form.name}
             onChangeText={(v: string) => handleChange('name', v)}
             error={errors.name}
+            colors={colors}
           />
 
           <Field
             label="Department Code *"
             placeholder="e.g. CSE"
             value={form.code}
-            onChangeText={(v: string) => handleChange('code', v.toUpperCase())}
+            onChangeText={handleCodeChange}
             error={errors.code}
             autoCapitalize="characters"
+            colors={colors}
           />
 
           <Field
@@ -175,12 +182,13 @@ const AddDepartmentScreen: React.FC = () => {
             value={form.institute}
             onChangeText={() => { }}
             editable={false}
+            colors={colors}
           />
         </View>
 
         {/* DESCRIPTION */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Additional Information</Text>
 
           <Field
             label="Description"
@@ -188,12 +196,13 @@ const AddDepartmentScreen: React.FC = () => {
             value={form.description}
             onChangeText={(v: string) => handleChange('description', v)}
             multiline
+            colors={colors}
           />
         </View>
 
         {/* SUBMIT */}
         <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, { backgroundColor: colors.primary }, loading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -210,8 +219,12 @@ const AddDepartmentScreen: React.FC = () => {
   );
 };
 
-/* ✅ FIXED FIELD COMPONENT */
-const Field: React.FC<FieldProps> = ({
+/* ✅ UPDATED FIELD COMPONENT */
+interface FieldPropsWithTheme extends FieldProps {
+  colors?: any;
+}
+
+const Field: React.FC<FieldPropsWithTheme> = ({
   label,
   placeholder,
   value,
@@ -221,28 +234,45 @@ const Field: React.FC<FieldProps> = ({
   keyboardType = 'default',
   autoCapitalize = 'words',
   editable = true,
-}) => (
-  <View style={fieldStyles.wrapper}>
-    <Text style={fieldStyles.label}>{label}</Text>
-    <TextInput
-      style={[
-        fieldStyles.input,
-        multiline && fieldStyles.multiline,
-        error && fieldStyles.inputError,
-        !editable && fieldStyles.disabledInput,
-      ]}
-      placeholder={placeholder}
-      placeholderTextColor="#9CA3AF"
-      value={value}
-      onChangeText={onChangeText}
-      editable={editable}
-      multiline={multiline}
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-    />
-    {error && <Text style={fieldStyles.errorText}>{error}</Text>}
-  </View>
-);
+  colors,
+}) => {
+  const defaultColors = {
+    background: '#F9FAFB',
+    text: '#1F2937',
+    subText: '#6B7280',
+    border: '#E5E7EB',
+  };
+
+  const themeColors = colors || defaultColors;
+
+  return (
+    <View style={fieldStyles.wrapper}>
+      <Text style={[fieldStyles.label, { color: themeColors.text }]}>{label}</Text>
+      <TextInput
+        style={[
+          fieldStyles.input,
+          { 
+            backgroundColor: themeColors.background,
+            color: themeColors.text,
+            borderColor: error ? '#ef4444' : themeColors.border,
+          },
+          multiline && fieldStyles.multiline,
+          error && fieldStyles.inputError,
+          !editable && fieldStyles.disabledInput,
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor={themeColors.subText}
+        value={value}
+        onChangeText={onChangeText}
+        editable={editable}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+      />
+      {error && <Text style={fieldStyles.errorText}>{error}</Text>}
+    </View>
+  );
+};
 
 export default AddDepartmentScreen;
 

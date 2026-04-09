@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Image,
   StyleSheet, StatusBar, TextInput, ActivityIndicator,
@@ -10,10 +10,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { coordinatorApi } from '../api/coordinatorApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
-
-const BASE_URL = 'http://localhost:8080/api/coordinator';
 
 const FacultyCoordinatorDashboard: React.FC = () => {
   const { colors } = useContext(ThemeContext);
@@ -63,49 +62,80 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   const isMounted = useRef(false);
 
-  const authHeader = useCallback(() => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${user?.token ?? ''}`,
-  }), [user]);
-
-  const safeFetch = useCallback(async (url: string, options?: RequestInit) => {
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) return null;
-      return res.json();
-    } catch (e) {
-      return null;
-    }
-  }, []);
-
   const showLocalMsg = (text: string, type: 'success' | 'error') => {
     setMsg({ text, type });
   };
 
   // ───────── FETCH ─────────
   const fetchAll = async () => {
-    setLoading(true);
-    const headers = { headers: authHeader() };
-    const [s, f, st, t, r] = await Promise.all([
-      safeFetch(`${BASE_URL}/stats`, headers),
-      safeFetch(`${BASE_URL}/faculties`, headers),
-      safeFetch(`${BASE_URL}/students`, headers),
-      safeFetch(`${BASE_URL}/teams`, headers),
-      safeFetch(`${BASE_URL}/rules`, headers)
-    ]);
-    if (s) setStats(s);
-    if (f) setFaculties(f.map((item: any) => ({ ...item, id: String(item.facultyId) })));
-    if (st) setStudents(st.map((item: any) => ({ ...item, id: String(item.studentId) })));
-    if (t) setteam(t.map((item: any) => ({ ...item, id: String(item.teamId) })));
-    if (r) {
-      setRules(r);
-      setTempRules(r);
+    if (!user?.token) {
+      showLocalMsg("No authentication token", "error");
+      return;
     }
-    setLoading(false);
-    isMounted.current = true;
+
+    setLoading(true);
+    try {
+      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching all data...');
+      
+      // ✅ USE NEW API FUNCTIONS
+      const [s, f, st, t, r] = await Promise.all([
+        coordinatorApi.getDashboardStats(user.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Stats error:', e);
+          return null;
+        }),
+        coordinatorApi.getAllFaculties(user.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Faculties error:', e);
+          return null;
+        }),
+        coordinatorApi.getAllStudents(user.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Students error:', e);
+          return null;
+        }),
+        coordinatorApi.getAllTeams(user.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Teams error:', e);
+          return null;
+        }),
+        coordinatorApi.getRules(user.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Rules error:', e);
+          return null;
+        }),
+      ]);
+
+      if (s) {
+        console.log('[FacultyCoordinatorDashboard] ✅ Stats:', s);
+        setStats(s);
+      }
+      if (f) {
+        console.log('[FacultyCoordinatorDashboard] ✅ Faculties:', f);
+        setFaculties(f.map((item: any) => ({ ...item, id: String(item.facultyId) })));
+      }
+      if (st) {
+        console.log('[FacultyCoordinatorDashboard] ✅ Students:', st);
+        setStudents(st.map((item: any) => ({ ...item, id: String(item.studentId) })));
+      }
+      if (t) {
+        console.log('[FacultyCoordinatorDashboard] ✅ Teams:', t);
+        setteam(t.map((item: any) => ({ ...item, id: String(item.teamId) })));
+      }
+      if (r) {
+        console.log('[FacultyCoordinatorDashboard] ✅ Rules:', r);
+        setRules(r);
+        setTempRules(r);
+      }
+
+      showLocalMsg("Data loaded successfully!", "success");
+    } catch (err: any) {
+      console.log('[FacultyCoordinatorDashboard] ❌ Error:', err);
+      showLocalMsg("Failed to load data", "error");
+    } finally {
+      setLoading(false);
+      isMounted.current = true;
+    }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+  }, [user?.token]);
 
   // ───────── ACTIONS ─────────
   const handleAllocateStudent = async () => {
@@ -114,21 +144,13 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch(`${BASE_URL}/allocate`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: JSON.stringify({ studentId: selectedStudent.id, facultyId: selectedFacultyId }),
-      });
-      if (res.ok) {
-        showLocalMsg("Student allocated successfully!", "success");
-        fetchAll();
-        setShowAllocationModal(false);
-      } else {
-        const err = await res.text();
-        showLocalMsg(err || "Allocation failed", "error");
-      }
-    } catch {
-      showLocalMsg("Network error", "error");
+      // ✅ USE NEW API FUNCTION
+      await coordinatorApi.allocateStudent(selectedStudent.id, selectedFacultyId, user!.token);
+      showLocalMsg("Student allocated successfully!", "success");
+      fetchAll();
+      setShowAllocationModal(false);
+    } catch (err: any) {
+      showLocalMsg(err.message || "Allocation failed", "error");
     }
   };
 
@@ -138,77 +160,96 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch(`${BASE_URL}/override`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: JSON.stringify({ studentId: selectedStudent.id, newFacultyId: selectedFacultyId }),
-      });
-      if (res.ok) {
-        showLocalMsg("Allocation overridden successfully!", "success");
-        fetchAll();
-        setShowOverrideModal(false);
-      } else {
-        const err = await res.text();
-        showLocalMsg(err || "Override failed", "error");
-      }
-    } catch {
-      showLocalMsg("Network error", "error");
+      // ✅ USE NEW API FUNCTION
+      await coordinatorApi.overrideAllocation(selectedStudent.id, selectedFacultyId, user!.token);
+      showLocalMsg("Allocation overridden successfully!", "success");
+      fetchAll();
+      setShowOverrideModal(false);
+    } catch (err: any) {
+      showLocalMsg(err.message || "Override failed", "error");
     }
   };
 
   const handleSaveRules = async () => {
     try {
-
       const computedRules = {
         ...tempRules,
-        maxStudentsPerFaculty:
-          tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
+        maxStudentsPerFaculty: tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
       };
 
-      const res = await fetch(`${BASE_URL}/rules`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: JSON.stringify(computedRules),
-      });
-
-      if (res.ok) {
-
-        // ✅ ONLY NOW update UI
-        setRules(computedRules);
-
-        showLocalMsg("Rules updated successfully!", "success");
-
-        // ❌ REMOVE THIS → NO AUTO REFRESH
-        // fetchAll();
-
-      } else {
-        showLocalMsg("Failed to save rules", "error");
-      }
-
-    } catch {
-      showLocalMsg("Network error", "error");
+      // ✅ USE NEW API FUNCTION
+      const result = await coordinatorApi.saveRules(computedRules, user!.token);
+      
+      setRules(computedRules);
+      showLocalMsg("Rules updated successfully!", "success");
+      
+      console.log('[FacultyCoordinatorDashboard] ✅ Rules saved:', result);
+    } catch (err: any) {
+      showLocalMsg(err.message || "Failed to save rules", "error");
     }
   };
 
   const handleDownloadReport = async () => {
     try {
       setLoading(true);
+      console.log('[FacultyCoordinatorDashboard] 📥 Downloading report...');
+      
+      // ✅ USE NEW API FUNCTION
+      const blob = await coordinatorApi.downloadTeamsReportPdf(user!.token);
+      
       const fileName = `team_report_${Date.now()}.pdf`;
       const filePath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${fileName}`;
+      
       await ReactNativeBlobUtil.config({
         path: filePath,
         addAndroidDownloads: {
           useDownloadManager: true,
           notification: true,
-          title: 'team Report',
+          title: 'Team Report',
           mime: 'application/pdf',
         },
-      }).fetch('GET', `${BASE_URL}/teams/report/pdf`, authHeader());
+      }).fetch('GET', `http://localhost:8080/api/coordinator/teams/report/pdf`, {
+        'Authorization': `Bearer ${user!.token}`,
+      });
+      
       showLocalMsg("Report downloaded successfully!", "success");
-    } catch {
+      console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded to:', filePath);
+    } catch (err: any) {
       showLocalMsg("Download failed", "error");
+      console.log('[FacultyCoordinatorDashboard] ❌ Download error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ───────── SEARCH HANDLERS ─────────
+  const handleSearchFaculties = async (query: string) => {
+    setFacultySearchQuery(query);
+    if (query.length === 0) {
+      fetchAll();
+      return;
+    }
+    try {
+      console.log('[FacultyCoordinatorDashboard] 🔍 Searching faculties:', query);
+      const results = await coordinatorApi.searchFaculties(query, user!.token);
+      setFaculties(results.map((item: any) => ({ ...item, id: String(item.facultyId) })));
+    } catch (err) {
+      console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
+    }
+  };
+
+  const handleSearchStudents = async (query: string) => {
+    setStudentSearchQuery(query);
+    if (query.length === 0) {
+      fetchAll();
+      return;
+    }
+    try {
+      console.log('[FacultyCoordinatorDashboard] 🔍 Searching students:', query);
+      const results = await coordinatorApi.searchStudents(query, user!.token);
+      setStudents(results.map((item: any) => ({ ...item, id: String(item.studentId) })));
+    } catch (err) {
+      console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
     }
   };
 
@@ -338,8 +379,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   const renderFaculties = () => (
     <>
-      <SearchBox value={facultySearchQuery} setValue={setFacultySearchQuery} />
-      {faculties.filter(f => f.name.toLowerCase().includes(facultySearchQuery.toLowerCase())).map(f => {
+      <SearchBox value={facultySearchQuery} setValue={handleSearchFaculties} />
+      {faculties.map(f => {
         const isFull = f.allocatedStudents >= f.maxStudents;
         
         return (
@@ -389,11 +430,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     </>
   );
 
-
   const renderStudents = () => (
     <>
-      <SearchBox value={studentSearchQuery} setValue={setStudentSearchQuery} />
-      {students.filter(s => s.name.toLowerCase().includes(studentSearchQuery.toLowerCase())).map(s => (
+      <SearchBox value={studentSearchQuery} setValue={handleSearchStudents} />
+      {students.map(s => (
         <Card key={s.id}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: accentSoft, justifyContent: 'center', alignItems: 'center' }}>
@@ -495,90 +535,66 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>Rule Configuration</Text>
         </View>
 
-        {/* MAX TEAM SIZE */}
+        <View>
+          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+            MAX TEAM SIZE
+          </Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: divider }]}
+            keyboardType="numeric"
+            value={tempRules.maxTeamSize ?? ""}
+            onChangeText={v => {
+              if (/^\d*$/.test(v)) {
+                setTempRules(prev => {
+                  const teamSize = v;
+                  const projects = prev.maxProjectsPerFaculty || "0";
+                  const computed = parseInt(teamSize || "0") * parseInt(projects || "0");
+                  return {
+                    ...prev,
+                    maxTeamSize: teamSize,
+                    maxStudentsPerFaculty: computed
+                  };
+                });
+              }
+            }}
+          />
+        </View>
 
-<View>
-  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-    MAX TEAM SIZE
-  </Text>
-  <TextInput
-    style={[styles.input, { color: colors.text, borderColor: divider }]}
-    keyboardType="numeric"
-    value={tempRules.maxTeamSize ?? ""}
-    onChangeText={v => {
-      if (/^\d*$/.test(v)) {
+        <View style={{ marginTop: 12 }}>
+          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+            MAX PROJECTS PER FACULTY
+          </Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: divider }]}
+            keyboardType="numeric"
+            value={tempRules.maxProjectsPerFaculty ?? ""}
+            onChangeText={v => {
+              if (/^\d*$/.test(v)) {
+                setTempRules(prev => {
+                  const projects = v;
+                  const teamSize = prev.maxTeamSize || "0";
+                  const computed = parseInt(teamSize || "0") * parseInt(projects || "0");
+                  return {
+                    ...prev,
+                    maxProjectsPerFaculty: projects,
+                    maxStudentsPerFaculty: computed
+                  };
+                });
+              }
+            }}
+          />
+        </View>
 
-        setTempRules(prev => {
-          const teamSize = v;
-          const projects = prev.maxProjectsPerFaculty || "0";
-
-          const computed =
-            parseInt(teamSize || "0") *
-            parseInt(projects || "0");
-
-          return {
-            ...prev,
-            maxTeamSize: teamSize,
-            maxStudentsPerFaculty: computed
-          };
-        });
-
-      }
-    }}
-  />
-</View>
-
-
-<View>
-  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-    MAX PROJECTS PER FACULTY
-  </Text>
-  <TextInput
-    style={[styles.input, { color: colors.text, borderColor: divider }]}
-    keyboardType="numeric"
-    value={tempRules.maxProjectsPerFaculty ?? ""}
-    onChangeText={v => {
-      if (/^\d*$/.test(v)) {
-
-        setTempRules(prev => {
-          const projects = v;
-          const teamSize = prev.maxTeamSize || "0";
-
-          const computed =
-            parseInt(teamSize || "0") *
-            parseInt(projects || "0");
-
-          return {
-            ...prev,
-            maxProjectsPerFaculty: projects,
-            maxStudentsPerFaculty: computed
-          };
-        });
-
-      }
-    }}
-  />
-</View>
-
-<View>
-  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-    MAX STUDENTS PER FACULTY (AUTO)
-  </Text>
-
-  <View
-    style={[
-      styles.input,
-      {
-        justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.05)'
-      }
-    ]}
-  >
-    <Text style={{ color: colors.text, fontWeight: '700' }}>
-      {tempRules.maxStudentsPerFaculty || 0}
-    </Text>
-  </View>
-</View>
+        <View style={{ marginTop: 12 }}>
+          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
+            MAX STUDENTS PER FACULTY (AUTO)
+          </Text>
+          <View style={[styles.input, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+            <Text style={{ color: colors.text, fontWeight: '700' }}>
+              {tempRules.maxStudentsPerFaculty || 0}
+            </Text>
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
@@ -588,7 +604,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         </TouchableOpacity>
       </Card>
 
-      {/* Active Rules Display (Visualizing Current System State) */}
+      {/* Active Rules Display */}
       <SectionLabel label="Currently Active Rules" />
       <View style={[styles.activeRulesContainer, { backgroundColor: isDark ? 'rgba(31,41,55,0.5)' : '#f8fafc', borderColor: colors.border }]}> 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -687,7 +703,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             {['overview', 'faculties', 'students', 'download', 'rules'].map(tab => (
               <TouchableOpacity
                 key={tab}
-                style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]}
+                style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]} 
                 onPress={() => { setMsg(null); setActiveTab(tab as any); }}
               >
                 <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}> 
@@ -743,7 +759,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderBottomWidth: 1,
   },
-
   sectionLabel: {
     fontSize: 10,
     fontWeight: '800',
@@ -751,7 +766,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     letterSpacing: 1,
   },
-
   card: {
     borderRadius: 16,
     padding: 16,
@@ -762,14 +776,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
   },
-
   menuItem: {
     width: '18%',
     alignItems: 'center',
     paddingVertical: 8,
     borderRadius: 12,
   },
-
   iconWrap: {
     width: 32,
     height: 32,
@@ -777,7 +789,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   searchBox: {
     flexDirection: 'row',
     paddingHorizontal: 12,
@@ -787,7 +798,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 45,
   },
-
   button: {
     height: 48,
     borderRadius: 12,
@@ -798,7 +808,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     elevation: 2,
   },
-
   miniBtn: {
     height: 38,
     borderRadius: 10,
@@ -806,7 +815,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 12,
   },
-
   input: {
     height: 45,
     borderWidth: 1,
@@ -814,7 +822,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
   },
-
   bottomTab: {
     height: 65,
     flexDirection: 'row',
@@ -822,16 +829,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
   },
-
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   tabIcon: {
     width: 22, height: 22, resizeMode: 'contain'
   },
-
   inlineAlert: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -847,7 +851,6 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   alertIcon: { width: 18, height: 18 },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

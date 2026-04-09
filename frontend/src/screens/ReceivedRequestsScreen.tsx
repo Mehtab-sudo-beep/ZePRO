@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,38 +39,90 @@ const ReceivedRequestsScreen: React.FC = () => {
   const isDark = colors.background === '#111827';
 
   const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
   // Rejection modal state
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectTargetId, setRejectTargetId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
 
+  // ✅ LOAD REQUESTS WITH ERROR HANDLING
   const loadRequests = async () => {
     try {
+      setLoading(true);
       const studentId = await AsyncStorage.getItem('studentId');
+      console.log('[ReceivedRequests] 📥 Fetching requests for student:', studentId);
+
       const res = await getReceivedRequests(Number(studentId));
+      console.log('[ReceivedRequests] ✅ Requests loaded:', res.data);
+
       if (Array.isArray(res.data)) {
         setRequests(res.data);
       } else {
         setRequests([]);
       }
-    } catch (err) {
-      console.log('RECEIVED REQUEST ERROR:', err);
+    } catch (err: any) {
+      console.log('[ReceivedRequests] ❌ Error:', err.response?.data?.error || err.message);
+      showAlert('Error', err.response?.data?.error || 'Failed to load requests');
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadRequests();
-  }, []);
+  // ✅ USE FOCUS EFFECT
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRequests();
+    }, [])
+  );
 
+  // ✅ HANDLE ACCEPT WITH ERROR HANDLING
   const handleAccept = async (id: number) => {
     try {
+      setProcessingId(id);
+      console.log('[ReceivedRequests] ✅ Approving request:', id);
+
       await approveRequest(id);
+
+      console.log('[ReceivedRequests] ✅ Request approved');
       loadRequests();
-      showAlert('Accepted', 'Student has been added to your team.');
-    } catch (err) {
-      console.log('APPROVE ERROR:', err);
-      showAlert('Error', 'Failed to accept request.');
+      showAlert('Accepted', 'Student has been added to your team.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (err: any) {
+      console.log('[ReceivedRequests] ❌ Error:', err.response?.data?.error || err.message);
+
+      const errorMsg = err.response?.data?.error || 'Failed to accept request';
+
+      // ✅ SPECIFIC ERROR MESSAGES
+      if (errorMsg.includes('different department')) {
+        showAlert(
+          '❌ Department Mismatch',
+          'Student is from a different department. Cannot add to team.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('different institute')) {
+        showAlert(
+          '❌ Institute Mismatch',
+          'Student is from a different institute. Cannot add to team.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('Limit reached')) {
+        showAlert(
+          '👥 Team Full',
+          'Team has reached maximum size due to allocation rules.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        showAlert('Error', errorMsg, [{ text: 'OK' }]);
+      }
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -79,21 +132,33 @@ const ReceivedRequestsScreen: React.FC = () => {
     setShowRejectModal(true);
   };
 
+  // ✅ HANDLE REJECT WITH ERROR HANDLING
   const handleRejectConfirm = async () => {
     if (!rejectReason.trim()) {
       showAlert('Required', 'Please enter a reason for rejection.');
       return;
     }
     try {
+      setRejectingId(rejectTargetId!);
+      console.log('[ReceivedRequests] ❌ Rejecting request:', rejectTargetId);
+
       await rejectRequest(rejectTargetId!, rejectReason.trim());
+
+      console.log('[ReceivedRequests] ✅ Request rejected');
       setShowRejectModal(false);
       setRejectTargetId(null);
       setRejectReason('');
       loadRequests();
-      showAlert('Rejected', 'Request has been rejected with feedback.');
-    } catch (err) {
-      console.log('REJECT ERROR:', err);
-      showAlert('Error', 'Failed to reject request.');
+      showAlert('Rejected', 'Request has been rejected with feedback.', [
+        {
+          text: 'OK',
+        },
+      ]);
+    } catch (err: any) {
+      console.log('[ReceivedRequests] ❌ Error:', err.response?.data?.error || err.message);
+      showAlert('Error', err.response?.data?.error || 'Failed to reject request.');
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -122,74 +187,86 @@ const ReceivedRequestsScreen: React.FC = () => {
               Join Requests
             </Text>
             <Text style={{ color: colors.subText, fontSize: 12 }}>
-              {pendingCount} pending
+              {pendingCount} pending • {requests.length} total
             </Text>
           </View>
         </View>
 
         {/* Cards */}
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
 
-          {requests.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={{ color: colors.subText, fontSize: 16 }}>No requests yet</Text>
-            </View>
-          ) : (
-            requests.map((req) => (
-              <View
-                key={req.requestId}
-                style={[styles.card, { backgroundColor: colors.card }]}
-              >
-                <View style={styles.cardRow}>
-                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
-                    {req.studentName}
-                  </Text>
-                  <View style={[styles.badge, { backgroundColor: statusColor(req.status) + '20' }]}>
-                    <Text style={{ color: statusColor(req.status), fontWeight: '600', fontSize: 12 }}>
-                      {req.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                <Text style={{ color: colors.subText, fontSize: 13 }}>
-                  Student ID: {req.studentId}
-                </Text>
-
-                {/* Show rejection reason if rejected */}
-                {req.status === 'REJECTED' && req.rejectionReason ? (
-                  <View style={[styles.reasonBox, { backgroundColor: '#FEE2E2' }]}>
-                    <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>
-                      Reason:
-                    </Text>
-                    <Text style={{ color: '#DC2626', fontSize: 13, marginTop: 2 }}>
-                      {req.rejectionReason}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {req.status === 'PENDING' && (
-                  <View style={styles.actions}>
-                    <TouchableOpacity
-                      style={styles.acceptBtn}
-                      onPress={() => handleAccept(req.requestId)}
-                    >
-                      <Text style={{ color: '#16A34A', fontWeight: '600' }}>Accept</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.rejectBtn}
-                      onPress={() => openRejectModal(req.requestId)}
-                    >
-                      <Text style={{ color: '#DC2626', fontWeight: '600' }}>Reject</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+            {requests.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Text style={{ color: colors.subText, fontSize: 16 }}>No requests yet</Text>
               </View>
-            ))
-          )}
-        </ScrollView>
+            ) : (
+              requests.map((req) => (
+                <View
+                  key={req.requestId}
+                  style={[styles.card, { backgroundColor: colors.card }]}
+                >
+                  <View style={styles.cardRow}>
+                    <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+                      {req.studentName}
+                    </Text>
+                    <View style={[styles.badge, { backgroundColor: statusColor(req.status) + '20' }]}>
+                      <Text style={{ color: statusColor(req.status), fontWeight: '600', fontSize: 12 }}>
+                        {req.status}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+                  <Text style={{ color: colors.subText, fontSize: 13 }}>
+                    Student ID: {req.studentId}
+                  </Text>
+
+                  {/* Show rejection reason if rejected */}
+                  {req.status === 'REJECTED' && req.rejectionReason ? (
+                    <View style={[styles.reasonBox, { backgroundColor: '#FEE2E2' }]}>
+                      <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>
+                        Reason:
+                      </Text>
+                      <Text style={{ color: '#DC2626', fontSize: 13, marginTop: 2 }}>
+                        {req.rejectionReason}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {req.status === 'PENDING' && (
+                    <View style={styles.actions}>
+                      <TouchableOpacity
+                        style={styles.acceptBtn}
+                        onPress={() => handleAccept(req.requestId)}
+                        disabled={processingId === req.requestId}
+                      >
+                        {processingId === req.requestId ? (
+                          <ActivityIndicator color="#16A34A" size="small" />
+                        ) : (
+                          <Text style={{ color: '#16A34A', fontWeight: '600' }}>Accept</Text>
+                        )}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.rejectBtn}
+                        onPress={() => openRejectModal(req.requestId)}
+                        disabled={processingId === req.requestId}
+                      >
+                        <Text style={{ color: '#DC2626', fontWeight: '600' }}>Reject</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </ScrollView>
+        )}
 
         {/* Rejection Reason Modal */}
         <Modal visible={showRejectModal} transparent animationType="fade">
@@ -199,7 +276,7 @@ const ReceivedRequestsScreen: React.FC = () => {
               {/* Modal header */}
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>Reject Request</Text>
-                <TouchableOpacity onPress={() => setShowRejectModal(false)}>
+                <TouchableOpacity onPress={() => setShowRejectModal(false)} disabled={rejectingId !== null}>
                   <Text style={{ fontSize: 20, color: colors.subText }}>✕</Text>
                 </TouchableOpacity>
               </View>
@@ -225,6 +302,7 @@ const ReceivedRequestsScreen: React.FC = () => {
                 onChangeText={setRejectReason}
                 multiline
                 numberOfLines={4}
+                editable={rejectingId === null}
               />
 
               {/* Modal buttons */}
@@ -232,6 +310,7 @@ const ReceivedRequestsScreen: React.FC = () => {
                 <TouchableOpacity
                   style={[styles.modalCancelBtn, { borderColor: colors.border }]}
                   onPress={() => setShowRejectModal(false)}
+                  disabled={rejectingId !== null}
                 >
                   <Text style={{ color: colors.subText, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
                 </TouchableOpacity>
@@ -239,8 +318,13 @@ const ReceivedRequestsScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.modalRejectBtn}
                   onPress={handleRejectConfirm}
+                  disabled={rejectingId !== null}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Reject</Text>
+                  {rejectingId !== null ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Reject</Text>
+                  )}
                 </TouchableOpacity>
               </View>
 
@@ -256,7 +340,6 @@ const ReceivedRequestsScreen: React.FC = () => {
 export default ReceivedRequestsScreen;
 
 const styles = StyleSheet.create({
-
   container: { flex: 1 },
 
   header: {
@@ -271,10 +354,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
 
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700' },
 
   backButton: {
     width: 36,
@@ -309,10 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  divider: {
-    height: 1,
-    marginVertical: 10,
-  },
+  divider: { height: 1, marginVertical: 10 },
 
   reasonBox: {
     marginTop: 10,
@@ -349,7 +426,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -374,15 +450,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
 
-  modalDivider: {
-    height: 1,
-    marginBottom: 14,
-  },
+  modalDivider: { height: 1, marginBottom: 14 },
 
   reasonInput: {
     borderWidth: 1,

@@ -14,9 +14,10 @@ import com.zepro.repository.ProjectDomainRepository;
 import com.zepro.repository.ProjectSubDomainRepository;
 import com.zepro.repository.StudentRepository;
 import com.zepro.model.Student;
-
+import com.zepro.service.FacultyService;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MeetingService {
@@ -27,31 +28,32 @@ public class MeetingService {
     private final ProjectDomainRepository projectDomainRepository;
     private final ProjectSubDomainRepository projectSubDomainRepository;
     private final StudentRepository studentRepository;
+    private final FacultyService facultyService;
 
     public MeetingService(MeetingRepository meetingRepository,
             ProjectRequestRepository requestRepository,
             ProjectRepository projectRepository,
             ProjectDomainRepository projectDomainRepository,
             ProjectSubDomainRepository projectSubDomainRepository,
-            StudentRepository studentRepository) {
+            StudentRepository studentRepository,
+            FacultyService facultyService) {
         this.meetingRepository = meetingRepository;
         this.requestRepository = requestRepository;
         this.projectRepository = projectRepository;
         this.projectDomainRepository = projectDomainRepository;
         this.projectSubDomainRepository = projectSubDomainRepository;
         this.studentRepository = studentRepository;
+        this.facultyService = facultyService;
     }
 
     // Schedule meeting
+    @Transactional
     public MeetingResponse scheduleMeeting(CreateMeetingRequest request) {
 
-        System.out.println("Scheduling meeting...");
-        System.out.println("Request ID: " + request.getRequestId());
-        System.out.println("Meeting Link: " + request.getMeetingLink());
-        System.out.println("Meeting Time: " + request.getMeetingTime());
+        System.out.println("[MeetingService] 📅 Scheduling meeting for request: " + request.getRequestId());
 
         ProjectRequest projectRequest = requestRepository.findById(request.getRequestId())
-                .orElseThrow(() -> new RuntimeException("Request not found"));
+                .orElseThrow(() -> new RuntimeException("Project request not found"));
 
         // 🔒 Prevent duplicate scheduling
         if (meetingRepository.findByRequestRequestId(request.getRequestId()).isPresent()) {
@@ -79,6 +81,16 @@ public class MeetingService {
         if (project != null) {
             project.setStatus("IN_PROGRESS"); // ✅ NEW STATE
             projectRepository.save(project);
+        }
+
+        // ✅ UPDATE MAX SLOTS WHEN SCHEDULING
+        if (projectRequest.getTeam() != null && projectRequest.getProject() != null) {
+            int teamSize = projectRequest.getTeam().getMembers() != null 
+                ? projectRequest.getTeam().getMembers().size() 
+                : 0;
+            
+            facultyService.updateMaximumSlotsReached(projectRequest.getProject().getProjectId(), teamSize);
+            System.out.println("[MeetingService] 📊 Updated max slots for project: " + teamSize);
         }
 
         System.out.println("Meeting saved successfully");

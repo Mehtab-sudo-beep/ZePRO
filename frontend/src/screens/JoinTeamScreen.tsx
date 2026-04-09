@@ -7,17 +7,15 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import { getAllTeams, sendJoinRequest } from "../api/studentApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect } from "react";
-/* =========================
-   TYPES
-========================= */
+
 interface Team {
   teamId: number;
   teamName: string;
@@ -27,12 +25,9 @@ interface Team {
   alreadyRequested: boolean;
 }
 
-// ONLY UI IMPROVED — NO LOGIC CHANGED
-
 const JoinTeamScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const isDark = colors.background === '#111827';
-  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
   const divider = isDark ? '#374151' : '#E5E7EB';
 
   const { showAlert } = useContext(AlertContext);
@@ -40,43 +35,112 @@ const JoinTeamScreen: React.FC = () => {
 
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sendingRequest, setSendingRequest] = useState(false);
 
-  useEffect(() => {
-    const loadTeams = async () => {
-      try {
-        const studentId = await AsyncStorage.getItem("studentId");
-        const res = await getAllTeams(Number(studentId));
-        setTeams(res.data);
-      } catch (err) {
-        console.log("TEAM LIST ERROR:", err);
+  // ✅ LOAD TEAMS WITH ERROR HANDLING
+  const loadTeams = async () => {
+    try {
+      setLoading(true);
+      const studentId = await AsyncStorage.getItem("studentId");
+      console.log('[JoinTeam] 📋 Fetching teams for student:', studentId);
+
+      const res = await getAllTeams(Number(studentId));
+      console.log('[JoinTeam] ✅ Teams loaded:', res.data);
+      setTeams(res.data || []);
+    } catch (err: any) {
+      console.log('[JoinTeam] ❌ Error:', err.response?.data?.error || err.message);
+
+      // ✅ HANDLE PROFILE INCOMPLETE ERROR
+      if (err.response?.data?.error?.includes('profile')) {
+        showAlert(
+          'Complete Profile',
+          'Please complete your profile first to join teams.',
+          [
+            {
+              text: 'Complete Profile',
+              onPress: () => navigation.navigate('CompleteProfile' as any),
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
       }
-    };
-    loadTeams();
-  }, []);
 
+      showAlert('Error', err.response?.data?.error || 'Failed to load teams');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ USE FOCUS EFFECT TO RELOAD TEAMS
+  useFocusEffect(
+    React.useCallback(() => {
+      loadTeams();
+    }, [])
+  );
+
+  // ✅ SEND JOIN REQUEST WITH ERROR HANDLING
   const sendRequest = async () => {
     try {
+      setSendingRequest(true);
       const studentId = await AsyncStorage.getItem("studentId");
+
+      console.log('[JoinTeam] 📤 Sending join request for team:', selectedTeam?.teamId);
 
       await sendJoinRequest({
         studentId: Number(studentId),
         teamId: selectedTeam!.teamId,
       });
 
-      showAlert("Request Sent", "Team leader will review your request.");
+      console.log('[JoinTeam] ✅ Request sent successfully');
+      showAlert("Request Sent", "Team leader will review your request.", [
+        {
+          text: 'OK',
+          onPress: () => {
+            const res = getAllTeams(Number(studentId));
+            res.then(r => {
+              setTeams(r.data || []);
+              const updatedTeam = r.data?.find(
+                (t: Team) => t.teamId === selectedTeam!.teamId
+              );
+              setSelectedTeam(updatedTeam || null);
+            });
+          },
+        },
+      ]);
 
-      const res = await getAllTeams(Number(studentId));
-      setTeams(res.data);
+    } catch (err: any) {
+      console.log('[JoinTeam] ❌ Error:', err.response?.data?.error || err.message);
 
-      const updatedTeam = res.data.find(
-        (t: Team) => t.teamId === selectedTeam!.teamId
-      );
+      const errorMsg = err.response?.data?.error || 'Failed to send request';
 
-      setSelectedTeam(updatedTeam || null);
-
-    } catch (err) {
-      console.log("JOIN REQUEST ERROR:", err);
-      showAlert("Error sending request");
+      // ✅ SPECIFIC ERROR MESSAGES
+      if (errorMsg.includes('different department')) {
+        showAlert(
+          '❌ Department Mismatch',
+          'You are from a different department. Cannot join this team.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('different institute')) {
+        showAlert(
+          '❌ Institute Mismatch',
+          'You are from a different institute. Cannot join this team.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('already')) {
+        showAlert('⚠️ Already Requested', errorMsg, [{ text: 'OK' }]);
+      } else if (errorMsg.includes('Limit reached')) {
+        showAlert(
+          '👥 Team Full',
+          'This team has reached the maximum size. Allocation rules prevent adding more members.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        showAlert('Error', errorMsg, [{ text: 'OK' }]);
+      }
+    } finally {
+      setSendingRequest(false);
     }
   };
 
@@ -117,7 +181,7 @@ const JoinTeamScreen: React.FC = () => {
             </Text>
 
             <Text style={[styles.sectionLabel, { color: colors.subText }]}>
-              MEMBERS
+              MEMBERS ({selectedTeam.members.length})
             </Text>
 
             {selectedTeam.members.map((m, i) => (
@@ -134,11 +198,15 @@ const JoinTeamScreen: React.FC = () => {
               { backgroundColor: selectedTeam.alreadyRequested ? '#9CA3AF' : colors.primary }
             ]}
             onPress={sendRequest}
-            disabled={selectedTeam.alreadyRequested}
+            disabled={selectedTeam.alreadyRequested || sendingRequest}
           >
-            <Text style={styles.btnText}>
-              {selectedTeam.alreadyRequested ? 'Request Sent' : 'Send Join Request'}
-            </Text>
+            {sendingRequest ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>
+                {selectedTeam.alreadyRequested ? '✓ Request Sent' : 'Send Join Request'}
+              </Text>
+            )}
           </TouchableOpacity>
 
         </ScrollView>
@@ -161,46 +229,65 @@ const JoinTeamScreen: React.FC = () => {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Join Team
         </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
+          {teams.length} teams
+        </Text>
       </View>
 
-      <FlatList
-        data={teams}
-        keyExtractor={item => item.teamId.toString()}
-        contentContainerStyle={styles.content}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.card }]}
-            onPress={() => setSelectedTeam(item)}
-          >
-            <Text style={[styles.teamName, { color: colors.text }]}>
-              {item.teamName}
-            </Text>
-
-            {item.description && (
-              <Text style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
-                {item.description}
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : teams.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: colors.subText, fontSize: 16 }}>
+            No teams available in your department
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={teams}
+          keyExtractor={item => item.teamId.toString()}
+          contentContainerStyle={styles.content}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.card, { backgroundColor: colors.card }]}
+              onPress={() => setSelectedTeam(item)}
+            >
+              <Text style={[styles.teamName, { color: colors.text }]}>
+                {item.teamName}
               </Text>
-            )}
 
-            <Text style={[styles.meta, { color: colors.subText }]}>
-              Leader: {item.teamLead}
-            </Text>
+              {item.description && (
+                <Text style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              )}
 
-            <Text style={[styles.meta, { color: colors.subText }]}>
-              {item.members.length}/3 members
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+              <Text style={[styles.meta, { color: colors.subText }]}>
+                Leader: {item.teamLead}
+              </Text>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                <Text style={[styles.meta, { color: colors.subText }]}>
+                  Members: {item.members.length}
+                </Text>
+                {item.alreadyRequested && (
+                  <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>
+                    ✓ Requested
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };
 
 export default JoinTeamScreen;
 
-/* =========================
-   STYLES
-========================= */
 const styles = StyleSheet.create({
   header: {
     height: 64,
@@ -214,6 +301,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+
+  headerSubtitle: {
+    fontSize: 12,
+    marginLeft: 'auto',
   },
 
   content: {

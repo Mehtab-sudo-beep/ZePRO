@@ -17,13 +17,12 @@ import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getProfileStatus,
+  completeFacultyProfile,
   getAllInstitutes,
   getDepartmentsByInstitute,
-  completeStudentProfile,
-} from '../api/studentApi';
+} from '../api/facultyApi';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CompleteProfile'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CompleteFacultyProfile'>;
 
 // ── Reusable Picker Modal ────────────────────────────────────────────────────
 const PickerModal = ({
@@ -124,24 +123,25 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
-// ── Year options ──────────────────────────────────────────────────────────────
-const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-
 // ── Main Screen ───────────────────────────────────────────────────────────────
-const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
+const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
 
-  // ✅ ADD THIS REF TO TRACK MOUNTED STATE
+  // ✅ TRACK MOUNTED STATE
   const isMountedRef = useRef(true);
 
   // Form fields
+  const [employeeId, setEmployeeId] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [specialization, setSpecialization] = useState('');
+  const [experience, setExperience] = useState('');
+  const [qualification, setQualification] = useState('');
+  const [cabinNo, setCabinNo] = useState('');
   const [phone, setPhone] = useState('');
-  const [rollNumber, setRollNumber] = useState('');
-  const [cgpa, setCgpa] = useState('');
-  const [year, setYear] = useState('');
-  const [resumeLink, setResumeLink] = useState('');
-  const [marksheetLink, setMarksheetLink] = useState('');
+  const [problemStatementLink, setProblemStatementLink] = useState('');
+  const [domains, setDomains] = useState('');
+  const [subDomains, setSubDomains] = useState('');
 
   // Institute / Department
   const [institutes, setInstitutes] = useState<any[]>([]);
@@ -152,21 +152,20 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   // Modal visibility
   const [showInstitutePicker, setShowInstitutePicker] = useState(false);
   const [showDepartmentPicker, setShowDepartmentPicker] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
 
   // UI state
   const [loadingInstitutes, setLoadingInstitutes] = useState(true);
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ ADD THIS USEEFFECT - Track component mount/unmount
+  // ✅ TRACK MOUNT/UNMOUNT
   useEffect(() => {
     isMountedRef.current = true;
-    console.log('[CompleteProfile] 📱 Component mounted');
+    console.log('[CompleteFacultyProfile] 📱 Component mounted');
 
     return () => {
       isMountedRef.current = false;
-      console.log('[CompleteProfile] 📱 Component unmounted');
+      console.log('[CompleteFacultyProfile] 📱 Component unmounted');
     };
   }, []);
 
@@ -174,19 +173,37 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     const fetchInstitutes = async () => {
       try {
+        console.log('[CompleteFacultyProfile] 📡 Fetching institutes...');
         const res = await getAllInstitutes();
+        
         if (isMountedRef.current) {
-          setInstitutes(res.data);
-          console.log('[CompleteProfile] ✅ Institutes loaded:', res.data.length);
+          console.log('[CompleteFacultyProfile] ✅ Institutes response:', res);
+          console.log('[CompleteFacultyProfile] Status:', res.status);
+          console.log('[CompleteFacultyProfile] Data:', res.data);
+          console.log('[CompleteFacultyProfile] Data type:', typeof res.data);
+          console.log('[CompleteFacultyProfile] Is Array:', Array.isArray(res.data));
+          
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            console.log('[CompleteFacultyProfile] ✅ Setting institutes:', res.data);
+            setInstitutes(res.data);
+          } else {
+            console.log('[CompleteFacultyProfile] ⚠️  Empty institutes array');
+            setInstitutes([]);
+          }
         }
       } catch (e: any) {
-        console.log('[CompleteProfile] ❌ ERROR LOADING INSTITUTES:', e);
+        console.log('[CompleteFacultyProfile] ❌ ERROR LOADING INSTITUTES');
+        console.log('[CompleteFacultyProfile] Error name:', e.name);
+        console.log('[CompleteFacultyProfile] Error message:', e.message);
+        console.log('[CompleteFacultyProfile] Error code:', e.code);
+        console.log('[CompleteFacultyProfile] Error config:', e.config?.url);
+        console.log('[CompleteFacultyProfile] Response status:', e.response?.status);
+        console.log('[CompleteFacultyProfile] Response data:', e.response?.data);
+        console.log('[CompleteFacultyProfile] Full error:', JSON.stringify(e, null, 2));
+        
         if (isMountedRef.current) {
-          showAlert(
-            'Error',
-            'Failed to load institutes. Please try again.',
-            [{ text: 'OK' }]
-          );
+          showAlert('Error', `Failed to load institutes: ${e.message}`, [{ text: 'OK' }]);
+          setInstitutes([]);
         }
       } finally {
         if (isMountedRef.current) {
@@ -205,15 +222,39 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
       setSelectedDepartment(null);
       setDepartments([]);
       try {
+        console.log('[CompleteFacultyProfile] 📡 Fetching departments...');
+        console.log('[CompleteFacultyProfile] Institute ID:', selectedInstitute.instituteId);
+        
         const res = await getDepartmentsByInstitute(selectedInstitute.instituteId);
+        
         if (isMountedRef.current) {
-          setDepartments(res.data);
-          console.log('[CompleteProfile] ✅ Departments loaded:', res.data.length);
+          console.log('[CompleteFacultyProfile] ✅ Departments response:', res);
+          console.log('[CompleteFacultyProfile] Status:', res.status);
+          console.log('[CompleteFacultyProfile] Data:', res.data);
+          console.log('[CompleteFacultyProfile] Data type:', typeof res.data);
+          console.log('[CompleteFacultyProfile] Is Array:', Array.isArray(res.data));
+          
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            console.log('[CompleteFacultyProfile] ✅ Setting departments:', res.data);
+            setDepartments(res.data);
+          } else {
+            console.log('[CompleteFacultyProfile] ⚠️  Empty departments array');
+            setDepartments([]);
+          }
         }
       } catch (e: any) {
-        console.log('[CompleteProfile] ❌ ERROR LOADING DEPARTMENTS:', e);
+        console.log('[CompleteFacultyProfile] ❌ ERROR LOADING DEPARTMENTS');
+        console.log('[CompleteFacultyProfile] Error name:', e.name);
+        console.log('[CompleteFacultyProfile] Error message:', e.message);
+        console.log('[CompleteFacultyProfile] Error code:', e.code);
+        console.log('[CompleteFacultyProfile] Error config:', e.config?.url);
+        console.log('[CompleteFacultyProfile] Response status:', e.response?.status);
+        console.log('[CompleteFacultyProfile] Response data:', e.response?.data);
+        console.log('[CompleteFacultyProfile] Full error:', JSON.stringify(e, null, 2));
+        
         if (isMountedRef.current) {
-          showAlert('Error', 'Failed to load departments.', [{ text: 'OK' }]);
+          showAlert('Error', `Failed to load departments: ${e.message}`, [{ text: 'OK' }]);
+          setDepartments([]);
         }
       } finally {
         if (isMountedRef.current) {
@@ -225,19 +266,20 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   }, [selectedInstitute, showAlert]);
 
   const validate = (): string | null => {
+    if (!employeeId.trim()) return 'Employee ID is required.';
+    if (!designation.trim()) return 'Designation is required.';
+    if (!specialization.trim()) return 'Specialization is required.';
+    if (!experience.trim()) return 'Experience is required.';
+    if (!qualification.trim()) return 'Qualification is required.';
+    if (!cabinNo.trim()) return 'Cabin number is required.';
     if (!phone.trim()) return 'Phone number is required.';
-    if (!/^[0-9]{10}$/.test(phone.replace(/\D/g, ''))) 
+    if (!/^[0-9]{10}$/.test(phone.replace(/\D/g, '')))
       return 'Please enter a valid 10-digit phone number.';
-    
-    if (!rollNumber.trim()) return 'Roll number is required.';
-    const cgpaNum = parseFloat(cgpa);
-    if (isNaN(cgpaNum) || cgpaNum < 0 || cgpaNum > 10)
-      return 'CGPA must be a number between 0 and 10.';
-    if (!year) return 'Please select your year of study.';
-    if (!selectedInstitute) return 'Please select your institute.';
-    if (!selectedDepartment) return 'Please select your department.';
-    if (!resumeLink.trim()) return 'Resume link is required.';
-    if (!marksheetLink.trim()) return 'Marksheet link is required.';
+    if (!problemStatementLink.trim()) return 'Problem statement link is required.';
+    if (!domains.trim()) return 'Domains are required.';
+    if (!subDomains.trim()) return 'Sub-domains are required.';
+    if (!selectedInstitute) return 'Please select an institute.';
+    if (!selectedDepartment) return 'Please select a department.';
     return null;
   };
 
@@ -250,67 +292,74 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
 
     setSubmitting(true);
     try {
-      const studentId = await AsyncStorage.getItem('studentId');
-      if (!studentId) throw new Error('Student ID not found. Please log in again.');
+      const facultyId = await AsyncStorage.getItem('facultyId');
+      const token = await AsyncStorage.getItem('token');
+      
+      if (!facultyId || !token) 
+        throw new Error('Faculty ID or token not found. Please log in again.');
 
-      console.log('\n[CompleteProfile] ═══════════════════════════════════════');
-      console.log('[CompleteProfile] 📝 SUBMITTING PROFILE');
-      console.log('[CompleteProfile] Student ID:', studentId);
-      console.log('[CompleteProfile] ═══════════════════════════════════════');
+      console.log('\n[CompleteFacultyProfile] ═══════════════════════════════════════');
+      console.log('[CompleteFacultyProfile] 📝 SUBMITTING FACULTY PROFILE');
+      console.log('[CompleteFacultyProfile] Faculty ID:', facultyId);
+      console.log('[CompleteFacultyProfile] Token:', token.substring(0, 20) + '...');
+      console.log('[CompleteFacultyProfile] ═══════════════════════════════════════');
 
       const payload = {
-        rollNumber: rollNumber.trim(),
-        cgpa: parseFloat(cgpa),
-        year,
-        instituteId: selectedInstitute.instituteId,
-        departmentId: selectedDepartment.departmentId,
-        resumeLink: resumeLink.trim(),
-        marksheetLink: marksheetLink.trim(),
+        employeeId: employeeId.trim(),
+        designation: designation.trim(),
+        specialization: specialization.trim(),
+        experience: experience.trim(),
+        qualification: qualification.trim(),
+        cabinNo: cabinNo.trim(),
         phone: phone.trim(),
+        problemStatementLink: problemStatementLink.trim(),
+        domains: domains.trim(),
+        subDomains: subDomains.trim(),
+        departmentId: selectedDepartment.departmentId,
+        instituteId: selectedInstitute.instituteId,
       };
 
-      console.log('[CompleteProfile] 📤 Payload:', JSON.stringify(payload, null, 2));
+      console.log('[CompleteFacultyProfile] 📤 Payload:', JSON.stringify(payload, null, 2));
 
-      // ✅ STEP 1: POST - Save profile
-      console.log('[CompleteProfile] 📤 POST: Saving profile...');
-      const saveRes = await completeStudentProfile(Number(studentId), payload);
+      // ✅ POST - Save profile
+      console.log('[CompleteFacultyProfile] 📤 POST: Saving profile...');
+      const saveRes = await completeFacultyProfile(Number(facultyId), payload, token);
 
       // ✅ CHECK IF COMPONENT IS STILL MOUNTED
       if (!isMountedRef.current) {
-        console.log('[CompleteProfile] ⚠️  Component unmounted, ignoring response');
+        console.log('[CompleteFacultyProfile] ⚠️  Component unmounted, ignoring response');
         return;
       }
 
-      console.log('\n[CompleteProfile] ✅ SAVE RESPONSE RECEIVED');
-      console.log('[CompleteProfile] Status Code:', saveRes.status);
-      console.log('[CompleteProfile] Response Data:', JSON.stringify(saveRes.data, null, 2));
+      console.log('\n[CompleteFacultyProfile] ✅ SAVE RESPONSE RECEIVED');
+      console.log('[CompleteFacultyProfile] Status Code:', saveRes.status);
+      console.log('[CompleteFacultyProfile] Response Data:', JSON.stringify(saveRes.data, null, 2));
+      console.log('[CompleteFacultyProfile] Is Profile Complete:', saveRes.data?.isProfileComplete);
       
       // ✅ SKIP VERIFICATION - FORCE NAVIGATION
-      console.log('\n[CompleteProfile] ✅✅✅ PROFILE SAVED - NAVIGATING TO STUDENT HOME');
-      console.log('[CompleteProfile] ═══════════════════════════════════════\n');
-
-      await AsyncStorage.removeItem('profileIncomplete');
+      console.log('\n[CompleteFacultyProfile] ✅✅✅ PROFILE SAVED - NAVIGATING TO FACULTY HOME');
+      console.log('[CompleteFacultyProfile] ═══════════════════════════════════════\n');
 
       showAlert('Success! 🎉', 'Your profile has been completed successfully!', [
         {
           text: 'Continue',
           onPress: () => {
-            console.log('[CompleteProfile] 🚀 Navigating to StudentHome');
+            console.log('[CompleteFacultyProfile] 🚀 Navigating to FacultyHome');
             if (isMountedRef.current) {
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'StudentHome' }],
+                routes: [{ name: 'FacultyHome' }],
               });
             }
           },
         },
       ]);
     } catch (e: any) {
-      console.log('\n[CompleteProfile] ❌ ERROR');
-      console.log('[CompleteProfile] Message:', e.message);
-      console.log('[CompleteProfile] Response Status:', e?.response?.status);
-      console.log('[CompleteProfile] Response Data:', e?.response?.data);
-      console.log('[CompleteProfile] ═══════════════════════════════════════\n');
+      console.log('\n[CompleteFacultyProfile] ❌ ERROR');
+      console.log('[CompleteFacultyProfile] Message:', e.message);
+      console.log('[CompleteFacultyProfile] Response:', e?.response?.data);
+      console.log('[CompleteFacultyProfile] Status:', e?.response?.status);
+      console.log('[CompleteFacultyProfile] ═══════════════════════════════════════\n');
 
       if (isMountedRef.current) {
         const errorMsg = e?.response?.data?.error || e?.message || 'Failed to save profile';
@@ -335,13 +384,13 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         {/* Header */}
         <View style={styles.headerBlock}>
           <View style={[styles.badgeIcon, { backgroundColor: accentSoft }]}>
-            <Text style={{ fontSize: 26 }}>📋</Text>
+            <Text style={{ fontSize: 26 }}>👨‍🏫</Text>
           </View>
           <Text style={[styles.title, { color: colors.text }]}>
             Complete Your Profile
           </Text>
           <Text style={[styles.subtitle, { color: colors.subText }]}>
-            A few details are missing. Please fill in the information below to continue using ZePRO.
+            Please provide your professional details to get started.
           </Text>
         </View>
 
@@ -361,23 +410,20 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               maxLength={10}
             />
-            <Text style={[styles.hint, { color: colors.subText }]}>
-              Enter a valid 10-digit phone number
-            </Text>
           </View>
         </View>
 
-        {/* ── Section: Academic Info ── */}
-        <Text style={[styles.sectionLabel, { color: colors.subText }]}>ACADEMIC INFO</Text>
+        {/* ── Section: Professional Info ── */}
+        <Text style={[styles.sectionLabel, { color: colors.subText }]}>PROFESSIONAL INFO</Text>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {/* Roll Number */}
+          {/* Employee ID */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Roll Number *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Employee ID *</Text>
             <TextInput
-              value={rollNumber}
-              onChangeText={setRollNumber}
-              placeholder="e.g. CS21B1042"
+              value={employeeId}
+              onChangeText={setEmployeeId}
+              placeholder="e.g. FAC001"
               placeholderTextColor={colors.subText}
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               autoCapitalize="characters"
@@ -386,33 +432,73 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* CGPA */}
+          {/* Designation */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>CGPA *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Designation *</Text>
             <TextInput
-              value={cgpa}
-              onChangeText={setCgpa}
-              placeholder="e.g. 8.5"
+              value={designation}
+              onChangeText={setDesignation}
+              placeholder="e.g. Assistant Professor"
               placeholderTextColor={colors.subText}
-              keyboardType="decimal-pad"
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
             />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Year */}
+          {/* Specialization */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Year of Study *</Text>
-            <TouchableOpacity
-              style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
-              onPress={() => setShowYearPicker(true)}
-            >
-              <Text style={[styles.selectorText, { color: year ? colors.text : colors.subText }]}>
-                {year || 'Select year'}
-              </Text>
-              <Text style={{ color: colors.subText, fontSize: 18 }}>›</Text>
-            </TouchableOpacity>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Specialization *</Text>
+            <TextInput
+              value={specialization}
+              onChangeText={setSpecialization}
+              placeholder="e.g. Machine Learning"
+              placeholderTextColor={colors.subText}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Experience */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Experience (years) *</Text>
+            <TextInput
+              value={experience}
+              onChangeText={setExperience}
+              placeholder="e.g. 5"
+              placeholderTextColor={colors.subText}
+              keyboardType="number-pad"
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Qualification */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Qualification *</Text>
+            <TextInput
+              value={qualification}
+              onChangeText={setQualification}
+              placeholder="e.g. Ph.D. in Computer Science"
+              placeholderTextColor={colors.subText}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Cabin Number */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Cabin Number *</Text>
+            <TextInput
+              value={cabinNo}
+              onChangeText={setCabinNo}
+              placeholder="e.g. A-101"
+              placeholderTextColor={colors.subText}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            />
           </View>
         </View>
 
@@ -471,44 +557,50 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* ── Section: Documents ── */}
-        <Text style={[styles.sectionLabel, { color: colors.subText }]}>DOCUMENT LINKS</Text>
+        {/* ── Section: Research Info ── */}
+        <Text style={[styles.sectionLabel, { color: colors.subText }]}>RESEARCH & DOMAINS</Text>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {/* Resume */}
+          {/* Problem Statement Link */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Resume Link *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Problem Statement Link *</Text>
             <TextInput
-              value={resumeLink}
-              onChangeText={setResumeLink}
+              value={problemStatementLink}
+              onChangeText={setProblemStatementLink}
               placeholder="https://drive.google.com/..."
               placeholderTextColor={colors.subText}
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               autoCapitalize="none"
               keyboardType="url"
             />
-            <Text style={[styles.hint, { color: colors.subText }]}>
-              Paste a publicly accessible link (Google Drive, Dropbox, etc.)
-            </Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Marksheet */}
+          {/* Domains */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Marksheet Link *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Domains *</Text>
             <TextInput
-              value={marksheetLink}
-              onChangeText={setMarksheetLink}
-              placeholder="https://drive.google.com/..."
+              value={domains}
+              onChangeText={setDomains}
+              placeholder="e.g. AI, ML, Blockchain"
               placeholderTextColor={colors.subText}
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              autoCapitalize="none"
-              keyboardType="url"
             />
-            <Text style={[styles.hint, { color: colors.subText }]}>
-              Share your latest semester marksheet
-            </Text>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          {/* Sub-Domains */}
+          <View style={styles.fieldWrap}>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Sub-Domains *</Text>
+            <TextInput
+              value={subDomains}
+              onChangeText={setSubDomains}
+              placeholder="e.g. NLP, Computer Vision, Smart Contracts"
+              placeholderTextColor={colors.subText}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            />
           </View>
         </View>
 
@@ -552,40 +644,11 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         onClose={() => setShowDepartmentPicker(false)}
         colors={colors}
       />
-
-      {/* Year Picker Modal */}
-      <Modal visible={showYearPicker} transparent animationType="slide">
-        <View style={pickerStyles.overlay}>
-          <View style={[pickerStyles.sheet, { backgroundColor: colors.card }]}>
-            <View style={pickerStyles.handle} />
-            <Text style={[pickerStyles.title, { color: colors.text }]}>Select Year</Text>
-            {YEAR_OPTIONS.map(y => (
-              <TouchableOpacity
-                key={y}
-                style={[pickerStyles.item, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setYear(y);
-                  setShowYearPicker(false);
-                }}
-              >
-                <Text style={[pickerStyles.itemText, { color: colors.text }]}>{y}</Text>
-                {year === y && <Text style={{ color: colors.primary, fontWeight: '700' }}>✓</Text>}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[pickerStyles.cancelBtn, { borderColor: colors.border }]}
-              onPress={() => setShowYearPicker(false)}
-            >
-              <Text style={{ color: colors.subText, fontWeight: '600' }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
-export default CompleteProfileScreen;
+export default CompleteFacultyProfileScreen;
 
 const styles = StyleSheet.create({
   scrollContent: {
@@ -676,12 +739,6 @@ const styles = StyleSheet.create({
   selectorText: {
     fontSize: 14,
     flex: 1,
-  },
-
-  hint: {
-    fontSize: 11,
-    marginTop: 6,
-    lineHeight: 16,
   },
 
   divider: {

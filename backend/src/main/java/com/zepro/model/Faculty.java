@@ -25,7 +25,6 @@ public class Faculty {
     private String experience;
     private String qualification;
     private String cabinNo;
-    private String institute;
     private String phone;
     private String problemStatementLink;
     private String domains;
@@ -36,6 +35,10 @@ public class Faculty {
 
     @OneToMany(mappedBy = "faculty")
     private List<Project> projects;
+    @ManyToOne
+    @JoinColumn(name = "institute_id")
+    private Institute institute;
+    
 
     // ----------- GETTERS -----------
 
@@ -50,7 +53,9 @@ public class Faculty {
     public String getExperience() { return experience; }
     public String getQualification() { return qualification; }
     public String getCabinNo() { return cabinNo; }
-    public String getInstitute() { return institute; }
+    public Institute getInstitute() {
+        return institute;
+    }
     public String getPhone() { return phone; }
     public String getProblemStatementLink() { return problemStatementLink; }
     public String getDomains() { return domains; }
@@ -71,7 +76,7 @@ public class Faculty {
     public void setExperience(String experience) { this.experience = experience; }
     public void setQualification(String qualification) { this.qualification = qualification; }
     public void setCabinNo(String cabinNo) { this.cabinNo = cabinNo; }
-    public void setInstitute(String institute) { this.institute = institute; }
+    public void setInstitute(Institute institute) { this.institute = institute; }
     public void setPhone(String phone) { this.phone = phone; }
     public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
     public void setDomains(String domains) { this.domains = domains; }

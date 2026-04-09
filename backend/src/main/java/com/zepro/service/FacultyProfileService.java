@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.zepro.model.Project;
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Service
 public class FacultyProfileService {
 
@@ -38,9 +39,12 @@ public class FacultyProfileService {
 
         FacultyProfile dto = new FacultyProfile();
 
+        // ✅ BASIC INFO
+        dto.setFacultyId(faculty.getFacultyId());
+        System.out.println("📌 Faculty ID: " + faculty.getFacultyId());
+
         dto.setName(faculty.getUser().getName());
         dto.setEmail(faculty.getUser().getEmail());
-
         dto.setPhone(faculty.getPhone());
         dto.setDesignation(faculty.getDesignation());
         dto.setEmployeeId(faculty.getEmployeeId());
@@ -48,18 +52,46 @@ public class FacultyProfileService {
         dto.setExperience(faculty.getExperience());
         dto.setQualification(faculty.getQualification());
         dto.setCabinNo(faculty.getCabinNo());
-        dto.setInstitute(faculty.getInstitute());
 
+        // ✅ SET INSTITUTE ID ONLY (NOT FULL OBJECT TO AVOID DUPLICATION)
+        if (faculty.getInstitute() != null) {
+            dto.setInstituteId(faculty.getInstitute().getInstituteId());
+            System.out.println("🏢 Institute ID: " + faculty.getInstitute().getInstituteId());
+            // ❌ DON'T SET FULL INSTITUTE OBJECT - CAUSES DUPLICATION
+            // dto.setInstitute(faculty.getInstitute());  // ← REMOVE THIS
+        }
+
+        // ✅ SET DEPARTMENT ID AND NAME ONLY (NOT FULL OBJECT)
         if (faculty.getDepartment() != null) {
+            dto.setDepartmentId(faculty.getDepartment().getDepartmentId());
             dto.setDepartment(faculty.getDepartment().getDepartmentName());
+            System.out.println("🏛️  Department ID: " + faculty.getDepartment().getDepartmentId());
+            System.out.println("🏛️  Department: " + faculty.getDepartment().getDepartmentName());
+        } else {
+            System.out.println("⚠️  No department assigned to faculty");
         }
 
         dto.setProblemStatementLink(faculty.getProblemStatementLink());
         dto.setDomains(faculty.getDomains());
         dto.setSubDomains(faculty.getSubDomains());
 
-        com.zepro.model.AllocationRules rules = allocationRulesRepository.findById(1L)
-                .orElse(new com.zepro.model.AllocationRules());
+        // ✅ GET DEPARTMENT-SPECIFIC ALLOCATION RULES
+        Long departmentId = (faculty.getDepartment() != null) 
+            ? faculty.getDepartment().getDepartmentId() 
+            : 1L;
+
+        com.zepro.model.AllocationRules rules = allocationRulesRepository
+                .findByDepartment_DepartmentId(departmentId)
+                .orElseGet(() -> {
+                    System.out.println("⚠️  No rules found for department " + departmentId + ", using defaults");
+                    com.zepro.model.AllocationRules defaults = new com.zepro.model.AllocationRules();
+                    defaults.setMaxStudentsPerFaculty(10);
+                    defaults.setMaxTeamSize(4);
+                    defaults.setMaxProjectsPerFaculty(3);
+                    return defaults;
+                });
+
+        System.out.println("📋 Allocation Rules - maxStudentsPerFaculty: " + rules.getMaxStudentsPerFaculty());
 
         // ✅ COUNT ONLY PROJECTS WITH STATUS "OPEN" OR "ASSIGNED" AND isActive = true
         List<Project> activeProjects = projectRepository.findByFacultyFacultyId(faculty.getFacultyId())
@@ -78,8 +110,12 @@ public class FacultyProfileService {
         dto.setAllocatedStudents(allocatedCount);
         dto.setMaxStudentsPerFaculty(rules.getMaxStudentsPerFaculty());
 
-        System.out.println("📦 Profile DTO prepared: " + dto.getName() + " stats: " + createdSlots + "/"
-                + rules.getMaxStudentsPerFaculty());
+        System.out.println("📦 Profile DTO prepared:");
+        System.out.println("   - Name: " + dto.getName());
+        System.out.println("   - Department: " + dto.getDepartment() + " (ID: " + dto.getDepartmentId() + ")");
+        System.out.println("   - Institute ID: " + dto.getInstituteId());
+        System.out.println("   - Created Slots: " + createdSlots + "/" + rules.getMaxStudentsPerFaculty());
+        System.out.println("   - Allocated Students: " + allocatedCount);
 
         return dto;
     }
@@ -95,7 +131,6 @@ public class FacultyProfileService {
                     return new RuntimeException("Faculty not found");
                 });
 
-        // 🔥 Before update log
         System.out.println("OLD NAME: " + faculty.getUser().getName());
         System.out.println("NEW NAME: " + dto.getName());
 
@@ -111,7 +146,8 @@ public class FacultyProfileService {
         faculty.setExperience(dto.getExperience());
         faculty.setQualification(dto.getQualification());
         faculty.setCabinNo(dto.getCabinNo());
-        faculty.setInstitute(dto.getInstitute());
+        // ❌ DON'T SET INSTITUTE OBJECT - CAUSES ISSUES
+        // faculty.setInstitute(dto.getInstitute());
 
         faculty.setProblemStatementLink(dto.getProblemStatementLink());
         faculty.setDomains(dto.getDomains());

@@ -6,7 +6,7 @@ import com.zepro.model.Project;
 import com.zepro.model.ProjectRequest;
 import com.zepro.model.Student;
 import com.zepro.model.Team;
-
+import com.zepro.model.Users;
 import com.zepro.model.Institute;
 import com.zepro.model.Department;
 import com.zepro.model.RequestStatus;
@@ -23,6 +23,9 @@ import java.util.List;
 import jakarta.transaction.Transactional;
 import com.zepro.repository.InstituteRepository;
 import com.zepro.repository.DepartmentRepository;
+import com.zepro.repository.UserRepository;
+import com.zepro.repository.AllocationRulesRepository;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class StudentService {
@@ -38,7 +41,7 @@ public class StudentService {
         private final com.zepro.repository.AllocationRulesRepository allocationRulesRepository;
         private final InstituteRepository instituteRepository;
         private final DepartmentRepository departmentRepository;
-
+        private final UserRepository userRepository;
         public StudentService(StudentRepository studentRepository,
                         TeamRepository teamRepository,
                         TeamJoinRequestRepository joinRequestRepository,
@@ -49,7 +52,8 @@ public class StudentService {
                         com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository,
                         com.zepro.repository.AllocationRulesRepository allocationRulesRepository,
                         InstituteRepository instituteRepository,
-                        DepartmentRepository departmentRepository) {
+                        DepartmentRepository departmentRepository,
+                        UserRepository userRepository) {
                 this.studentRepository = studentRepository;
                 this.teamRepository = teamRepository;
                 this.joinRequestRepository = joinRequestRepository;
@@ -61,6 +65,7 @@ public class StudentService {
                 this.allocationRulesRepository = allocationRulesRepository;
                 this.instituteRepository = instituteRepository;
                 this.departmentRepository = departmentRepository;
+                this.userRepository = userRepository;
         }
 
         // ------------------------------------------------
@@ -78,10 +83,19 @@ public class StudentService {
                         throw new RuntimeException("Student already in a team");
                 }
 
+                // ✅ CHECK IF PROFILE COMPLETE
+                if (!isProfileComplete(student)) {
+                    throw new RuntimeException("Please complete your profile first");
+                }
+
                 Team team = new Team();
                 team.setTeamName(request.getTeamName());
                 team.setDescription(request.getDescription());
                 team.setTeamLead(student);
+                
+                // ✅ SET DEPARTMENT & INSTITUTE FROM STUDENT
+                team.setDepartment(student.getDepartment());
+                team.setInstitute(student.getInstitute());
 
                 teamRepository.save(team);
 
@@ -117,12 +131,31 @@ public class StudentService {
                         throw new RuntimeException("Student already in a team");
                 }
 
+                // ✅ CHECK IF PROFILE COMPLETE
+                if (!isProfileComplete(student)) {
+                    throw new RuntimeException("Please complete your profile first");
+                }
+
                 Team team = teamRepository.findById(request.getTeamId())
                                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
-                int maxTeamSize = allocationRulesRepository.findById(1L).get().getMaxTeamSize();
+                // ✅ VALIDATE DEPARTMENT & INSTITUTE
+                if (!team.getDepartment().getDepartmentId().equals(student.getDepartment().getDepartmentId())) {
+                    throw new RuntimeException("You are from a different department. Cannot join this team");
+                }
+
+                if (!team.getInstitute().getInstituteId().equals(student.getInstitute().getInstituteId())) {
+                    throw new RuntimeException("You are from a different institute. Cannot join this team");
+                }
+
+                // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
+                com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+                        student.getDepartment().getDepartmentId(),
+                        student.getInstitute().getInstituteId());
+
+                int maxTeamSize = rules.getMaxTeamSize();
                 if (team.getMembers().size() >= maxTeamSize) {
-                        throw new RuntimeException("Limit reached in the current team");
+                    throw new RuntimeException("Limit reached in the current team (Max: " + maxTeamSize + ")");
                 }
 
                 student.setTeam(team);
@@ -134,10 +167,60 @@ public class StudentService {
                 return "Successfully joined the team";
         }
 
+        // ✅ GET ALL TEAMS (only same department & institute)
+        public List<TeamListResponse> getAllTeams(Long studentId) {
+
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
+
+            // ✅ Check if student profile is complete
+            if (!isProfileComplete(student)) {
+                throw new RuntimeException("Please complete your profile first");
+            }
+
+            // ✅ FILTER: Get only teams from same department & institute
+            List<Team> teams = teamRepository.findAll().stream()
+                    .filter(team -> team.getDepartment() != null && team.getInstitute() != null &&
+                            team.getDepartment().getDepartmentId().equals(student.getDepartment().getDepartmentId()) &&
+                            team.getInstitute().getInstituteId().equals(student.getInstitute().getInstituteId()))
+                    .toList();
+
+            return teams.stream()
+                    .map(team -> {
+
+                            boolean alreadyRequested = joinRequestRepository
+                                    .existsByStudentStudentIdAndTeamTeamId(studentId, team.getTeamId());
+
+                            List<String> members = team.getMembers()
+                                    .stream()
+                                    .map(s -> s.getUser().getName())
+                                    .toList();
+
+                            return new TeamListResponse(
+                                    team.getTeamId(),
+                                    team.getTeamName(),
+                                    team.getDescription(),
+                                    team.getTeamLead().getUser().getName(),
+                                    members,
+                                    alreadyRequested);
+
+                    })
+                    .toList();
+        }
+
+        // ✅ GET ALL PROJECTS (filtered by faculty department & institute)
         public List<ProjectResponse> getAllProjects(String email) {
 
             Student student = studentRepository.findByUser_Email(email)
                     .orElseThrow(() -> new RuntimeException("Student not found"));
+
+            // ✅ Check if student profile is complete
+            if (!isProfileComplete(student)) {
+                throw new RuntimeException("Please complete your profile first");
+            }
+
+            // ✅ GET REQUESTED PROJECTS (hide them from view)
+            List<Long> requestedProjectIds = getRequestedProjects(student.getStudentId());
 
             List<Project> projects = projectRepository.findAll();
             int teamMemberSize = (student.getTeam() != null && student.getTeam().getMembers() != null) 
@@ -159,7 +242,37 @@ public class StudentService {
                                 (p.getTeam() != null && p.getTeam().getMembers() != null 
                                         ? p.getTeam().getMembers().size() 
                                         : 0);
-                        return availableSlots >= teamMemberSize;
+                        if (availableSlots < teamMemberSize) {
+                            return false;
+                        }
+                        
+                        // ✅ HIDE REQUESTED PROJECTS
+                        if (requestedProjectIds.contains(p.getProjectId())) {
+                            return false;
+                        }
+
+                        // ✅ FILTER: Faculty must be from same department
+                        if (p.getFaculty() == null || p.getFaculty().getDepartment() == null) {
+                            return false;
+                        }
+
+                        if (!p.getFaculty().getDepartment().getDepartmentId()
+                                .equals(student.getDepartment().getDepartmentId())) {
+                            return false;
+                        }
+
+                        // ✅ FILTER: Faculty must be from same institute
+                        // FIX: Use getInstituteId() instead of getInstitute()
+                        if (p.getFaculty().getInstitute() == null) {
+                            return false;
+                        }
+
+                        if (!p.getFaculty().getInstitute().getInstituteId()
+                                .equals(student.getInstitute().getInstituteId())) {
+                            return false;
+                        }
+
+                        return true;
                     })
                     .map(project -> {
                         String domainStr = "";
@@ -177,15 +290,18 @@ public class StudentService {
                             subdomainStr = pSubDomains.get(0).getSubDomain().getName();
                         }
 
-                        int maxTeamSize = allocationRulesRepository.findById(1L)
-                                .orElse(new com.zepro.model.AllocationRules()).getMaxTeamSize();
+                        // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
+                        com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+                                student.getDepartment().getDepartmentId(),
+                                student.getInstitute().getInstituteId());
+
+                        int maxTeamSize = rules.getMaxTeamSize();
                         int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null) 
                                 ? project.getTeam().getMembers().size() 
                                 : 0;
                         int maxSlots = project.getStudentSlots();
                         int remainingSlots = Math.max(0, maxSlots - projectAssigned);
 
-                        // ✅ NEW: Get faculty name
                         String facultyName = (project.getFaculty() != null && project.getFaculty().getUser() != null)
                                 ? project.getFaculty().getUser().getName()
                                 : "N/A";
@@ -205,8 +321,8 @@ public class StudentService {
                                 projectAssigned,
                                 maxSlots,
                                 remainingSlots,
-                                facultyName,      // ✅ NEW
-                                facultyId);        // ✅ NEW
+                                facultyName,
+                                facultyId);
                     })
                     .toList();
         }
@@ -233,6 +349,21 @@ public class StudentService {
             Project project = projectRepository.findById(request.getProjectId())
                     .orElseThrow(() -> new RuntimeException("Project not found"));
 
+            // ✅ VALIDATE FACULTY DEPARTMENT & INSTITUTE
+            if (project.getFaculty() == null || project.getFaculty().getDepartment() == null) {
+                throw new RuntimeException("Faculty not assigned to this project");
+            }
+
+            if (!project.getFaculty().getDepartment().getDepartmentId()
+                    .equals(student.getDepartment().getDepartmentId())) {
+                throw new RuntimeException("Faculty is from a different department");
+            }
+
+            if (!project.getFaculty().getInstitute().getInstituteId()
+                    .equals(student.getInstitute().getInstituteId())) {
+                throw new RuntimeException("Faculty is from a different institute");
+            }
+
             boolean alreadyRequested = projectRequestRepository.existsByTeamTeamIdAndProjectProjectId(
                     team.getTeamId(),
                     project.getProjectId());
@@ -251,7 +382,6 @@ public class StudentService {
             StringBuilder resumeLinks = new StringBuilder("[");
             StringBuilder markSheetLinks = new StringBuilder("[");
 
-            // Use DTO if provided, otherwise use team members from database
             List<?> membersToProcess = (teamMembersFromDTO != null && !teamMembersFromDTO.isEmpty()) 
                 ? teamMembersFromDTO 
                 : teamMembers;
@@ -306,7 +436,6 @@ public class StudentService {
             req.setFaculty(project.getFaculty());
             req.setStatus(RequestStatus.PENDING);
             
-            // ✅ SET INDIVIDUAL FIELDS
             req.setTeamMembersNames(names.toString());
             req.setTeamMembersRollNumbers(rollNumbers.toString());
             req.setTeamMembersCgpas(cgpas.toString());
@@ -314,6 +443,8 @@ public class StudentService {
             req.setTeamMembersMarkSheetLinks(markSheetLinks.toString());
 
             projectRequestRepository.save(req);
+
+            System.out.println("[StudentService] ✅ Project request sent to faculty: " + project.getFaculty().getUser().getName());
 
             return "Project request sent";
         }
@@ -592,9 +723,30 @@ public class StudentService {
                 throw new RuntimeException("Student already belongs to a team");
             }
 
-            int maxTeamSize = allocationRulesRepository.findById(1L).get().getMaxTeamSize();
+            // ✅ VALIDATE DEPARTMENT
+            if (!team.getDepartment().getDepartmentId().equals(student.getDepartment().getDepartmentId())) {
+                request.setStatus("REJECTED");
+                request.setRejectionReason("You are from a different department");
+                joinRequestRepository.save(request);
+                throw new RuntimeException("You are from a different department");
+            }
+
+            // ✅ VALIDATE INSTITUTE
+            if (!team.getInstitute().getInstituteId().equals(student.getInstitute().getInstituteId())) {
+                request.setStatus("REJECTED");
+                request.setRejectionReason("You are from a different institute");
+                joinRequestRepository.save(request);
+                throw new RuntimeException("You are from a different institute");
+            }
+
+            // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
+            com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+                    team.getDepartment().getDepartmentId(),
+                    team.getInstitute().getInstituteId());
+
+            int maxTeamSize = rules.getMaxTeamSize();
             if (team.getMembers().size() >= maxTeamSize) {
-                throw new RuntimeException("Limit reached in the current team");
+                throw new RuntimeException("Limit reached in the current team (Max: " + maxTeamSize + ")");
             }
 
             // add student
@@ -625,32 +777,12 @@ public class StudentService {
             return "Request rejected";
         }
 
-        public List<TeamListResponse> getAllTeams(Long studentId) {
-
-            List<Team> teams = teamRepository.findAll();
-
-            return teams.stream()
-                    .map(team -> {
-
-                            boolean alreadyRequested = joinRequestRepository
-                                    .existsByStudentStudentIdAndTeamTeamId(studentId,
-                                                    team.getTeamId());
-
-                            List<String> members = team.getMembers()
-                                    .stream()
-                                    .map(s -> s.getUser().getName())
-                                    .toList();
-
-                            return new TeamListResponse(
-                                    team.getTeamId(),
-                                    team.getTeamName(),
-                                    team.getDescription(),
-                                    team.getTeamLead().getUser().getName(),
-                                    members,
-                                    alreadyRequested);
-
-                    })
-                    .toList();
+        // ✅ GET ALLOCATION RULES FOR DEPARTMENT & INSTITUTE
+        private com.zepro.model.AllocationRules getAllocationRulesForDept(Long departmentId, Long instituteId) {
+            return allocationRulesRepository
+                    .findByDepartment_DepartmentIdAndInstitute_InstituteId(departmentId, instituteId)
+                    .orElse(allocationRulesRepository.findById(1L)
+                            .orElse(new com.zepro.model.AllocationRules()));
         }
 
         public List<SentRequestResponse> getSentRequests(Long studentId) {
@@ -745,112 +877,203 @@ public class StudentService {
                     .toList();
         }
 
-        // ✅ COMPLETE STUDENT PROFILE
+        // ✅ COMPLETE STUDENT PROFILE - FIXED
+        @Transactional
         public StudentProfileResponse completeStudentProfile(Long studentId, CompleteStudentProfileRequest request) {
             
-            System.out.println("[StudentService] 📝 Completing student profile for ID: " + studentId);
+            System.out.println("\n╔════════════════════════════════════════╗");
+            System.out.println("║    COMPLETING STUDENT PROFILE          ║");
+            System.out.println("╚════════════════════════════════════════╝");
+            System.out.println("[StudentService] 📝 Student ID: " + studentId);
             
             Student student = studentRepository.findById(studentId)
                     .orElseThrow(() -> new RuntimeException("Student not found"));
 
-            // ✅ Set all required fields
-            student.setRollNumber(request.getRollNumber());
-            student.setCgpa(request.getCgpa());
-            student.setYear(request.getYear());
-            student.setResumeLink(request.getResumeLink());
-            student.setMarksheetLink(request.getMarksheetLink());
-            
-            // ✅ Set institute
+            validateProfileRequest(request);
+
+            // ✅ SET INSTITUTE
             if (request.getInstituteId() != null) {
                 Institute institute = instituteRepository.findById(request.getInstituteId())
                         .orElseThrow(() -> new RuntimeException("Institute not found"));
                 student.setInstitute(institute);
+                System.out.println("[StudentService] 🏢 Institute set: " + institute.getInstituteName());
+            } else {
+                throw new RuntimeException("Institute ID is required");
             }
             
-            // ✅ Set department
+            // ✅ SET DEPARTMENT
             if (request.getDepartmentId() != null) {
                 Department department = departmentRepository.findById(request.getDepartmentId())
                         .orElseThrow(() -> new RuntimeException("Department not found"));
                 student.setDepartment(department);
+                System.out.println("[StudentService] 🏛️  Department set: " + department.getDepartmentName());
+            } else {
+                throw new RuntimeException("Department ID is required");
             }
+
+            // ✅ SET STUDENT FIELDS
+            student.setRollNumber(request.getRollNumber().trim());
+            System.out.println("[StudentService] 📝 Roll Number set: " + student.getRollNumber());
+
+            double cgpaValue = request.getCgpa().doubleValue();
+            student.setCgpa(cgpaValue);
+            System.out.println("[StudentService] 📊 CGPA set: " + cgpaValue);
+
+            student.setYear(request.getYear());
+            System.out.println("[StudentService] 📅 Year set: " + student.getYear());
+
+            student.setResumeLink(request.getResumeLink().trim());
+            System.out.println("[StudentService] 📄 Resume Link set");
+
+            student.setMarksheetLink(request.getMarksheetLink().trim());
+            System.out.println("[StudentService] 📋 Marksheet Link set");
+
+            // ✅ SET PHONE IN USERS TABLE
+            Users user = student.getUser();
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            }
+            user.setPhone(request.getPhone().trim());
+            System.out.println("[StudentService] 📱 Phone set: " + user.getPhone());
             
-            Student saved = studentRepository.save(student);
-            
-            System.out.println("[StudentService] ✅ Student profile completed");
+            // ✅ SAVE USER FIRST, THEN STUDENT
+            userRepository.save(user);
+            Student savedStudent = studentRepository.save(student);
+            System.out.println("[StudentService] ✅ Profile saved to database");
+
             
             return new StudentProfileResponse(
-                    saved.getStudentId(),
-                    saved.getUser().getName(),
-                    saved.getUser().getEmail(),
-                    saved.getRollNumber(),
-                    saved.getCgpa(),
-                    saved.getYear(),
-                    saved.getDepartment() != null ? saved.getDepartment().getDepartmentId() : null,
-                    saved.getDepartment() != null ? saved.getDepartment().getDepartmentName() : null,
-                    saved.getResumeLink(),
-                    saved.getMarksheetLink(),
-                    isProfileComplete(saved)
+                    savedStudent.getStudentId(),
+                    savedStudent.getUser().getName(),
+                    savedStudent.getUser().getEmail(),
+                    savedStudent.getRollNumber(),
+                    savedStudent.getCgpa(),
+                    savedStudent.getYear(),
+                    savedStudent.getDepartment() != null ? savedStudent.getDepartment().getDepartmentId() : null,
+                    savedStudent.getDepartment() != null ? savedStudent.getDepartment().getDepartmentName() : null,
+                    savedStudent.getResumeLink(),
+                    savedStudent.getMarksheetLink(),
+                    true
             );
         }
 
-        // ✅ VALIDATE STUDENT PROFILE COMPLETION
+        // ✅ CHECK PROFILE - matching Student.java double cgpa
         public boolean isProfileComplete(Student student) {
-            return student.getRollNumber() != null && !student.getRollNumber().isEmpty() &&
-                   student.getCgpa() > 0 &&
-                   student.getYear() != null && !student.getYear().isEmpty() &&
-                   student.getDepartment() != null &&
-                   student.getResumeLink() != null && !student.getResumeLink().isEmpty() &&
-                   student.getMarksheetLink() != null && !student.getMarksheetLink().isEmpty();
+            if (student == null || student.getUser() == null) return false;
+
+            String phone = student.getUser().getPhone();
+            if (phone == null || phone.trim().isEmpty()) return false;
+
+            String rollNo = student.getRollNumber();
+            if (rollNo == null || rollNo.trim().isEmpty()) return false;
+
+            // ✅ CGPA IS DOUBLE - check > 0
+            double cgpa = student.getCgpa();
+            if (cgpa <= 0) return false;
+
+            String year = student.getYear();
+            if (year == null || year.trim().isEmpty()) return false;
+
+            if (student.getDepartment() == null) return false;
+            if (student.getInstitute() == null) return false;
+
+            String resumeLink = student.getResumeLink();
+            if (resumeLink == null || resumeLink.trim().isEmpty()) return false;
+
+            String marksheetLink = student.getMarksheetLink();
+            if (marksheetLink == null || marksheetLink.trim().isEmpty()) return false;
+
+            return true;
         }
 
-        // ✅ GET STUDENT PROFILE STATUS
-        public StudentProfileStatusResponse getProfileStatus(Long studentId) {
-            
-            Student student = studentRepository.findById(studentId)
-                    .orElseThrow(() -> new RuntimeException("Student not found"));
-            
-            boolean isComplete = isProfileComplete(student);
-            
-            return new StudentProfileStatusResponse(
-                    studentId,
-                    isComplete,
-                    student.getRollNumber(),
-                    student.getCgpa(),
-                    student.getYear(),
-                    student.getDepartment() != null ? student.getDepartment().getDepartmentId() : null,
-                    student.getResumeLink(),
-                    student.getMarksheetLink()
-            );
+        private void validateProfileRequest(CompleteStudentProfileRequest request) {
+            if (request.getRollNumber() == null || request.getRollNumber().trim().isEmpty()) 
+                throw new RuntimeException("Roll number is required");
+            if (request.getCgpa() == null || request.getCgpa() <= 0) 
+                throw new RuntimeException("Valid CGPA is required");
+            if (request.getYear() == null || request.getYear().trim().isEmpty()) 
+                throw new RuntimeException("Year is required");
+            if (request.getPhone() == null || request.getPhone().trim().isEmpty()) 
+                throw new RuntimeException("Phone is required");
+            if (request.getResumeLink() == null || request.getResumeLink().trim().isEmpty()) 
+                throw new RuntimeException("Resume link is required");
+            if (request.getMarksheetLink() == null || request.getMarksheetLink().trim().isEmpty()) 
+                throw new RuntimeException("Marksheet link is required");
         }
 
-        // ✅ GET ALL INSTITUTES
-        public List<InstituteDTO> getAllInstitutes() {
-            System.out.println("[StudentService] 🔍 Fetching all institutes");
-            
+    // ✅ GET PROFILE STATUS (for login verification)
+    public StudentProfileResponse getProfileStatus(Long studentId) {
+        System.out.println("\n[StudentService] 🔍 Getting profile status for Student ID: " + studentId);
+        
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        boolean isComplete = isProfileComplete(student);
+        
+        return new StudentProfileResponse(
+                student.getStudentId(),
+                student.getUser() != null ? student.getUser().getName() : "",
+                student.getUser() != null ? student.getUser().getEmail() : "",
+                student.getRollNumber(),
+                student.getCgpa(),
+                student.getYear(),
+                student.getDepartment() != null ? student.getDepartment().getDepartmentId() : null,
+                student.getDepartment() != null ? student.getDepartment().getDepartmentName() : null,
+                student.getResumeLink(),
+                student.getMarksheetLink(),
+                isComplete
+        );
+    }
+
+    // ✅ GET ALL INSTITUTES
+    public List<InstituteDTO> getAllInstitutes() {
+        System.out.println("\n[StudentService] 📡 Fetching all institutes...");
+        
+        try {
             List<Institute> institutes = instituteRepository.findAll();
+            System.out.println("[StudentService] ✅ Found " + institutes.size() + " institutes");
             
-            return institutes.stream()
-                    .map(institute -> new InstituteDTO(
-                            institute.getInstituteId(),
-                            institute.getInstituteName(),
-                            institute.getInstituteCode()
-                    ))
-                    .toList();
-        }
-
-        // ✅ GET DEPARTMENTS BY INSTITUTE
-        public List<DepartmentDTO> getDepartmentsByInstitute(Long instituteId) {
-            System.out.println("[StudentService] 🔍 Fetching departments for institute: " + instituteId);
+            List<InstituteDTO> instituteDTOs = new ArrayList<>();
+            for (Institute institute : institutes) {
+                InstituteDTO dto = new InstituteDTO();
+                dto.setInstituteId(institute.getInstituteId());
+                dto.setInstituteName(institute.getInstituteName());
+                dto.setInstituteCode(institute.getInstituteCode());
+                instituteDTOs.add(dto);
+            }
             
-            Institute institute = instituteRepository.findById(instituteId)
-                    .orElseThrow(() -> new RuntimeException("Institute not found"));
-            
-            return institute.getDepartments().stream()
-                    .map(dept -> new DepartmentDTO(
-                            dept.getDepartmentId(),
-                            dept.getDepartmentName(),
-                            dept.getDepartmentCode()
-                    ))
-                    .toList();
+            return instituteDTOs;
+        } catch (Exception e) {
+            System.out.println("[StudentService] ❌ Error fetching institutes: " + e.getMessage());
+            throw new RuntimeException("Failed to fetch institutes");
         }
     }
+
+    // ✅ GET DEPARTMENTS BY INSTITUTE
+    public List<DepartmentDTO> getDepartmentsByInstitute(Long instituteId) {
+        System.out.println("\n[StudentService] 📡 Fetching departments for institute ID: " + instituteId);
+        
+        try {
+            Institute institute = instituteRepository.findById(instituteId)
+                    .orElseThrow(() -> new RuntimeException("Institute not found with ID: " + instituteId));
+            
+            List<Department> departments = departmentRepository.findByInstitute_InstituteId(instituteId);
+            
+            List<DepartmentDTO> departmentDTOs = new ArrayList<>();
+            for (Department department : departments) {
+                DepartmentDTO dto = new DepartmentDTO();
+                dto.setDepartmentId(department.getDepartmentId());
+                dto.setDepartmentName(department.getDepartmentName());
+                dto.setDepartmentCode(department.getDepartmentCode());
+                dto.setInstituteId(instituteId);
+                departmentDTOs.add(dto);
+            }
+            
+            return departmentDTOs;
+        } catch (Exception e) {
+            System.out.println("[StudentService] ❌ Error fetching departments: " + e.getMessage());
+            throw new RuntimeException("Failed to fetch departments");
+        }
+    }
+
+} // ✅ CLOSING BRACE FOR CLASS

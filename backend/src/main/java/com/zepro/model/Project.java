@@ -26,6 +26,10 @@ public class Project {
     @Column(name = "student_slots", nullable = false)
     private int studentSlots = 0; // ✅ NEW - tracks manually set slots
 
+    // ✅ ADD THIS FIELD - Track max slots reached
+    @Column(name = "maximum_slots_reached_till_now", nullable = false)
+    private int maximumSlotsReachedTillNow = 0;
+
     // ─── Getters & Setters ─────────────────────────────────
 
     public Long getProjectId() {
@@ -90,5 +94,10 @@ public class Project {
 
     public void setStudentSlots(int studentSlots) { // ✅ NEW
         this.studentSlots = studentSlots;
+    }
+
+    public int getMaximumSlotsReachedTillNow() { return maximumSlotsReachedTillNow; }
+    public void setMaximumSlotsReachedTillNow(int maximumSlotsReachedTillNow) { 
+        this.maximumSlotsReachedTillNow = maximumSlotsReachedTillNow; 
     }
 }

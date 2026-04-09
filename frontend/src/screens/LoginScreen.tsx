@@ -15,6 +15,8 @@ import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'react-native';
 import { getProfileStatus } from '../api/studentApi';
+import { getFacultyProfileStatus } from '../api/facultyApi';
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
@@ -37,12 +39,28 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         return;
       }
 
+      console.log('[Login] 🔐 Attempting login with:', email);
+
       const res = await login({
         email,
         password
       });
 
-      const { token, role, studentId, facultyId, isInTeam, isTeamLead, email: resEmail, name, phone, fc: isFC } = res.data;
+      console.log('[Login] ✅ Login response:', res.data);
+
+      const { 
+        token, 
+        role, 
+        studentId, 
+        facultyId, 
+        isInTeam, 
+        isTeamLead, 
+        email: resEmail, 
+        name, 
+        phone, 
+        fc: isFC 
+      } = res.data;
+
       await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('role', role);
       await AsyncStorage.setItem('userEmail', resEmail || '');
@@ -71,7 +89,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       });
 
       if (role === 'STUDENT') {
-        console.log("STUDENT LOGGED IN:", res.data);
+        console.log('[Login] 👤 Student logged in - ID:', studentId);
 
         const user = {
           ...res.data,
@@ -83,27 +101,70 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         setStudentUser(user);
 
         // ✅ CHECK PROFILE COMPLETION
+        console.log('\n[Login] 📊 CHECKING PROFILE STATUS...');
+        console.log('[Login] ═══════════════════════════════════════');
+        
         try {
+          console.log('[Login] 🔍 Calling getProfileStatus with studentId:', studentId);
+          
           const profileStatusRes = await getProfileStatus(studentId);
-          const profileStatus = profileStatusRes.data;  // ✅ ADD THIS LINE
-          console.log("PROFILE STATUS:", profileStatus);
-
-          if (profileStatus.isComplete) {
-            // ✅ PROFILE COMPLETE → GO TO STUDENT HOME
+          
+          console.log('[Login] ✅ Got response');
+          console.log('[Login] Response status:', profileStatusRes.status);
+          console.log('[Login] Response headers:', profileStatusRes.headers);
+          
+          // ✅ GET THE DATA PROPERLY
+          const profileStatus = profileStatusRes.data;
+          
+          console.log('\n[Login] 📥 RAW RESPONSE DATA:');
+          console.log('[Login] Full object:', JSON.stringify(profileStatus, null, 2));
+          
+          console.log('\n[Login] 📋 CHECKING FIELDS:');
+          console.log('[Login] Type of profileStatus:', typeof profileStatus);
+          console.log('[Login] Keys in object:', Object.keys(profileStatus));
+          console.log('[Login] profileStatus.isProfileComplete:', profileStatus.isProfileComplete);
+          console.log('[Login] typeof isProfileComplete:', typeof profileStatus.isProfileComplete);
+          console.log('[Login] Value (strict):', profileStatus.isProfileComplete === true);
+          console.log('[Login] Value (loose):', profileStatus.isProfileComplete == true);
+          
+          // ✅ ALTERNATIVE: Also check for field name variations
+          const isComplete = 
+            profileStatus.isProfileComplete === true ||
+            profileStatus['isProfileComplete'] === true ||
+            profileStatus.profileComplete === true ||
+            profileStatus['profileComplete'] === true;
+          
+          console.log('[Login] 🎯 Is Complete (any variation):', isComplete);
+          
+          if (isComplete) {
+            console.log('\n[Login] ✅✅✅ PROFILE COMPLETE - NAVIGATING TO STUDENT HOME');
+            console.log('[Login] ═══════════════════════════════════════\n');
+            
             navigation.reset({
               index: 0,
               routes: [{ name: 'StudentHome' }],
             });
           } else {
-            // ✅ PROFILE INCOMPLETE → GO TO COMPLETE PROFILE PAGE
+            console.log('\n[Login] ⚠️  PROFILE INCOMPLETE');
+            console.log('[Login] isProfileComplete value:', profileStatus.isProfileComplete);
+            console.log('[Login] All response fields:', profileStatus);
+            console.log('[Login] ═══════════════════════════════════════\n');
+            
             navigation.reset({
               index: 0,
               routes: [{ name: 'CompleteProfile' as any }],
             });
           }
-        } catch (err) {
-          console.log("PROFILE STATUS ERROR:", err);
-          // If error, assume incomplete and navigate to complete profile
+        } catch (err: any) {
+          console.log('\n[Login] ❌ ERROR IN PROFILE CHECK');
+          console.log('[Login] Error name:', err.name);
+          console.log('[Login] Error message:', err.message);
+          console.log('[Login] Error code:', err.code);
+          console.log('[Login] Response status:', err.response?.status);
+          console.log('[Login] Response data:', err.response?.data);
+          console.log('[Login] ═══════════════════════════════════════');
+          console.log('[Login] ⚠️  DEFAULTING TO COMPLETE PROFILE\n');
+          
           navigation.reset({
             index: 0,
             routes: [{ name: 'CompleteProfile' as any }],
@@ -111,15 +172,76 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         }
       }
       else if (role === 'FACULTY') {
-        navigation.replace('FacultyHome');
+        console.log('[Login] 👨‍🏫 Faculty logged in - ID:', facultyId);
+
+        // ✅ CHECK FACULTY PROFILE COMPLETION
+        console.log('\n[Login] 📊 CHECKING FACULTY PROFILE STATUS...');
+        console.log('[Login] ═══════════════════════════════════════');
+        
+        try {
+          console.log('[Login] 🔍 Calling getFacultyProfileStatus with facultyId:', facultyId);
+          
+          const facultyProfileRes = await getFacultyProfileStatus(facultyId, token);
+          
+          console.log('[Login] ✅ Got response');
+          console.log('[Login] Response status:', facultyProfileRes.status);
+          
+          // ✅ GET THE DATA PROPERLY
+          const facultyProfile = facultyProfileRes.data;
+          
+          console.log('\n[Login] 📥 RAW RESPONSE DATA:');
+          console.log('[Login] Full object:', JSON.stringify(facultyProfile, null, 2));
+          
+          console.log('\n[Login] 📋 CHECKING FIELDS:');
+          console.log('[Login] isProfileComplete:', facultyProfile.isProfileComplete);
+          console.log('[Login] Type:', typeof facultyProfile.isProfileComplete);
+          
+          const isComplete = 
+            facultyProfile.isProfileComplete === true ||
+            facultyProfile['isProfileComplete'] === true ||
+            facultyProfile.profileComplete === true ||
+            facultyProfile['profileComplete'] === true;
+          
+          console.log('[Login] 🎯 Is Complete:', isComplete);
+          
+          if (isComplete) {
+            console.log('\n[Login] ✅✅✅ FACULTY PROFILE COMPLETE - NAVIGATING TO FACULTY HOME');
+            console.log('[Login] ═══════════════════════════════════════\n');
+            
+            navigation.replace('FacultyHome');
+          } else {
+            console.log('\n[Login] ⚠️  FACULTY PROFILE INCOMPLETE');
+            console.log('[Login] isProfileComplete value:', facultyProfile.isProfileComplete);
+            console.log('[Login] All response fields:', facultyProfile);
+            console.log('[Login] ═══════════════════════════════════════\n');
+            
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'CompleteFacultyProfile' as any }],
+            });
+          }
+        } catch (err: any) {
+          console.log('\n[Login] ❌ ERROR IN FACULTY PROFILE CHECK');
+          console.log('[Login] Error message:', err.message);
+          console.log('[Login] Response status:', err.response?.status);
+          console.log('[Login] Response data:', err.response?.data);
+          console.log('[Login] ═══════════════════════════════════════');
+          console.log('[Login] ⚠️  DEFAULTING TO COMPLETE PROFILE\n');
+          
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'CompleteFacultyProfile' as any }],
+          });
+        }
       }
       else if (role === 'ADMIN') {
+        console.log('[Login] 🔐 Admin logged in');
         navigation.replace('InstituteList');
       }
 
     } catch (error: any) {
 
-      console.log("LOGIN ERROR:", error);
+      console.log('[Login] ❌ Login error:', error);
 
       if (error.response) {
         setErrorMsg(error.response.data.message || "Invalid credentials");

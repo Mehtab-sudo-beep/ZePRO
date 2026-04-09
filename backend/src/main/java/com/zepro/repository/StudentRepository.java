@@ -19,12 +19,15 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     long countByDepartment_DepartmentId(Long departmentId);
 
     long countByIsAllocatedTrue();
+    long countByIsAllocatedTrueAndDepartment_DepartmentId(Long departmentId);
+    long countByIsAllocatedFalseAndDepartment_DepartmentId(Long departmentId);
 
     long countByIsAllocatedFalse();
 
     List<Student> findByIsAllocatedFalse();
 
     List<Student> findByIsAllocatedTrue(); // ✅ ADD THIS — used by getAllocatedStudents()
+    List<Student> findByIsAllocatedTrueAndDepartment_DepartmentId(Long departmentId); // ✅ ADD THIS — used by getAllocatedStudentsByDepartment()
 
     List<Student> findByAllocatedFacultyFacultyId(Long facultyId);
     List<Student> findByDepartment_DepartmentId(Long departmentId);
