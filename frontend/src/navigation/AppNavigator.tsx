@@ -42,7 +42,7 @@ import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
 import AllocatedProjectScreen from '../screens/AllocatedProjectScreen';
 import DeadlineDetailScreen from '../screens/DeadlinedetailsScreen';
 import DepartmentDetailsScreen from '../screens/DepartmentDetailsScreen';
-
+import CompleteProfileScreen from '../screens/CompleteProfileScreen';
 export type RootStackParamList = {
   Login: undefined;
   StudentHome: undefined;
@@ -99,6 +99,7 @@ export type RootStackParamList = {
     instituteId: string;
     instituteName: string;
   };
+  CompleteProfile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -168,6 +169,11 @@ const AppNavigator = () => {
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
       <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen}/>
       <Stack.Screen name="DeadlineDetail" component={DeadlineDetailScreen} />
+      <Stack.Screen 
+        name="CompleteProfile" 
+        component={CompleteProfileScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };

@@ -124,14 +124,4 @@ public class FacultyController {
     public ProjectRequest cancelRequest(@PathVariable("requestId") Long requestId) {
         return requestService.cancelRequest(requestId);
     }
-
-    @PostMapping("/make-fc")
-    public String makeFC(Authentication authentication) {
-        String email = authentication.getName();
-        Faculty faculty = facultyRepository.findByUser_Email(email)
-                .orElseThrow(() -> new RuntimeException("Faculty not found"));
-        faculty.setIsFC(true);
-        facultyRepository.save(faculty);
-        return "Promoted to Faculty Coordinator";
-    }
 }

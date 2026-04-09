@@ -21,6 +21,8 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     Optional<Faculty> findByUser(Users user);
     Optional<Faculty> findByUserUserIdAndIsFCTrue(Long userId);
     List<Faculty> findByDepartment_DepartmentId(Long departmentId);
+        Optional<Faculty> findByUser_UserId(Long userId);
+    long countByDepartment_DepartmentId(Long departmentId);
 
 
     @Query("SELECT f FROM Faculty f WHERE " +

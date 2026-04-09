@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
@@ -28,17 +29,28 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-    // ✅ CHECK IF USER IS ADMIN
+   // ✅ HELPER METHOD - CHECK IF ADMIN
     private boolean isAdmin(Authentication authentication) {
-        try {
-            String email = authentication.getName();
-            var user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-            return user.getRole() == UserRole.ADMIN;
-        } catch (Exception e) {
+        if (authentication == null) {
+            System.out.println("[AdminController] ❌ Authentication is null");
             return false;
         }
+
+        System.out.println("[AdminController] 🔐 Principal: " + authentication.getPrincipal());
+        System.out.println("[AdminController] 🔐 Authorities: " + authentication.getAuthorities());
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> {
+                    System.out.println("[AdminController] 🔍 Checking authority: " + auth);
+                    return auth.equals("ROLE_ADMIN") || auth.equals("ADMIN");
+                });
+
+        System.out.println("[AdminController] ✅ Is Admin: " + isAdmin);
+        return isAdmin;
     }
+
 
     // ── INSTITUTE ─────────────────────────────────────────────
 
@@ -236,6 +248,218 @@ public class AdminController {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Failed to update user role");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ✅ GET FACULTY BY DEPARTMENT
+    @GetMapping("/department/{departmentId}/faculty")
+    public ResponseEntity<?> getFacultyByDepartment(
+            @PathVariable Long departmentId,
+            Authentication authentication) {
+
+        System.out.println("\n========== GET FACULTY BY DEPARTMENT ==========");
+        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/faculty");
+        System.out.println("[AdminController] 🔐 Authentication: " + authentication);
+
+        if (authentication == null) {
+            System.out.println("[AdminController] ❌ No authentication provided");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized"));
+        }
+
+        if (!isAdmin(authentication)) {
+            System.out.println("[AdminController] ❌ User is not admin - FORBIDDEN");
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Only ADMIN can view faculty");
+            error.put("status", 403);
+            error.put("authorities", authentication.getAuthorities().toString());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
+
+        try {
+            List<UserResponse> faculty = adminService.getFacultyByDepartment(departmentId);
+            System.out.println("[AdminController] ✅ Found " + faculty.size() + " faculty members");
+            return ResponseEntity.ok(faculty);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            e.printStackTrace();
+
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to fetch faculty: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ✅ ASSIGN FACULTY COORDINATOR
+    @PostMapping("/department/{departmentId}/coordinator")
+    public ResponseEntity<?> assignFacultyCoordinator(
+            @PathVariable Long departmentId,
+            @RequestBody AssignFacultyCoordinatorRequest request,
+            Authentication authentication) {
+
+        System.out.println("\n========== ASSIGN FACULTY COORDINATOR ==========");
+        System.out.println("[AdminController] 📤 POST /admin/department/" + departmentId + "/coordinator");
+        System.out.println("[AdminController] Request - FacultyId: " + request.getFacultyId() + ", DepartmentId: " + request.getDepartmentId());
+        System.out.println("[AdminController] 🔐 Authentication: " + authentication);
+
+        if (authentication == null) {
+            System.out.println("[AdminController] ❌ No authentication provided");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized"));
+        }
+
+        if (!isAdmin(authentication)) {
+            System.out.println("[AdminController] ❌ User is not admin - FORBIDDEN");
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Only ADMIN can assign coordinators");
+            error.put("status", 403);
+            error.put("authorities", authentication.getAuthorities().toString());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
+
+        try {
+            System.out.println("[AdminController] 🔄 Processing assignment...");
+            
+            DepartmentResponse response = adminService.assignFacultyCoordinator(
+                    request.getFacultyId(),
+                    departmentId
+            );
+            
+            System.out.println("[AdminController] ✅ Success - Coordinator assigned");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            e.printStackTrace();
+
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("timestamp", new java.util.Date());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+    
+    // ✅ REMOVE FACULTY COORDINATOR
+    @DeleteMapping("/department/{departmentId}/coordinator/{facultyId}")
+    public ResponseEntity<?> removeFacultyCoordinator(
+            @PathVariable Long departmentId,
+            @PathVariable Long facultyId,
+            Authentication authentication) {
+
+        System.out.println("\n========== REMOVE FACULTY COORDINATOR ==========");
+        System.out.println("[AdminController] 📤 DELETE /admin/department/" + departmentId + "/coordinator/" + facultyId);
+        System.out.println("[AdminController] 🔐 Authentication: " + authentication);
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Unauthorized"));
+        }
+
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only ADMIN can remove coordinators"));
+        }
+
+        try {
+            System.out.println("[AdminController] 🔄 Processing removal...");
+            
+            DepartmentResponse response = adminService.removeFacultyCoordinator(facultyId, departmentId);
+            
+            System.out.println("[AdminController] ✅ Success - Coordinator removed");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            e.printStackTrace();
+
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("timestamp", new java.util.Date());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ✅ GET DEPARTMENT STATS
+    @GetMapping("/department/{departmentId}/stats")
+    public ResponseEntity<?> getDepartmentStats(
+            @PathVariable Long departmentId,
+            Authentication authentication) {
+
+        System.out.println("\n========== GET DEPARTMENT STATS ==========");
+        System.out.println("[AdminController] 📊 GET /admin/department/" + departmentId + "/stats");
+
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only ADMIN can view stats"));
+        }
+
+        try {
+            DepartmentStatsResponse stats = adminService.getDepartmentStats(departmentId);
+            System.out.println("[AdminController] ✅ Stats fetched");
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ GET ADMIN DASHBOARD STATS
+    @GetMapping("/dashboard/stats")
+    public ResponseEntity<?> getAdminDashboardStats(Authentication authentication) {
+
+        System.out.println("\n========== ADMIN DASHBOARD STATS ==========");
+        System.out.println("[AdminController] 📊 GET /admin/dashboard/stats");
+
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only ADMIN can access this"));
+        }
+
+        try {
+            AdminDashboardStatsResponse stats = adminService.getAdminDashboardStats();
+            System.out.println("[AdminController] ✅ Stats fetched");
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ GET FACULTY DASHBOARD STATS
+    @GetMapping("/faculty/{facultyId}/dashboard-stats")
+    public ResponseEntity<?> getFacultyDashboardStats(
+            @PathVariable Long facultyId,
+            Authentication authentication) {
+
+        System.out.println("\n========== FACULTY DASHBOARD STATS ==========");
+        System.out.println("[AdminController] 📊 GET /admin/faculty/" + facultyId + "/dashboard-stats");
+
+        try {
+            FacultyDashboardStatsResponse stats = adminService.getFacultyDashboardStats(facultyId);
+            System.out.println("[AdminController] ✅ Faculty stats fetched");
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ GET STUDENT DASHBOARD STATS
+    @GetMapping("/student/{studentId}/dashboard-stats")
+    public ResponseEntity<?> getStudentDashboardStats(
+            @PathVariable Long studentId,
+            Authentication authentication) {
+
+        System.out.println("\n========== STUDENT DASHBOARD STATS ==========");
+        System.out.println("[AdminController] 📊 GET /admin/student/" + studentId + "/dashboard-stats");
+
+        try {
+            StudentDashboardStatsResponse stats = adminService.getStudentDashboardStats(studentId);
+            System.out.println("[AdminController] ✅ Student stats fetched");
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 }

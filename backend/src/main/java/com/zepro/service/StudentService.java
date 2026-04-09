@@ -6,6 +6,9 @@ import com.zepro.model.Project;
 import com.zepro.model.ProjectRequest;
 import com.zepro.model.Student;
 import com.zepro.model.Team;
+
+import com.zepro.model.Institute;
+import com.zepro.model.Department;
 import com.zepro.model.RequestStatus;
 import com.zepro.repository.StudentRepository;
 import com.zepro.repository.TeamRepository;
@@ -18,6 +21,8 @@ import com.zepro.model.TeamJoinRequest;
 import java.util.ArrayList;
 import java.util.List;
 import jakarta.transaction.Transactional;
+import com.zepro.repository.InstituteRepository;
+import com.zepro.repository.DepartmentRepository;
 
 @Service
 public class StudentService {
@@ -31,6 +36,8 @@ public class StudentService {
         private final com.zepro.repository.ProjectDomainRepository projectDomainRepository;
         private final com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository;
         private final com.zepro.repository.AllocationRulesRepository allocationRulesRepository;
+        private final InstituteRepository instituteRepository;
+        private final DepartmentRepository departmentRepository;
 
         public StudentService(StudentRepository studentRepository,
                         TeamRepository teamRepository,
@@ -40,7 +47,9 @@ public class StudentService {
                         ProjectRepository projectRepository,
                         com.zepro.repository.ProjectDomainRepository projectDomainRepository,
                         com.zepro.repository.ProjectSubDomainRepository projectSubDomainRepository,
-                        com.zepro.repository.AllocationRulesRepository allocationRulesRepository) {
+                        com.zepro.repository.AllocationRulesRepository allocationRulesRepository,
+                        InstituteRepository instituteRepository,
+                        DepartmentRepository departmentRepository) {
                 this.studentRepository = studentRepository;
                 this.teamRepository = teamRepository;
                 this.joinRequestRepository = joinRequestRepository;
@@ -50,6 +59,8 @@ public class StudentService {
                 this.projectDomainRepository = projectDomainRepository;
                 this.projectSubDomainRepository = projectSubDomainRepository;
                 this.allocationRulesRepository = allocationRulesRepository;
+                this.instituteRepository = instituteRepository;
+                this.departmentRepository = departmentRepository;
         }
 
         // ------------------------------------------------
@@ -238,7 +249,7 @@ public class StudentService {
             StringBuilder rollNumbers = new StringBuilder("[");
             StringBuilder cgpas = new StringBuilder("[");
             StringBuilder resumeLinks = new StringBuilder("[");
-            StringBuilder makeSheetLinks = new StringBuilder("[");
+            StringBuilder markSheetLinks = new StringBuilder("[");
 
             // Use DTO if provided, otherwise use team members from database
             List<?> membersToProcess = (teamMembersFromDTO != null && !teamMembersFromDTO.isEmpty()) 
@@ -272,14 +283,14 @@ public class StudentService {
                 rollNumbers.append("\"").append(rollNumber).append("\"");
                 cgpas.append(cgpa);
                 resumeLinks.append("\"").append(resumeLink).append("\"");
-                makeSheetLinks.append("\"").append(makeSheetLink).append("\"");
+                markSheetLinks.append("\"").append(makeSheetLink).append("\"");
 
                 if (i < membersToProcess.size() - 1) {
                     names.append(",");
                     rollNumbers.append(",");
                     cgpas.append(",");
                     resumeLinks.append(",");
-                    makeSheetLinks.append(",");
+                    markSheetLinks.append(",");
                 }
             }
 
@@ -287,7 +298,7 @@ public class StudentService {
             rollNumbers.append("]");
             cgpas.append("]");
             resumeLinks.append("]");
-            makeSheetLinks.append("]");
+            markSheetLinks.append("]");
 
             ProjectRequest req = new ProjectRequest();
             req.setTeam(team);
@@ -300,7 +311,7 @@ public class StudentService {
             req.setTeamMembersRollNumbers(rollNumbers.toString());
             req.setTeamMembersCgpas(cgpas.toString());
             req.setTeamMembersResumeLinks(resumeLinks.toString());
-            req.setTeamMembersMakeSheetLinks(makeSheetLinks.toString());
+            req.setTeamMembersMarkSheetLinks(markSheetLinks.toString());
 
             projectRequestRepository.save(req);
 
@@ -734,4 +745,112 @@ public class StudentService {
                     .toList();
         }
 
-}
+        // ✅ COMPLETE STUDENT PROFILE
+        public StudentProfileResponse completeStudentProfile(Long studentId, CompleteStudentProfileRequest request) {
+            
+            System.out.println("[StudentService] 📝 Completing student profile for ID: " + studentId);
+            
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
+
+            // ✅ Set all required fields
+            student.setRollNumber(request.getRollNumber());
+            student.setCgpa(request.getCgpa());
+            student.setYear(request.getYear());
+            student.setResumeLink(request.getResumeLink());
+            student.setMarksheetLink(request.getMarksheetLink());
+            
+            // ✅ Set institute
+            if (request.getInstituteId() != null) {
+                Institute institute = instituteRepository.findById(request.getInstituteId())
+                        .orElseThrow(() -> new RuntimeException("Institute not found"));
+                student.setInstitute(institute);
+            }
+            
+            // ✅ Set department
+            if (request.getDepartmentId() != null) {
+                Department department = departmentRepository.findById(request.getDepartmentId())
+                        .orElseThrow(() -> new RuntimeException("Department not found"));
+                student.setDepartment(department);
+            }
+            
+            Student saved = studentRepository.save(student);
+            
+            System.out.println("[StudentService] ✅ Student profile completed");
+            
+            return new StudentProfileResponse(
+                    saved.getStudentId(),
+                    saved.getUser().getName(),
+                    saved.getUser().getEmail(),
+                    saved.getRollNumber(),
+                    saved.getCgpa(),
+                    saved.getYear(),
+                    saved.getDepartment() != null ? saved.getDepartment().getDepartmentId() : null,
+                    saved.getDepartment() != null ? saved.getDepartment().getDepartmentName() : null,
+                    saved.getResumeLink(),
+                    saved.getMarksheetLink(),
+                    isProfileComplete(saved)
+            );
+        }
+
+        // ✅ VALIDATE STUDENT PROFILE COMPLETION
+        public boolean isProfileComplete(Student student) {
+            return student.getRollNumber() != null && !student.getRollNumber().isEmpty() &&
+                   student.getCgpa() > 0 &&
+                   student.getYear() != null && !student.getYear().isEmpty() &&
+                   student.getDepartment() != null &&
+                   student.getResumeLink() != null && !student.getResumeLink().isEmpty() &&
+                   student.getMarksheetLink() != null && !student.getMarksheetLink().isEmpty();
+        }
+
+        // ✅ GET STUDENT PROFILE STATUS
+        public StudentProfileStatusResponse getProfileStatus(Long studentId) {
+            
+            Student student = studentRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
+            
+            boolean isComplete = isProfileComplete(student);
+            
+            return new StudentProfileStatusResponse(
+                    studentId,
+                    isComplete,
+                    student.getRollNumber(),
+                    student.getCgpa(),
+                    student.getYear(),
+                    student.getDepartment() != null ? student.getDepartment().getDepartmentId() : null,
+                    student.getResumeLink(),
+                    student.getMarksheetLink()
+            );
+        }
+
+        // ✅ GET ALL INSTITUTES
+        public List<InstituteDTO> getAllInstitutes() {
+            System.out.println("[StudentService] 🔍 Fetching all institutes");
+            
+            List<Institute> institutes = instituteRepository.findAll();
+            
+            return institutes.stream()
+                    .map(institute -> new InstituteDTO(
+                            institute.getInstituteId(),
+                            institute.getInstituteName(),
+                            institute.getInstituteCode()
+                    ))
+                    .toList();
+        }
+
+        // ✅ GET DEPARTMENTS BY INSTITUTE
+        public List<DepartmentDTO> getDepartmentsByInstitute(Long instituteId) {
+            System.out.println("[StudentService] 🔍 Fetching departments for institute: " + instituteId);
+            
+            Institute institute = instituteRepository.findById(instituteId)
+                    .orElseThrow(() -> new RuntimeException("Institute not found"));
+            
+            return institute.getDepartments().stream()
+                    .map(dept -> new DepartmentDTO(
+                            dept.getDepartmentId(),
+                            dept.getDepartmentName(),
+                            dept.getDepartmentCode()
+                    ))
+                    .toList();
+        }
+    }

@@ -11,16 +11,15 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { login } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 import { StudentAuthContext } from '../context/StudentAuthContext';
-import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'react-native';
+import { getProfileStatus } from '../api/studentApi';
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { setUser } = useContext(AuthContext);
-  const { studentUser, setStudentUser } = useContext(StudentAuthContext);
-  const { showAlert } = useContext(AlertContext);
+  const {  setStudentUser } = useContext(StudentAuthContext);
   const { colors } = useContext(ThemeContext);
 
   const [email, setEmail] = useState('');
@@ -80,17 +79,36 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           isTeamLead: res.data.teamLead,
         };
 
-        // ✅ Save
         await AsyncStorage.setItem('user', JSON.stringify(user));
-
-        // ✅ Update context
         setStudentUser(user);
 
-        // ✅ FORCE NAVIGATION (NO useEffect)
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'StudentHome' }],
-        });
+        // ✅ CHECK PROFILE COMPLETION
+        try {
+          const profileStatusRes = await getProfileStatus(studentId);
+          const profileStatus = profileStatusRes.data;  // ✅ ADD THIS LINE
+          console.log("PROFILE STATUS:", profileStatus);
+
+          if (profileStatus.isComplete) {
+            // ✅ PROFILE COMPLETE → GO TO STUDENT HOME
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'StudentHome' }],
+            });
+          } else {
+            // ✅ PROFILE INCOMPLETE → GO TO COMPLETE PROFILE PAGE
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'CompleteProfile' as any }],
+            });
+          }
+        } catch (err) {
+          console.log("PROFILE STATUS ERROR:", err);
+          // If error, assume incomplete and navigate to complete profile
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'CompleteProfile' as any }],
+          });
+        }
       }
       else if (role === 'FACULTY') {
         navigation.replace('FacultyHome');
