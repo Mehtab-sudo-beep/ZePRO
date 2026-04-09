@@ -1,19 +1,17 @@
 package com.zepro.repository;
 
-import java.util.Optional;
-
+import com.zepro.model.Faculty;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import com.zepro.model.Faculty;
+import org.springframework.data.jpa.repository.Modifying;
 import com.zepro.model.Users;
-import java.util.List;
 
+import java.util.List;
+import java.util.Optional;
 
 public interface FacultyRepository extends JpaRepository<Faculty, Long> {
-
+    
     // ✅ ADD THIS METHOD (Find faculty by user email)
     Optional<Faculty> findByUser_Email(String email);
     
@@ -23,7 +21,6 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     List<Faculty> findByDepartment_DepartmentId(Long departmentId);
         Optional<Faculty> findByUser_UserId(Long userId);
     long countByDepartment_DepartmentId(Long departmentId);
-
 
     @Query("SELECT f FROM Faculty f WHERE " +
            "LOWER(f.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
@@ -44,4 +41,7 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     @Modifying
     @Query("UPDATE Faculty f SET f.allocatedStudents = f.allocatedStudents + 1 WHERE f.facultyId = :facultyId")
     void incrementAllocatedStudents(@Param("facultyId") Long facultyId);
+
+    // ✅ ADD THIS - Find faculties by department
+    
 }

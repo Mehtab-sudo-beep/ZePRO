@@ -120,16 +120,77 @@ public class StudentController {
 
     // ✅ COMPLETE STUDENT PROFILE (Mandatory after login)
     @PostMapping("/complete-profile/{studentId}")
-    public ResponseEntity<?> completeStudentProfile(
+    public ResponseEntity<?> completeProfile(
             @PathVariable Long studentId,
             @RequestBody CompleteStudentProfileRequest request) {
         
-        System.out.println("\n========== COMPLETE STUDENT PROFILE ==========");
-        System.out.println("[StudentController] 📝 POST /student/complete-profile/" + studentId);
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║   COMPLETE PROFILE API ENDPOINT        ║");
+        System.out.println("╚════════════════════════════════════════╝");
+        System.out.println("[StudentController] POST /student/complete-profile/" + studentId);
         
         try {
+            System.out.println("[StudentController] 📥 Request body:");
+            System.out.println("  - Roll Number: " + request.getRollNumber());
+            System.out.println("  - CGPA: " + request.getCgpa());
+            System.out.println("  - Year: " + request.getYear());
+            System.out.println("  - Phone: " + request.getPhone());
+            System.out.println("  - Institute ID: " + request.getInstituteId());
+            System.out.println("  - Department ID: " + request.getDepartmentId());
+            System.out.println("  - Resume Link: " + request.getResumeLink());
+            System.out.println("  - Marksheet Link: " + request.getMarksheetLink());
+            
             StudentProfileResponse response = studentService.completeStudentProfile(studentId, request);
-            System.out.println("[StudentController] ✅ Profile completed successfully");
+            
+            System.out.println("\n[StudentController] ✅ RESPONSE:");
+            System.out.println("  - Student ID: " + response.getStudentId());
+            System.out.println("  - Name: " + response.getName());
+            System.out.println("  - Email: " + response.getEmail());
+            System.out.println("  - Roll Number: " + response.getRollNumber());
+            System.out.println("  - CGPA: " + response.getCgpa());
+            System.out.println("  - Year: " + response.getYear());
+            System.out.println("  - Is Profile Complete: " + response.isProfileComplete());
+            System.out.println();
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.out.println("[StudentController] ❌ ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            java.util.Map<String, Object> error = new java.util.HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("timestamp", new java.util.Date());
+            
+            return ResponseEntity.status(400).body(error);
+        }
+    }
+
+    // ✅ GET PROFILE COMPLETION STATUS
+    @GetMapping("/profile-status/{studentId}")
+    public ResponseEntity<?> getProfileStatus(@PathVariable Long studentId) {
+        
+        System.out.println("\n╔════════════════════════════════════════╗");
+        System.out.println("║      GET PROFILE STATUS ENDPOINT       ║");
+        System.out.println("╚════════════════════════════════════════╝");
+        System.out.println("[StudentController] 📡 GET /student/profile-status/" + studentId);
+        
+        try {
+            StudentProfileResponse response = studentService.getProfileStatus(studentId);
+            
+            System.out.println("[StudentController] ✅ Profile Status Response:");
+            System.out.println("  - Student ID: " + response.getStudentId());
+            System.out.println("  - Name: " + response.getName());
+            System.out.println("  - Email: " + response.getEmail());
+            System.out.println("  - Roll Number: " + response.getRollNumber());
+            System.out.println("  - CGPA: " + response.getCgpa());
+            System.out.println("  - Year: " + response.getYear());
+            System.out.println("  - Department ID: " + response.getDepartmentId());
+            System.out.println("  - Department Name: " + response.getDepartmentName());
+            System.out.println("  - Resume Link: " + response.getResumeLink());
+            System.out.println("  - Marksheet Link: " + response.getMarksheetLink());
+            System.out.println("  - Is Profile Complete: " + response.isProfileComplete());
+            System.out.println();
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ Error: " + e.getMessage());
@@ -138,26 +199,6 @@ public class StudentController {
             java.util.Map<String, Object> error = new java.util.HashMap<>();
             error.put("error", e.getMessage());
             error.put("timestamp", new java.util.Date());
-            
-            return ResponseEntity.status(500).body(error);
-        }
-    }
-
-    // ✅ GET PROFILE COMPLETION STATUS
-    @GetMapping("/profile-status/{studentId}")
-    public ResponseEntity<?> getProfileStatus(@PathVariable Long studentId) {
-        
-        System.out.println("\n========== GET PROFILE STATUS ==========");
-        System.out.println("[StudentController] 📡 GET /student/profile-status/" + studentId);
-        
-        try {
-            StudentProfileStatusResponse response = studentService.getProfileStatus(studentId);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.out.println("[StudentController] ❌ Error: " + e.getMessage());
-            
-            java.util.Map<String, Object> error = new java.util.HashMap<>();
-            error.put("error", e.getMessage());
             
             return ResponseEntity.status(500).body(error);
         }

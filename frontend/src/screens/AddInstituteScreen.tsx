@@ -1,23 +1,15 @@
 import React, { useState, useContext } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { addInstitute } from '../api/instituteApi';
-import { AlertContext } from '../context/AlertContext';  // ✅ IMPORT
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 const AddInstituteScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { showAlert } = useContext(AlertContext);  // ✅ USE CONTEXT
+  const { showAlert } = useContext(AlertContext);
+  const { theme, colors } = useContext(ThemeContext);
 
   const [form, setForm] = useState({
     name: '',
@@ -34,97 +26,12 @@ const AddInstituteScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ✅ VALIDATION
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
+  const handleCodeChange = (value: string) => {
+    const uppercased = value.toUpperCase();
+    setForm(prev => ({ ...prev, code: uppercased }));
 
-    if (!form.name.trim()) newErrors.name = 'Institute name is required';
-    if (!form.code.trim()) newErrors.code = 'Institute code is required';
-    if (!form.address.trim()) newErrors.address = 'Address is required';
-    if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!form.email.trim()) newErrors.email = 'Email is required';
-    if (!form.website.trim()) newErrors.website = 'Website is required';
-    if (!form.tail.trim()) newErrors.tail = 'Email tail is required';
-
-    if (form.email && !/\S+@\S+\.\S+/.test(form.email))
-      newErrors.email = 'Enter a valid email address';
-
-    if (form.phone && !/^(\+91)?[6-9]\d{9}$/.test(form.phone))
-      newErrors.phone = 'Enter a valid phone number';
-
-    return newErrors;
-  };
-
-  const handleSubmit = async () => {
-    console.log('====================');
-    console.log('[AddInstitute] 🚀 Submit started');
-
-    const validationErrors = validate();
-
-    if (Object.keys(validationErrors).length > 0) {
-      console.log('[AddInstitute] ❌ Validation failed');
-      console.log(validationErrors);
-      setErrors(validationErrors);
-      showAlert('Validation Error', 'Please fill in all required fields');
-      return;
-    }
-
-    console.log('[AddInstitute] ✅ Validation passed');
-    setLoading(true);
-
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        showAlert('Error', 'Authentication token not found. Please login again.');
-        setLoading(false);
-        return;
-      }
-
-      const payload = {
-        instituteName: form.name,
-        instituteCode: form.code,
-        address: form.address,
-        city: form.city,
-        state: form.state,
-        phoneNumber: form.phone,
-        email: form.email,
-        website: form.website,
-        tail: form.tail,
-      };
-
-      console.log('[AddInstitute] 📤 Payload:');
-      console.log(JSON.stringify(payload, null, 2));
-
-      const response = await addInstitute(payload);
-
-      console.log('[AddInstitute] ✅ Success:', response.data);
-
-      // ✅ USE SHOWALERT INSTEAD OF Alert.alert
-      showAlert(
-        'Success',
-        `${response.data?.instituteName || form.name} added successfully`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-            style: 'default',
-          }
-        ]
-      );
-
-    } catch (error: any) {
-      console.log('[AddInstitute] 💥 ERROR:', error.message);
-      console.log('Error details:', error.response?.data);
-
-      // ✅ USE SHOWALERT FOR ERRORS
-      showAlert(
-        'Error',
-        error.response?.data?.error || 'Failed to create institute'
-      );
-    } finally {
-      setLoading(false);
-      console.log('[AddInstitute] 🏁 Finished');
-      console.log('====================');
+    if (errors.code) {
+      setErrors(prev => ({ ...prev, code: '' }));
     }
   };
 
@@ -138,127 +45,220 @@ const AddInstituteScreen: React.FC = () => {
     }
   };
 
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.name.trim())
+      newErrors.name = 'Institute name is required';
+
+    if (!form.code.trim())
+      newErrors.code = 'Institute code is required';
+
+    if (!form.email.trim() || !form.email.includes('@'))
+      newErrors.email = 'Valid email is required';
+
+    return newErrors;
+  };
+
+  const handleSubmit = async () => {
+    console.log('[AddInstitute] 🚀 Submit started');
+
+    const validationErrors = validate();
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      showAlert('Validation Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const payload = {
+        instituteName: form.name,
+        instituteCode: form.code.toUpperCase(),
+        address: form.address || '',
+        city: form.city || '',
+        state: form.state || '',
+        phoneNumber: form.phone || '',  // ✅ CHANGED: phone → phoneNumber
+        email: form.email,
+        website: form.website || '',
+        tail: form.tail || '',
+      };
+
+      console.log('[AddInstitute] 📤 Sending:', payload);
+
+      const response = await addInstitute(payload);
+
+      console.log('[AddInstitute] ✅ Success:', response.data);
+
+      showAlert(
+        'Success',
+        `"${form.name}" has been successfully added.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+            style: 'default',
+          }
+        ]
+      );
+    } catch (err: any) {
+      console.log('[AddInstitute] 💥 ERROR:', err?.response?.data || err.message);
+      showAlert(
+        'Error',
+        err.response?.data?.error || 'Failed to create institute. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Image source={require('../assets/angle.png')} style={styles.backIcon} />
+          <Image
+            source={
+              theme === 'dark'
+                ? require('../assets/angle-white.png')
+                : require('../assets/angle.png')
+            }
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Institute</Text>
+
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Add Institute</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+        {/* BASIC INFO */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Basic Information</Text>
 
           <Field
             label="Institute Name *"
             placeholder="e.g. NIT Calicut"
             value={form.name}
-            onChangeText={(t: string) => handleChange('name', t)}
+            onChangeText={(v: string) => handleChange('name', v)}
             error={errors.name}
+            colors={colors}
           />
 
           <Field
             label="Institute Code *"
             placeholder="e.g. NITC"
             value={form.code}
-            onChangeText={(t: string) => handleChange('code', t.toUpperCase())}
+            onChangeText={handleCodeChange}
             error={errors.code}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Location</Text>
-
-          <Field
-            label="Address *"
-            placeholder="Street address"
-            value={form.address}
-            onChangeText={(t: string) => handleChange('address', t)}
-            error={errors.address}
-            multiline
-          />
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Field
-                label="City"
-                placeholder="City"
-                value={form.city}
-                onChangeText={(t: string) => handleChange('city', t)}
-              />
-            </View>
-
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <Field
-                label="State"
-                placeholder="State"
-                value={form.state}
-                onChangeText={(t: string) => handleChange('state', t)}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Details</Text>
-
-          <Field
-            label="Phone *"
-            placeholder="+91 XXXXX XXXXX"
-            value={form.phone}
-            onChangeText={(t: string) => handleChange('phone', t)}
-            error={errors.phone}
+            autoCapitalize="characters"
+            colors={colors}
           />
 
           <Field
             label="Email *"
-            placeholder="admin@inst.edu"
+            placeholder="admin@institute.edu"
             value={form.email}
-            onChangeText={(t: string) => handleChange('email', t)}
+            onChangeText={(v: string) => handleChange('email', v)}
             error={errors.email}
+            keyboardType="email-address"
+            colors={colors}
           />
 
           <Field
-            label="Website *"
-            placeholder="https://example.com"
+            label="Phone"
+            placeholder="+91 XXXX XXXXXX"
+            value={form.phone}
+            onChangeText={(v: string) => handleChange('phone', v)}
+            colors={colors}
+          />
+        </View>
+
+        {/* ADDRESS INFO */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Address Information</Text>
+
+          <Field
+            label="Address"
+            placeholder="Street address..."
+            value={form.address}
+            onChangeText={(v: string) => handleChange('address', v)}
+            multiline
+            colors={colors}
+          />
+
+          <Field
+            label="City"
+            placeholder="e.g. Kozhikode"
+            value={form.city}
+            onChangeText={(v: string) => handleChange('city', v)}
+            colors={colors}
+          />
+
+          <Field
+            label="State"
+            placeholder="e.g. Kerala"
+            value={form.state}
+            onChangeText={(v: string) => handleChange('state', v)}
+            colors={colors}
+          />
+        </View>
+
+        {/* ADDITIONAL INFO */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Additional Information</Text>
+
+          <Field
+            label="Website"
+            placeholder="https://institute.edu"
             value={form.website}
-            onChangeText={(t: string) => handleChange('website', t)}
-            error={errors.website}
+            onChangeText={(v: string) => handleChange('website', v)}
+            colors={colors}
           />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Email Configuration</Text>
 
           <Field
-            label="Email Tail *"
-            placeholder="e.g. @nitc.ac.in (for help page)"
+            label="Tail"
+            placeholder="Institute identifier..."
             value={form.tail}
-            onChangeText={(t: string) => handleChange('tail', t)}
-            error={errors.tail}
+            onChangeText={(v: string) => handleChange('tail', v)}
+            colors={colors}
           />
         </View>
 
+        {/* SUBMIT */}
         <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, { backgroundColor: colors.primary }, loading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={styles.submitText}>Create Institute</Text>
           )}
         </TouchableOpacity>
 
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+// ✅ FIELD COMPONENT WITH THEME SUPPORT
+interface FieldProps {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  error?: string;
+  multiline?: boolean;
+  keyboardType?: 'default' | 'email-address' | 'number-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  editable?: boolean;
+  colors?: any;
+}
 
 const Field = ({
   label,
@@ -267,48 +267,67 @@ const Field = ({
   onChangeText,
   error,
   multiline = false,
-}: any) => (
-  <View style={{ marginBottom: 12 }}>
-    <Text style={{ fontWeight: '600' }}>{label}</Text>
+  keyboardType = 'default',
+  autoCapitalize = 'words',
+  editable = true,
+  colors,
+}: FieldProps) => {
+  const defaultColors = {
+    background: '#F9FAFB',
+    text: '#1F2937',
+    subText: '#6B7280',
+    border: '#E5E7EB',
+  };
 
-    <TextInput
-      style={{
-        borderWidth: 1,
-        borderColor: error ? '#ef4444' : '#ddd',
-        padding: 10,
-        borderRadius: 8,
-        marginTop: 5,
-      }}
-      placeholder={placeholder}
-      value={value}
-      onChangeText={onChangeText}
-      multiline={multiline}
-    />
+  const themeColors = colors || defaultColors;
 
-    {error && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{error}</Text>}
-  </View>
-);
+  return (
+    <View style={fieldStyles.wrapper}>
+      <Text style={[fieldStyles.label, { color: themeColors.text }]}>{label}</Text>
+      <TextInput
+        style={[
+          fieldStyles.input,
+          {
+            backgroundColor: themeColors.background,
+            color: themeColors.text,
+            borderColor: error ? '#ef4444' : themeColors.border,
+          },
+          multiline && fieldStyles.multiline,
+          error && fieldStyles.inputError,
+          !editable && fieldStyles.disabledInput,
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor={themeColors.subText}
+        value={value}
+        onChangeText={onChangeText}
+        editable={editable}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+      />
+      {error && <Text style={fieldStyles.errorText}>{error}</Text>}
+    </View>
+  );
+};
 
+export default AddInstituteScreen;
+
+/* STYLES */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-
-  backBtn: { width: 40 },
-  backIcon: { width: 22, height: 22 },
-
-  headerTitle: { fontSize: 18, fontWeight: 'bold' },
-
+  backBtn: { width: 40, justifyContent: 'center', alignItems: 'center' },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
   scrollContent: { padding: 16, paddingBottom: 40 },
-
   section: {
     backgroundColor: '#fff',
     padding: 16,
@@ -317,23 +336,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-
-  sectionTitle: { fontWeight: 'bold', marginBottom: 10, fontSize: 14 },
-
-  row: { flexDirection: 'row' },
-
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#374151',
+  },
   submitBtn: {
     backgroundColor: '#4F46E5',
     padding: 16,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
     elevation: 2,
   },
-
   submitBtnDisabled: { backgroundColor: '#93C5FD' },
-
-  submitText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
 
-export default AddInstituteScreen;
+const fieldStyles = StyleSheet.create({
+  wrapper: { marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  input: {
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    fontSize: 14,
+  },
+  multiline: { height: 100, textAlignVertical: 'top' },
+  inputError: { borderColor: '#ef4444', borderWidth: 1 },
+  disabledInput: { backgroundColor: '#E5E7EB', color: '#6B7280' },
+  errorText: { color: '#ef4444', fontSize: 12, marginTop: 4 },
+});

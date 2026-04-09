@@ -90,6 +90,7 @@ export const updateStudentProfile = async (data: any) => {
 // ================= STUDENT PROFILE COMPLETION =================
 
 export const getProfileStatus = (studentId: number) => {
+  console.log('[studentApi] 📡 Calling getProfileStatus for studentId:', studentId);
   return API.get(`/student/profile-status/${studentId}`);
 };
 
@@ -97,18 +98,23 @@ export const completeStudentProfile = (studentId: number, data: {
   rollNumber: string;
   cgpa: number;
   year: string;
-  departmentId: number;
   instituteId: number;
+  departmentId: number;
   resumeLink: string;
   marksheetLink: string;
+  phone: string;
 }) => {
+  console.log('[studentApi] 📤 Calling completeStudentProfile for studentId:', studentId);
+  console.log('[studentApi] Payload:', data);
   return API.post(`/student/complete-profile/${studentId}`, data);
 };
 
 export const getAllInstitutes = () => {
+  console.log('[studentApi] 📡 Calling getAllInstitutes');
   return API.get('/student/institutes');
 };
 
 export const getDepartmentsByInstitute = (instituteId: number) => {
+  console.log('[studentApi] 📡 Calling getDepartmentsByInstitute for instituteId:', instituteId);
   return API.get(`/student/departments/${instituteId}`);
 };
