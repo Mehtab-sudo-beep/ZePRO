@@ -362,7 +362,7 @@ public class FacultyService {
                 response.setTeamMembersRollNumbers(request.getTeamMembersRollNumbers());
                 response.setTeamMembersCgpas(request.getTeamMembersCgpas());
                 response.setTeamMembersResumeLinks(request.getTeamMembersResumeLinks());
-                response.setTeamMembersMakeSheetLinks(request.getTeamMembersMakeSheetLinks());
+                response.setTeamMembersMarkSheetLinks(request.getTeamMembersMarkSheetLinks());
             }
 
             response.setStatus(request.getStatus().name());

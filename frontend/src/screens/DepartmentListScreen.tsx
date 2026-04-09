@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertContext } from '../context/AlertContext';
-import { getDepartments, addDepartment, deleteDepartment } from '../api/departmentApi';
+import { getDepartments, addDepartment, deleteDepartment, getDepartmentStats } from '../api/departmentApi';
 import { BottomTab } from './InstituteListScreen';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'DepartmentList'>;
@@ -37,11 +37,18 @@ interface Department {
   };
 }
 
+interface DepartmentStats {
+  studentCount: number;
+  facultyCount: number;
+  projectCount: number;
+}
+
 const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
   const { instituteId, instituteName } = route.params;
   const { showAlert } = useContext(AlertContext);
 
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<Record<string, DepartmentStats>>({});
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -54,6 +61,26 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
     description: '',
   });
 
+  // ✅ LOAD DEPARTMENT STATS
+  const loadDepartmentStats = async (deptId: string) => {
+    try {
+      console.log('[DepartmentList] 📊 Fetching stats for dept:', deptId);
+      const statsRes = await getDepartmentStats(deptId);
+      console.log('[DepartmentList] ✅ Stats loaded:', statsRes.data);
+      
+      setDepartmentStats(prev => ({
+        ...prev,
+        [deptId]: {
+          studentCount: statsRes.data.studentCount || 0,
+          facultyCount: statsRes.data.facultyCount || 0,
+          projectCount: statsRes.data.projectCount || 0,
+        }
+      }));
+    } catch (e) {
+      console.log('[DepartmentList] ❌ Error loading stats:', e);
+    }
+  };
+
   // ✅ LOAD DEPARTMENTS FROM BACKEND
   const loadDepartments = async () => {
     try {
@@ -64,6 +91,13 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
       console.log('[DepartmentList] ✅ Departments loaded:', response.data);
 
       setDepartments(response.data || []);
+
+      // ✅ LOAD STATS FOR EACH DEPARTMENT
+      if (response.data && response.data.length > 0) {
+        response.data.forEach((dept: Department) => {
+          loadDepartmentStats(dept.departmentId);
+        });
+      }
     } catch (error: any) {
       console.log('[DepartmentList] ❌ Error:', error.message);
       showAlert('Error', error.response?.data?.error || 'Failed to fetch departments');
@@ -78,6 +112,12 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
       loadDepartments();
     }, [instituteId])
   );
+
+  // ✅ CALCULATE TOTAL STATS
+  const totalStats = {
+    students: Object.values(departmentStats).reduce((sum, s) => sum + s.studentCount, 0),
+    faculty: Object.values(departmentStats).reduce((sum, s) => sum + s.facultyCount, 0),
+  };
 
   // ✅ FILTER DEPARTMENTS
   const filtered = departments.filter(d =>
@@ -166,6 +206,10 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
             console.log('[DepartmentList] ✅ Deleted successfully');
 
             setDepartments(departments.filter(d => d.departmentId !== id));
+            const newStats = { ...departmentStats };
+            delete newStats[id];
+            setDepartmentStats(newStats);
+            
             showAlert('Success', 'Department deleted successfully');
           } catch (error: any) {
             console.log('[DepartmentList] ❌ Error:', error.message);
@@ -202,18 +246,18 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Stats */}
+        {/* ✅ UPDATED Stats with dynamic data */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={[styles.statValue, { color: '#4F46E5' }]}>{departments.length}</Text>
             <Text style={styles.statLabel}>Departments</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#059669' }]}>-</Text>
+            <Text style={[styles.statValue, { color: '#059669' }]}>{totalStats.students}</Text>
             <Text style={styles.statLabel}>Students</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#D97706' }]}>-</Text>
+            <Text style={[styles.statValue, { color: '#D97706' }]}>{totalStats.faculty}</Text>
             <Text style={styles.statLabel}>Faculty</Text>
           </View>
         </View>
@@ -254,43 +298,71 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
                 </Text>
               </View>
             ) : (
-              filtered.map(dept => (
-                <TouchableOpacity
-                  key={dept.departmentId}
-                  style={styles.card}
-                  onPress={() =>
-                    navigation.navigate('DepartmentDetails', {
-                      departmentId: dept.departmentId,
-                      departmentName: dept.departmentName,
-                      instituteId,
-                      instituteName,
-                    })
-                  }
-                  activeOpacity={0.85}
-                >
-                  {/* Card Header */}
-                  <View style={styles.cardHeader}>
-                    <View style={styles.deptIcon}>
-                      <Text style={styles.deptIconText}>
-                        {dept.departmentCode.substring(0, 2).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.cardTitle}>{dept.departmentName}</Text>
-                      <Text style={styles.cardText}>Code: {dept.departmentCode}</Text>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </View>
-
-                  {/* Delete Button */}
+              filtered.map(dept => {
+                const stats = departmentStats[dept.departmentId] || { studentCount: 0, facultyCount: 0, projectCount: 0 };
+                
+                return (
                   <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDelete(dept.departmentId, dept.departmentName)}
+                    key={dept.departmentId}
+                    style={styles.card}
+                    onPress={() =>
+                      navigation.navigate('DepartmentDetails', {
+                        departmentId: dept.departmentId,
+                        departmentName: dept.departmentName,
+                        instituteId,
+                        instituteName,
+                      })
+                    }
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    {/* Card Header */}
+                    <View style={styles.cardHeader}>
+                      <View style={styles.deptIcon}>
+                        <Text style={styles.deptIconText}>
+                          {dept.departmentCode.substring(0, 2).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={styles.cardTitle}>{dept.departmentName}</Text>
+                        <Text style={styles.cardText}>Code: {dept.departmentCode}</Text>
+                      </View>
+                      <Text style={styles.chevron}>›</Text>
+                    </View>
+
+                    {/* ✅ DYNAMIC STATS ROW */}
+                    <View style={styles.statsRow}>
+                      <View style={styles.statItem}>
+                        <Text style={[styles.statCount, { color: '#059669' }]}>
+                          {stats.studentCount}
+                        </Text>
+                        <Text style={styles.statName}>Students</Text>
+                      </View>
+                      <View style={styles.divider} />
+                      <View style={styles.statItem}>
+                        <Text style={[styles.statCount, { color: '#D97706' }]}>
+                          {stats.facultyCount}
+                        </Text>
+                        <Text style={styles.statName}>Faculty</Text>
+                      </View>
+                      <View style={styles.divider} />
+                      <View style={styles.statItem}>
+                        <Text style={[styles.statCount, { color: '#4F46E5' }]}>
+                          {stats.projectCount}
+                        </Text>
+                        <Text style={styles.statName}>Projects</Text>
+                      </View>
+                    </View>
+
+                    {/* Delete Button */}
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDelete(dept.departmentId, dept.departmentName)}
+                    >
+                      <Text style={styles.deleteButtonText}>Delete</Text>
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              ))
+                );
+              })
             )}
           </ScrollView>
         )}
@@ -492,6 +564,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deptIconText: { fontSize: 13, fontWeight: 'bold', color: '#4F46E5' },
+
+  // ✅ NEW STATS ROW STYLES
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statCount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statName: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  divider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#E5E7EB',
+  },
 
   deleteButton: {
     borderWidth: 1,

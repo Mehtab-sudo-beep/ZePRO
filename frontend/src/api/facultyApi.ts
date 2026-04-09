@@ -175,13 +175,6 @@ export const rejectProject = async (requestId: number, token: string, reason: st
   });
 };
 
-export const promoteToFC = async (token: string) => {
-  const res = await axios.post(`${API}/faculty/make-fc`, {}, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
-};
-
 export const rescheduleMeeting = async (
   requestId: number,
   meetingTime: string,

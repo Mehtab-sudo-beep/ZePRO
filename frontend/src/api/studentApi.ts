@@ -86,3 +86,29 @@ export const updateStudentProfile = async (data: any) => {
   const res = await API.put('/student/profile', data);
   return res.data; // ✅ IMPORTANT
 };
+
+// ================= STUDENT PROFILE COMPLETION =================
+
+export const getProfileStatus = (studentId: number) => {
+  return API.get(`/student/profile-status/${studentId}`);
+};
+
+export const completeStudentProfile = (studentId: number, data: {
+  rollNumber: string;
+  cgpa: number;
+  year: string;
+  departmentId: number;
+  instituteId: number;
+  resumeLink: string;
+  marksheetLink: string;
+}) => {
+  return API.post(`/student/complete-profile/${studentId}`, data);
+};
+
+export const getAllInstitutes = () => {
+  return API.get('/student/institutes');
+};
+
+export const getDepartmentsByInstitute = (instituteId: number) => {
+  return API.get(`/student/departments/${instituteId}`);
+};

@@ -43,7 +43,13 @@ public class Student {
     @JoinColumn(name = "team_id")
     private Team team;
 
+    // ✅ ADD INSTITUTE RELATION
     @ManyToOne
+    @JoinColumn(name = "institute_id")
+    private Institute institute;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id")
     private Department department;
 
     private String resumeLink;
@@ -90,6 +96,11 @@ public class Student {
 
     public Team getTeam() {
         return team;
+    }
+
+    // ✅ ADD INSTITUTE GETTER
+    public Institute getInstitute() {
+        return institute;
     }
 
     public Department getDepartment() {
@@ -144,6 +155,11 @@ public class Student {
 
     public void setTeam(Team team) {
         this.team = team;
+    }
+
+    // ✅ ADD INSTITUTE SETTER
+    public void setInstitute(Institute institute) {
+        this.institute = institute;
     }
 
     public void setDepartment(Department department) {

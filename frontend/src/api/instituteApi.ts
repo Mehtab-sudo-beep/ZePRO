@@ -52,3 +52,21 @@ export const deleteInstitute = (id: string) => {
   console.log("🗑 DELETE:", id);
   return api.delete(`/admin/institute/${id}`);
 };
+
+// ✅ GET ADMIN DASHBOARD STATS
+export const getAdminDashboardStats = () => {
+  console.log('📊 GET /admin/dashboard/stats');
+  return api.get('/admin/dashboard/stats');
+};
+
+// ✅ GET FACULTY DASHBOARD STATS
+export const getFacultyDashboardStats = (facultyId: number) => {
+  console.log('📊 GET /admin/faculty/' + facultyId + '/dashboard-stats');
+  return api.get(`/admin/faculty/${facultyId}/dashboard-stats`);
+};
+
+// ✅ GET STUDENT DASHBOARD STATS
+export const getStudentDashboardStats = (studentId: number) => {
+  console.log('📊 GET /admin/student/' + studentId + '/dashboard-stats');
+  return api.get(`/admin/student/${studentId}/dashboard-stats`);
+};

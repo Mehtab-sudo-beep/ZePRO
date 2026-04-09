@@ -11,10 +11,12 @@ import com.zepro.model.Users;
 import java.util.Optional;
 import java.util.List;
 public interface StudentRepository extends JpaRepository<Student, Long> {
-     Optional<Student> findByUser(Users user);
-
-         Optional<Student> findByUser_Email(String email);
+    Optional<Student> findByUser(Users user);
+    Optional<Student> findByUser_Email(String email);
     Optional<Student> findByUserUserId(Long userId);
+    
+    // ✅ ADD THIS
+    long countByDepartment_DepartmentId(Long departmentId);
 
     long countByIsAllocatedTrue();
 
@@ -25,8 +27,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findByIsAllocatedTrue(); // ✅ ADD THIS — used by getAllocatedStudents()
 
     List<Student> findByAllocatedFacultyFacultyId(Long facultyId);
-        List<Student> findByDepartment_DepartmentId(Long departmentId);
-
+    List<Student> findByDepartment_DepartmentId(Long departmentId);
 
     List<Student> findByDepartment_DepartmentIdAndIsAllocatedFalse(Long departmentId);
     long countByAllocatedFaculty(Faculty faculty);

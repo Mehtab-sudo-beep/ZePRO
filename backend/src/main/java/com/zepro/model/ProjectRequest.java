@@ -39,7 +39,7 @@ public class ProjectRequest {
     private String teamMembersResumeLinks;
 
     @Column(columnDefinition = "LONGTEXT")
-    private String teamMembersMakeSheetLinks;
+    private String teamMembersMarkSheetLinks;
     
 
     // Getters and Setters
@@ -124,11 +124,11 @@ public class ProjectRequest {
         this.teamMembersResumeLinks = teamMembersResumeLinks;
     }
 
-    public String getTeamMembersMakeSheetLinks() {
-        return teamMembersMakeSheetLinks;
+    public String getTeamMembersMarkSheetLinks() {
+        return teamMembersMarkSheetLinks;
     }
 
-    public void setTeamMembersMakeSheetLinks(String teamMembersMakeSheetLinks) {
-        this.teamMembersMakeSheetLinks = teamMembersMakeSheetLinks;
+    public void setTeamMembersMarkSheetLinks(String teamMembersMarkSheetLinks) {
+        this.teamMembersMarkSheetLinks = teamMembersMarkSheetLinks;
     }
 }
