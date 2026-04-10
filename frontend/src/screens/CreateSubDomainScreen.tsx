@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 import { createSubDomain, getDomains, getSubDomains } from '../api/facultyApi';
@@ -21,6 +21,7 @@ const CreateSubDomainScreen = () => {
 
   const [name, setName] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [domains, setDomains] = useState<any[]>([]);
   const [subDomains, setSubDomains] = useState<any[]>([]);
@@ -37,8 +38,8 @@ const CreateSubDomainScreen = () => {
 
   const loadDomains = async () => {
     try {
+      console.log('[CreateSubDomainScreen] 📥 Loading domains...');
       const data = await getDomains();
-
       setDomains(data || []);
 
       setItems(
@@ -47,8 +48,10 @@ const CreateSubDomainScreen = () => {
           value: d.domainId,
         })),
       );
+      console.log('[CreateSubDomainScreen] ✅ Domains loaded:', data.length);
     } catch (err) {
-      console.log('Error loading domains', err);
+      console.log('[CreateSubDomainScreen] ❌ Error loading domains:', err);
+      Alert.alert('Error', 'Failed to load domains');
     }
   };
 
@@ -59,10 +62,12 @@ const CreateSubDomainScreen = () => {
 
     const fetchSubDomains = async () => {
       try {
+        console.log('[CreateSubDomainScreen] 📥 Loading subdomains for domain:', domainId);
         const data = await getSubDomains(domainId);
         setSubDomains(data || []);
+        console.log('[CreateSubDomainScreen] ✅ Subdomains loaded:', data.length);
       } catch (err) {
-        console.log('Error loading subdomains', err);
+        console.log('[CreateSubDomainScreen] ❌ Error loading subdomains:', err);
       }
     };
 
@@ -94,28 +99,37 @@ const CreateSubDomainScreen = () => {
     }
 
     try {
+      setLoading(true);
+      console.log('[CreateSubDomainScreen] 📤 Creating subdomain:', subDomainName);
+
       await createSubDomain(subDomainName, domainId, user!.token);
 
+      console.log('[CreateSubDomainScreen] ✅ Subdomain created successfully');
       setSuccess(true);
       setName('');
 
+      // Reload subdomains
       const data = await getSubDomains(domainId);
       setSubDomains(data || []);
+
+      // Clear success message after 2 seconds
+      setTimeout(() => setSuccess(false), 2000);
     } catch (err) {
-      console.log(err);
+      console.log('[CreateSubDomainScreen] ❌ Error creating subdomain:', err);
       Alert.alert('Error', 'Failed to create subdomain');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           Create SubDomain
         </Text>
 
         {/* DOMAIN DROPDOWN */}
-
         <Text style={[styles.label, { color: colors.text }]}>
           Select Domain
         </Text>
@@ -128,12 +142,12 @@ const CreateSubDomainScreen = () => {
           setValue={setDomainId}
           setItems={setItems}
           placeholder="Select Domain"
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownList}
+          style={[styles.dropdown, { borderColor: colors.border }]}
+          dropDownContainerStyle={[styles.dropdownList, { borderColor: colors.border }]}
+          textStyle={{ color: colors.text }}
         />
 
         {/* SUBDOMAIN INPUT */}
-
         <TextInput
           style={[
             styles.input,
@@ -146,30 +160,35 @@ const CreateSubDomainScreen = () => {
             setName(text);
             setSuccess(false);
           }}
+          editable={!loading}
         />
 
         {/* CREATE BUTTON */}
-
         <TouchableOpacity
           style={[
             styles.button,
             {
-              backgroundColor: name.trim() && domainId ? '#2563EB' : '#ccc',
+              backgroundColor: name.trim() && domainId && !loading ? colors.primary : '#ccc',
             },
           ]}
           onPress={handleCreate}
-          disabled={!name.trim() || !domainId}
+          disabled={!name.trim() || !domainId || loading}
         >
-          <Text style={styles.buttonText}>Create SubDomain</Text>
+          <Text style={styles.buttonText}>
+            {loading ? 'Creating...' : 'Create SubDomain'}
+          </Text>
         </TouchableOpacity>
 
+        {/* SUCCESS MESSAGE */}
         {success && (
-          <Text style={styles.successText}>
-            ✓ SubDomain created successfully
-          </Text>
+          <View style={[styles.successContainer, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+            <Text style={styles.successText}>
+              ✓ SubDomain created successfully
+            </Text>
+          </View>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -186,38 +205,42 @@ const styles = StyleSheet.create({
 
   card: {
     padding: 24,
-    borderRadius: 12,
+    borderRadius: 16,
     elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 24,
+    letterSpacing: -0.5,
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
   },
 
   dropdown: {
-    borderColor: '#2563EB',
-    borderWidth: 2,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     marginBottom: 20,
   },
 
   dropdownList: {
-    borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderRadius: 10,
   },
 
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderRadius: 10,
     padding: 14,
     fontSize: 15,
     marginBottom: 20,
@@ -225,19 +248,33 @@ const styles = StyleSheet.create({
 
   button: {
     padding: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+
+  successContainer: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
   },
 
   successText: {
-    marginTop: 16,
-    color: 'green',
+    color: '#10b981',
     fontWeight: '600',
     textAlign: 'center',
+    fontSize: 14,
   },
 });

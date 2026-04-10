@@ -192,12 +192,13 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const handleDownloadReport = async () => {
     try {
       setLoading(true);
-      console.log('[FacultyCoordinatorDashboard] 📥 Downloading report...');
+      console.log('[FacultyCoordinatorDashboard] 📥 Downloading fresh report...');
       
-      // ✅ USE NEW API FUNCTION
-      const blob = await coordinatorApi.downloadTeamsReportPdf(user!.token);
-      
-      const fileName = `team_report_${Date.now()}.pdf`;
+      // ✅ GENERATE READABLE TIMESTAMP FOR FILENAME
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+      const fileName = `team_report_${dateStr}_${timeStr}_${Math.random().toString(36).substring(7)}.pdf`;
       const filePath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${fileName}`;
       
       await ReactNativeBlobUtil.config({
@@ -207,15 +208,16 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           notification: true,
           title: 'Team Report',
           mime: 'application/pdf',
+          description: 'Downloading team report',
         },
       }).fetch('GET', `http://localhost:8080/api/coordinator/teams/report/pdf`, {
         'Authorization': `Bearer ${user!.token}`,
       });
       
       showLocalMsg("Report downloaded successfully!", "success");
-      console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded to:', filePath);
+      console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded:', fileName);
     } catch (err: any) {
-      showLocalMsg("Download failed", "error");
+      showLocalMsg("Download failed: " + err.message, "error");
       console.log('[FacultyCoordinatorDashboard] ❌ Download error:', err);
     } finally {
       setLoading(false);
@@ -457,7 +459,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
           <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
             <TouchableOpacity
-              style={[styles.miniBtn, { backgroundColor: s.isAllocated ? '#6366f1' : colors.primary, flex: 1 }]}
+              style={[styles.miniBtn, { backgroundColor: s.isAllocated ? '#6366f1' : colors.primary, flex: 1 }]} 
               onPress={() => {
                 setSelectedStudent(s);
                 setMsg(null);
@@ -478,7 +480,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const renderteam = () => (
     <>
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary, marginBottom: 16 }]}
+        style={[styles.button, { backgroundColor: colors.primary, marginBottom: 16 }]} 
         onPress={handleDownloadReport}
       >
         <Icon name="download" />
@@ -540,7 +542,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             MAX TEAM SIZE
           </Text>
           <TextInput
-            style={[styles.input, { color: colors.text, borderColor: divider }]}
+            style={[styles.input, { color: colors.text, borderColor: divider }]} 
             keyboardType="numeric"
             value={tempRules.maxTeamSize ?? ""}
             onChangeText={v => {
@@ -565,7 +567,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             MAX PROJECTS PER FACULTY
           </Text>
           <TextInput
-            style={[styles.input, { color: colors.text, borderColor: divider }]}
+            style={[styles.input, { color: colors.text, borderColor: divider }]} 
             keyboardType="numeric"
             value={tempRules.maxProjectsPerFaculty ?? ""}
             onChangeText={v => {
@@ -589,7 +591,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
             MAX STUDENTS PER FACULTY (AUTO)
           </Text>
-          <View style={[styles.input, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+          <View style={[styles.input, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}> 
             <Text style={{ color: colors.text, fontWeight: '700' }}>
               {tempRules.maxStudentsPerFaculty || 0}
             </Text>
@@ -597,7 +599,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]}
+          style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]} 
           onPress={handleSaveRules}
         >
           <Text style={{ color: '#fff', fontWeight: '700' }}>Save Changes</Text>
@@ -662,13 +664,13 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.border }]}
+              style={[styles.modalBtn, { backgroundColor: colors.border }]} 
               onPress={() => { setShowAllocationModal(false); setShowOverrideModal(false); setSelectedFacultyId(''); }}
             >
               <Text style={{ color: colors.text }}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]}
+              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]} 
               onPress={isOverride ? handleOverrideAllocation : handleAllocateStudent}
             >
               <Text style={{ color: '#fff', fontWeight: '700' }}>Confirm</Text>
