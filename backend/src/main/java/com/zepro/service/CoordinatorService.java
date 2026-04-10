@@ -1,6 +1,7 @@
 package com.zepro.service;
 
 import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
@@ -16,6 +17,16 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.zepro.dto.facultycoordinator.AllTeamsReportResponse;
 import com.zepro.dto.facultycoordinator.AllocateStudentRequest;
 import com.zepro.dto.facultycoordinator.AllocationRulesResponse;
@@ -29,15 +40,6 @@ import com.zepro.dto.facultycoordinator.TeamMemberInfo;
 import com.zepro.model.*;
 import com.zepro.repository.*;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.io.ByteArrayOutputStream;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
 public class CoordinatorService {
 
@@ -46,7 +48,7 @@ public class CoordinatorService {
     private final TeamRepository teamRepository;
     private final ProjectRepository projectRepository;
     private final AllocationRulesRepository allocationRulesRepository;
-        private final DepartmentRepository departmentrepository;
+    private final DepartmentRepository departmentrepository;
 
     public CoordinatorService(StudentRepository studentRepository,
             FacultyRepository facultyRepository,
@@ -114,20 +116,9 @@ public class CoordinatorService {
         long totalTeams = teamRepository.countByDepartmentId(departmentId);
         long totalFaculty = facultyRepository.countByDepartment_DepartmentId(departmentId);
 
-        // ✅ CHANGED: Get department-specific rule for department dashboard
-        // AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
-        //         .orElseGet(() -> {
-        //             System.out.println("[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
-        //             AllocationRules defaults = new AllocationRules();
-        //             defaults.setMaxStudentsPerFaculty(10);
-        //             return defaults;
-        //         });
-        // int globalMaxPerFaculty = rules.getMaxStudentsPerFaculty();
-        // long totalMaxSlots = totalFaculty * globalMaxPerFaculty;
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
         System.out.println("[CoordinatorService] 📌 Fetching active projects for " + departmentFaculties.size() + " faculties");
 
-        // Get all ACTIVE projects from these faculties and sum their student slots
         int totalCreatedActiveSlots = 0;
         for (Faculty faculty : departmentFaculties) {
             List<Project> activeProjects = projectRepository.findByFacultyFacultyId(faculty.getFacultyId())
@@ -172,11 +163,9 @@ public class CoordinatorService {
         System.out.println("[CoordinatorService] 🔍 Searching faculties in department: " + departmentId);
         System.out.println("[CoordinatorService] Query: " + query);
         
-        // ✅ Get all faculties in the department
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
         System.out.println("[CoordinatorService] Total faculties in department: " + departmentFaculties.size());
         
-        // ✅ Filter by search query
         List<CoordinatorFacultyResponse> results = departmentFaculties.stream()
                 .filter(faculty -> 
                     faculty.getUser().getName().toLowerCase().contains(query.toLowerCase()) ||
@@ -230,7 +219,6 @@ public class CoordinatorService {
         Faculty faculty = facultyRepository.findById(request.getFacultyId())
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
 
-        // ✅ CHANGED: Use Department-specific rules
         Long departmentId = faculty.getDepartment() != null ? faculty.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
         
@@ -242,15 +230,12 @@ public class CoordinatorService {
                     " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
         }
 
-        // ── Update student ───────────────────────────────────────────────────
         student.setAllocated(true);
         student.setAllocatedFaculty(faculty);
         studentRepository.save(student);
 
-        // ── Update faculty slot count ────────────────────────────────────────
         updateFacultyAllocationCount(faculty);
 
-        // ── Update team's guide if student is in a team ──────────────────────
         Team team = student.getTeam();
         if (team != null) {
             team.setFaculty(faculty);
@@ -284,7 +269,6 @@ public class CoordinatorService {
                     "New faculty must be different from the current faculty.");
         }
 
-        // ✅ CHANGED: Use Department-specific rules
         Long departmentId = newFaculty.getDepartment() != null ? newFaculty.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
         
@@ -296,15 +280,12 @@ public class CoordinatorService {
                     " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
         }
 
-        // ── Update faculty slot counts ───────────────────────────────────────
         updateFacultyAllocationCount(oldFaculty);
         updateFacultyAllocationCount(newFaculty);
 
-        // ── Update student ───────────────────────────────────────────────────
         student.setAllocatedFaculty(newFaculty);
         studentRepository.save(student);
 
-        // ── Update team's guide if student is in a team ──────────────────────
         Team team = student.getTeam();
         if (team != null) {
             Faculty currentTeamFaculty = team.getFaculty();
@@ -383,236 +364,221 @@ public class CoordinatorService {
         try {
             System.out.println("[CoordinatorService] 📄 Generating PDF report for department: " + departmentId);
             
-            // ✅ GET DEPARTMENT NAME
             Department department = departmentrepository.findById(departmentId)
                     .orElseThrow(() -> new RuntimeException("Department not found"));
             
-            String departmentName = department.getDepartmentName();
-            System.out.println("[CoordinatorService] 🏛️  Department: " + departmentName);
-
-            DeviceRgb indigo = new DeviceRgb(79, 70, 229);
-            DeviceRgb indigoLight = new DeviceRgb(238, 242, 255);
-            DeviceRgb rowAlt = new DeviceRgb(249, 250, 251);
-            DeviceRgb borderGray = new DeviceRgb(229, 231, 235);
-            DeviceRgb textDark = new DeviceRgb(31, 41, 55);
-            DeviceRgb textMuted = new DeviceRgb(107, 114, 128);
-
-            PdfFont regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
-            PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            System.out.println("[CoordinatorService]   Department: " + department.getDepartmentName());
+            
+            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+            System.out.println("[CoordinatorService]  Total teams in department: " + allTeams.size());
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PdfDocument pdfDoc = new PdfDocument(new PdfWriter(baos));
-            Document document = new Document(pdfDoc, PageSize.A4);
-            document.setMargins(36, 36, 36, 36);
-
-            // ── Banner with Department Name ────────────────────────────────────
-            Table banner = new Table(UnitValue.createPercentArray(new float[] { 1 }))
-                    .useAllAvailableWidth().setBackgroundColor(indigo)
-                    .setBorder(Border.NO_BORDER).setMarginBottom(20);
-            banner.addCell(new Cell()
-                    .add(new Paragraph("ALL TEAMS PROJECT REPORT")
-                            .setFont(bold).setFontSize(20)
-                            .setFontColor(ColorConstants.WHITE)
-                            .setTextAlignment(TextAlignment.CENTER).setMarginBottom(4))
-                    .add(new Paragraph("Department: " + departmentName)  // ✅ ADD DEPARTMENT NAME
-                            .setFont(regular).setFontSize(11)
-                            .setFontColor(ColorConstants.WHITE)
-                            .setTextAlignment(TextAlignment.CENTER).setMarginBottom(4))
-                    .add(new Paragraph("Generated on: " +
-                            LocalDate.now().format(
-                                    DateTimeFormatter.ofPattern("dd MMMM yyyy")))
-                            .setFont(regular).setFontSize(10)
-                            .setFontColor(ColorConstants.WHITE)
-                            .setTextAlignment(TextAlignment.CENTER))
-                    .setBorder(Border.NO_BORDER).setPadding(20));
-            document.add(banner);
-
-            // ── Get Department Teams ───────────────────────────────────────────
-            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
-            System.out.println("[CoordinatorService] 👥 Total teams in department: " + allTeams.size());
-
-            List<CoordinatorTeamResponse> teams = allTeams.stream()
-                    .map(this::mapToTeamResponse)
-                    .collect(Collectors.toList());
-
-            // ✅ CALCULATE DYNAMIC SUMMARY STATS
-            long activeCount = teams.stream()
-                    .filter(t -> "active".equalsIgnoreCase(t.getStatus()))
-                    .count();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdfDocument = new PdfDocument(writer);
+            Document document = new Document(pdfDocument, PageSize.A4);
             
-            long totalMembers = teams.stream()
-                    .mapToLong(t -> t.getMembers() != null ? t.getMembers().size() : 0)
+            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont regularFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+            PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            String generatedDate = LocalDate.now().format(dateFormatter);
+
+            Color lightBlue = new DeviceRgb(230, 245, 255);
+            Color darkText = new DeviceRgb(33, 33, 33);
+
+            Paragraph header = new Paragraph("Teams Report")
+                    .setFont(titleFont)
+                    .setFontSize(24)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginBottom(10);
+            document.add(header);
+
+            Paragraph deptInfo = new Paragraph("Department: " + department.getDepartmentName())
+                    .setFont(regularFont)
+                    .setFontSize(12)
+                    .setMarginBottom(5);
+            document.add(deptInfo);
+
+            Paragraph dateInfo = new Paragraph("Generated on: " + generatedDate)
+                    .setFont(regularFont)
+                    .setFontSize(10)
+                    .setFontColor(ColorConstants.DARK_GRAY)
+                    .setMarginBottom(20);
+            document.add(dateInfo);
+
+            Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1}))
+                    .useAllAvailableWidth()
+                    .setMarginBottom(20);
+
+            summaryTable.addCell(summaryCell("Total Teams", String.valueOf(allTeams.size()), 
+                    boldFont, regularFont, lightBlue, darkText));
+            
+            int totalMembers = (int) allTeams.stream()
+                    .mapToLong(team -> team.getMembers() != null ? team.getMembers().size() : 0)
                     .sum();
+            summaryTable.addCell(summaryCell("Total Members", String.valueOf(totalMembers), 
+                    boldFont, regularFont, lightBlue, darkText));
             
-            long allocatedCount = teams.stream()
-                    .flatMap(t -> t.getMembers() != null ? t.getMembers().stream() : java.util.stream.Stream.empty())
-                    .filter(m -> m.getAllocatedFacultyName() != null && !m.getAllocatedFacultyName().equals("Unallocated"))
+            long allocatedTeams = allTeams.stream()
+                    .filter(team -> team.getFaculty() != null)
                     .count();
+            summaryTable.addCell(summaryCell("Allocated Teams", String.valueOf(allocatedTeams), 
+                    boldFont, regularFont, lightBlue, darkText));
+            
+            long unallocatedTeams = allTeams.size() - allocatedTeams;
+            summaryTable.addCell(summaryCell("Unallocated Teams", String.valueOf(unallocatedTeams), 
+                    boldFont, regularFont, lightBlue, darkText));
+            
+            document.add(summaryTable);
 
-            System.out.println("[CoordinatorService] 📊 Stats - Total: " + teams.size() + 
-                             ", Active: " + activeCount + 
-                             ", Members: " + totalMembers + 
-                             ", Allocated: " + allocatedCount);
+            Table teamTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 2, 2, 1}))
+                    .useAllAvailableWidth()
+                    .setMarginBottom(20);
 
-            // ── Summary Stats Table ────────────────────────────────────────────
-            Table summary = new Table(UnitValue.createPercentArray(new float[] { 1, 1 }))
-                    .useAllAvailableWidth().setMarginBottom(24);
-            summary.addCell(summaryCell("Total Teams", String.valueOf(teams.size()), bold, regular,
-                    indigoLight, textDark));
-            summary.addCell(summaryCell("Active Teams", String.valueOf(activeCount), bold, regular,
-                    indigoLight, textDark));
-            summary.addCell(summaryCell("Total Members", String.valueOf(totalMembers), bold, regular,
-                    indigoLight, textDark));
-            summary.addCell(summaryCell("Allocated", String.valueOf(allocatedCount), bold, regular,
-                    indigoLight, textDark));
-            document.add(summary);
+            Color headerBg = new DeviceRgb(41, 128, 185);
+            Color headerText = ColorConstants.WHITE;
 
-            // ── One section per team ──────────────────────────────────────────
-            for (int idx = 0; idx < teams.size(); idx++) {
-                CoordinatorTeamResponse team = teams.get(idx);
+            teamTable.addHeaderCell(new Cell()
+                    .add(new Paragraph("Team ID").setFont(boldFont).setFontColor(headerText))
+                    .setBackgroundColor(headerBg)
+                    .setPadding(10)
+                    .setTextAlignment(TextAlignment.CENTER));
 
-                System.out.println("[CoordinatorService] 📌 Processing team " + (idx + 1) + ": " + team.getTeamName());
+            teamTable.addHeaderCell(new Cell()
+                    .add(new Paragraph("Team Name").setFont(boldFont).setFontColor(headerText))
+                    .setBackgroundColor(headerBg)
+                    .setPadding(10));
 
-                Table teamHeader = new Table(UnitValue.createPercentArray(new float[] { 1 }))
-                        .useAllAvailableWidth().setBackgroundColor(indigoLight)
-                        .setBorder(new SolidBorder(indigo, 1)).setMarginTop(12)
-                        .setMarginBottom(6);
-                teamHeader.addCell(new Cell()
-                        .add(new Paragraph("TEAM " + (idx + 1) + ":  " + team.getTeamName())
-                                .setFont(bold).setFontSize(13).setFontColor(indigo))
-                        .setBorder(Border.NO_BORDER).setPaddingLeft(10).setPaddingTop(8)
-                        .setPaddingBottom(8));
-                document.add(teamHeader);
+            teamTable.addHeaderCell(new Cell()
+                    .add(new Paragraph("Guide").setFont(boldFont).setFontColor(headerText))
+                    .setBackgroundColor(headerBg)
+                    .setPadding(10));
 
-                // ✅ DYNAMIC TEAM META DATA
-                Table meta = new Table(UnitValue.createPercentArray(new float[] { 1, 1 }))
-                        .useAllAvailableWidth().setMarginBottom(6);
-                meta.addCell(metaCell("Project Title", 
-                        team.getProjectTitle() != null ? team.getProjectTitle() : "N/A", 
-                        bold, regular, textDark, textMuted));
-                meta.addCell(metaCell("Status",
-                        team.getStatus() != null ? team.getStatus().toUpperCase() : "N/A", 
-                        bold, regular, textDark, textMuted));
-                meta.addCell(metaCell("Guide / Faculty",
-                        team.getFacultyName() != null ? team.getFacultyName() : "Not Assigned", 
-                        bold, regular, textDark, textMuted));
-                meta.addCell(metaCell("Total Members",
-                        String.valueOf(team.getMembers() != null ? team.getMembers().size() : 0),
-                        bold, regular, textDark, textMuted));
-                document.add(meta);
+            teamTable.addHeaderCell(new Cell()
+                    .add(new Paragraph("Members").setFont(boldFont).setFontColor(headerText))
+                    .setBackgroundColor(headerBg)
+                    .setPadding(10)
+                    .setTextAlignment(TextAlignment.CENTER));
 
-                // ✅ MEMBERS TABLE WITH DYNAMIC DATA
-                List<TeamMemberInfo> members = team.getMembers();
-                if (members != null && !members.isEmpty()) {
-                    System.out.println("[CoordinatorService]    📝 Team has " + members.size() + " members");
-                    
-                    members.sort((a, b) -> Boolean.compare(b.isTeamLead(), a.isTeamLead()));
+            teamTable.addHeaderCell(new Cell()
+                    .add(new Paragraph("Status").setFont(boldFont).setFontColor(headerText))
+                    .setBackgroundColor(headerBg)
+                    .setPadding(10)
+                    .setTextAlignment(TextAlignment.CENTER));
 
-                    Table membersTable = new Table(UnitValue.createPercentArray(
-                            new float[] { 0.4f, 2f, 1.2f, 2f, 0.8f, 2f }))
-                            .useAllAvailableWidth().setMarginBottom(4);
-                    
-                    // ✅ HEADER ROW
-                    for (String h : new String[] { "#", "Name", "Roll No", "Email", "CGPA",
-                            "Allocated Faculty" }) {
-                        membersTable.addHeaderCell(new Cell()
-                                .add(new Paragraph(h).setFont(bold).setFontSize(9)
-                                        .setFontColor(ColorConstants.WHITE))
-                                .setBackgroundColor(indigo).setBorder(Border.NO_BORDER)
-                                .setPadding(6));
-                    }
-                    
-                    // ✅ DATA ROWS - DYNAMIC MEMBER DATA
-                    DeviceRgb leaderBg = new DeviceRgb(255, 251, 235);
-                    for (int mi = 0; mi < members.size(); mi++) {
-                        TeamMemberInfo m = members.get(mi);
-                        DeviceRgb rowBg = m.isTeamLead() ? leaderBg
-                                : ((mi % 2 == 0) ? rowAlt : null);
-                        
-                        String nameDisplay = (m.getName() != null ? m.getName() : "N/A")
-                                + (m.isTeamLead() ? "  ★ LEADER" : "");
-                        
-                        System.out.println("[CoordinatorService]       - Member " + (mi+1) + ": " + 
-                                         m.getName() + " (Roll: " + m.getRollNo() + ")");
-                        
-                        membersTable.addCell(memberCell(String.valueOf(mi + 1), regular, 9,
-                                textDark, borderGray, rowBg));
-                        membersTable.addCell(
-                                memberCell(nameDisplay, m.isTeamLead() ? bold : regular,
-                                        9, textDark, borderGray, rowBg));
-                        membersTable.addCell(memberCell(
-                                m.getRollNo() != null ? m.getRollNo() : "N/A", 
-                                regular, 9, textDark, borderGray, rowBg));
-                        membersTable.addCell(memberCell(
-                                m.getEmail() != null ? m.getEmail() : "N/A", 
-                                regular, 8, textMuted, borderGray, rowBg));
-                        membersTable.addCell(memberCell(
-                                String.format("%.2f", m.getCgpa()), 
-                                regular, 9, textDark, borderGray, rowBg));
-                        membersTable.addCell(memberCell(
-                                m.getAllocatedFacultyName() != null && !m.getAllocatedFacultyName().equals("Unallocated")
-                                        ? m.getAllocatedFacultyName()
-                                        : "⚠️  Unallocated",
-                                regular, 9, 
-                                m.getAllocatedFacultyName() != null && !m.getAllocatedFacultyName().equals("Unallocated") 
-                                    ? textDark 
-                                    : new DeviceRgb(220, 53, 69),  // Red for unallocated
-                                borderGray, rowBg));
-                    }
-                    document.add(membersTable);
-                } else {
-                    System.out.println("[CoordinatorService]    ⚠️  No members in this team");
-                    document.add(new Paragraph("No members assigned yet.")
-                            .setFont(regular).setFontSize(9).setFontColor(textMuted)
-                            .setMarginLeft(8).setMarginBottom(6));
-                }
+            Color altBg = new DeviceRgb(245, 248, 250);
+            int rowCount = 0;
+            
+            for (Team team : allTeams) {
+                rowCount++;
+                Color rowBg = (rowCount % 2 == 0) ? altBg : null;
+
+                Cell teamIdCell = new Cell()
+                        .add(new Paragraph(String.valueOf(team.getTeamId()))
+                                .setFont(regularFont)
+                                .setFontSize(10))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(8);
+                if (rowBg != null) teamIdCell.setBackgroundColor(rowBg);
+                teamTable.addCell(teamIdCell);
+
+                Cell teamNameCell = new Cell()
+                        .add(new Paragraph(team.getTeamName() != null ? team.getTeamName() : "N/A")
+                                .setFont(regularFont)
+                                .setFontSize(10))
+                        .setPadding(8);
+                if (rowBg != null) teamNameCell.setBackgroundColor(rowBg);
+                teamTable.addCell(teamNameCell);
+
+                String guideName = (team.getFaculty() != null) 
+                        ? team.getFaculty().getUser().getName() 
+                        : "Not Assigned";
+                Cell guideCell = new Cell()
+                        .add(new Paragraph(guideName)
+                                .setFont(regularFont)
+                                .setFontSize(10))
+                        .setPadding(8);
+                if (rowBg != null) guideCell.setBackgroundColor(rowBg);
+                teamTable.addCell(guideCell);
+
+                int memberCount = (team.getMembers() != null) ? team.getMembers().size() : 0;
+                Cell memberCell = new Cell()
+                        .add(new Paragraph(String.valueOf(memberCount))
+                                .setFont(regularFont)
+                                .setFontSize(10))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(8);
+                if (rowBg != null) memberCell.setBackgroundColor(rowBg);
+                teamTable.addCell(memberCell);
+
+                String status = team.getStatus() != null ? team.getStatus() : "UNKNOWN";
+                Color statusColor = getStatusColor(status);
+                Cell statusCell = new Cell()
+                        .add(new Paragraph(status)
+                                .setFont(regularFont)
+                                .setFontSize(9)
+                                .setFontColor(statusColor))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setPadding(8);
+                if (rowBg != null) statusCell.setBackgroundColor(rowBg);
+                teamTable.addCell(statusCell);
             }
 
-            // ✅ FOOTER WITH GENERATION DETAILS
-            document.add(new Paragraph("\n— End of Report —")
-                    .setFont(regular).setFontSize(9).setFontColor(textMuted)
-                    .setTextAlignment(TextAlignment.CENTER).setMarginTop(20));
-            
-            document.add(new Paragraph(
-                    "This is an automatically generated report. " +
-                    "Total Teams: " + teams.size() + 
-                    " | Total Members: " + totalMembers +
-                    " | Generated: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
-                    .setFont(regular).setFontSize(8).setFontColor(textMuted)
-                    .setTextAlignment(TextAlignment.CENTER));
-            
+            document.add(teamTable);
+
+            Paragraph footer = new Paragraph("This is an auto-generated report from ZePRO System")
+                    .setFont(regularFont)
+                    .setFontSize(8)
+                    .setFontColor(ColorConstants.DARK_GRAY)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setMarginTop(30);
+            document.add(footer);
+
             document.close();
-            System.out.println("[CoordinatorService] ✅ PDF generated successfully for department: " + departmentName);
             return baos.toByteArray();
 
         } catch (Exception e) {
-            System.out.println("[CoordinatorService] ❌ Error generating PDF: " + e.getMessage());
+            System.out.println("[CoordinatorService]  Error generating PDF: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Failed to generate PDF report: " + e.getMessage(), e);
         }
     }
 
-    // ── PDF helper cells ──────────────────────────────────────────────────────
+    // ✅ Helper method to get status color
+    private Color getStatusColor(String status) {
+        return switch (status) {
+            case "ACTIVE" -> new DeviceRgb(46, 204, 113); // Green
+            case "INACTIVE" -> new DeviceRgb(231, 76, 60); // Red
+            case "PENDING" -> new DeviceRgb(241, 196, 15); // Yellow
+            default -> new DeviceRgb(52, 152, 219); // Blue
+        };
+    }
 
-    private Cell summaryCell(String label, String value, PdfFont bold, PdfFont regular, DeviceRgb bg,
-            DeviceRgb textDark) {
+    // ✅ Helper method: summaryCell
+    private Cell summaryCell(String label, String value, PdfFont bold, PdfFont regular, Color bg,
+            Color textDark) {
         return new Cell()
                 .add(new Paragraph(value).setFont(bold).setFontSize(22).setFontColor(textDark))
                 .add(new Paragraph(label).setFont(regular).setFontSize(10).setFontColor(textDark))
-                .setBackgroundColor(bg).setBorder(Border.NO_BORDER).setPadding(14)
+                .setBackgroundColor(bg)
+                .setBorder(Border.NO_BORDER)
+                .setPadding(14)
                 .setTextAlignment(TextAlignment.CENTER);
     }
 
-    private Cell metaCell(String label, String value, PdfFont bold, PdfFont regular, DeviceRgb textDark,
-            DeviceRgb textMuted) {
+    // ✅ Helper method: metaCell
+    private Cell metaCell(String label, String value, PdfFont bold, PdfFont regular, Color textDark,
+            Color textMuted) {
         return new Cell()
                 .add(new Paragraph(label).setFont(bold).setFontSize(9).setFontColor(textMuted))
                 .add(new Paragraph(value).setFont(regular).setFontSize(11).setFontColor(textDark))
                 .setBorder(Border.NO_BORDER).setPaddingLeft(4).setPaddingTop(4).setPaddingBottom(4);
     }
 
-    private Cell memberCell(String text, PdfFont font, float size, DeviceRgb textColor, DeviceRgb borderColor,
-            DeviceRgb bgColor) {
+    // ✅ Helper method: memberCell
+    private Cell memberCell(String text, PdfFont font, float size, Color textColor, Color borderColor,
+            Color bgColor) {
         Cell cell = new Cell()
                 .add(new Paragraph(text != null ? text : "N/A").setFont(font).setFontSize(size)
                         .setFontColor(textColor))
@@ -629,8 +595,6 @@ public class CoordinatorService {
     // RULES TAB
     // =========================================================================
 
-    
-
     @Transactional
     public void saveRules(SaveRulesRequest request) {
         if (request.getMaxTeamSize() <= 0)
@@ -640,15 +604,16 @@ public class CoordinatorService {
         if (request.getMaxProjectsPerFaculty() <= 0)
             throw new RuntimeException("Max projects per faculty must be greater than 0");
 
-        // ✅ FIXED: Use department-specific rules instead of global ID=1
-        Long departmentId = request.getDepartmentId();  // ✅ ADD THIS TO REQUEST
-        Department dept=departmentrepository.findById(departmentId).orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
+        Long departmentId = request.getDepartmentId();
+        Department dept = departmentrepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
+        
         System.out.println("[CoordinatorService] 💾 Saving rules for department: " + departmentId);
         System.out.println("[CoordinatorService] maxTeamSize: " + request.getMaxTeamSize());
         System.out.println("[CoordinatorService] maxStudentsPerFaculty: " + request.getMaxStudentsPerFaculty());
         System.out.println("[CoordinatorService] maxProjectsPerFaculty: " + request.getMaxProjectsPerFaculty());
 
-AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
                 .orElseGet(() -> {
                     System.out.println("[CoordinatorService] ⚠️  No existing rules found for department: " + departmentId + ", creating new...");
                     AllocationRules newRules = new AllocationRules();
@@ -660,12 +625,11 @@ AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(
         rules.setMaxTeamSize(request.getMaxTeamSize());
         rules.setMaxStudentsPerFaculty(request.getMaxStudentsPerFaculty());
         rules.setMaxProjectsPerFaculty(request.getMaxProjectsPerFaculty());
-        rules.setDepartment(dept); // ✅ ASSOCIATE WITH DEPARTMENT
+        rules.setDepartment(dept);
         allocationRulesRepository.save(rules);
         
         System.out.println("[CoordinatorService] ✅ Rules saved for department: " + departmentId);
 
-        // ✅ Sync existing faculties in this department to the new slot limit
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
         System.out.println("[CoordinatorService] 🔄 Updating " + departmentFaculties.size() + " faculties in department " + departmentId);
         
@@ -686,11 +650,9 @@ AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(
         String deptName = (f.getDepartment() != null) ? f.getDepartment().getDepartmentName() : "N/A";
         int allocatedCount = (int) studentRepository.countByAllocatedFaculty(f);
         
-        // ✅ CHANGED: Use Department-specific rules instead of global
         Long departmentId = f.getDepartment() != null ? f.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
         
-        // ✅ Dynamic Created Slots count
         int totalCreatedSlots = projectRepository.findByFacultyFacultyId(f.getFacultyId()).size()
                 * rules.getMaxTeamSize();
 
@@ -724,7 +686,6 @@ AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(
             Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
             String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
 
-            // Get team lead student id for comparison
             Long teamLeadId = (t.getTeamLead() != null) ? t.getTeamLead().getStudentId() : null;
 
             List<TeamMemberInfo> members = (t.getMembers() != null)
@@ -739,7 +700,6 @@ AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(
                             .collect(Collectors.toList())
                     : new java.util.ArrayList<>();
 
-            // ✅ CHANGED: Use Department-specific rules
             Long departmentId = faculty != null && faculty.getDepartment() != null 
                 ? faculty.getDepartment().getDepartmentId() 
                 : 1L;
