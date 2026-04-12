@@ -1,14 +1,5 @@
 package com.zepro.controller;
-
-import com.zepro.dto.facultycoordinator.AllTeamsReportResponse;
-import com.zepro.dto.facultycoordinator.AllocateStudentRequest;
-import com.zepro.dto.facultycoordinator.AllocationRulesResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorFacultyResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorStudentResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorTeamResponse;
-import com.zepro.dto.facultycoordinator.DashboardStatsResponse;
-import com.zepro.dto.facultycoordinator.OverrideAllocationRequest;
-import com.zepro.dto.facultycoordinator.SaveRulesRequest;
+import com.zepro.dto.facultycoordinator.*;
 import com.zepro.model.Faculty;
 import com.zepro.repository.FacultyRepository;
 import com.zepro.service.CoordinatorService;
@@ -19,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 
@@ -369,6 +359,119 @@ public class FacultyCoordinatorController {
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/student-team-details")
+    public ResponseEntity<?> getStudentAndTeamDetails(Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/student-team-details");
+        try {
+            String email = authentication.getName();
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() : null;
+
+            if(departmentId == null) {
+                return ResponseEntity.status(400).body(null);
+            }
+
+            return ResponseEntity.ok(coordinatorService.getStudentAndTeamDetails(departmentId));
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/available-teams")
+    public ResponseEntity<?> getAvailableTeamsToJoin(Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/available-teams");
+        try {
+            String email = authentication.getName();
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() : null;
+
+            if(departmentId == null) {
+                return ResponseEntity.status(400).body(null);
+            }
+
+            return ResponseEntity.ok(coordinatorService.getAvailableTeamsToJoin(departmentId));
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/faculty-projects/{facultyId}")
+    public ResponseEntity<?> getFacultyProjects(@PathVariable Long facultyId, Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/faculty-projects/" + facultyId);
+        try {
+            return ResponseEntity.ok(coordinatorService.getFacultyProjects(facultyId));
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/allocate-team")
+    public ResponseEntity<?> allocateTeamToFacultyProject(@RequestBody AllocateTeamRequest request) {
+        System.out.println("[FacultyCoordinatorController] 📌 POST /api/coordinator/allocate-team");
+        try {
+            coordinatorService.allocateTeamToFacultyProject(request);
+            return ResponseEntity.ok(Map.of("message", "Team allocated successfully"));
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/create-team")
+    public ResponseEntity<?> createTeam(@RequestBody CreateTeamRequest request,Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 🆕 POST /api/coordinator/create-team");
+        try {
+            String email = authentication.getName();
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() : null;
+
+            if(departmentId == null) {
+                return ResponseEntity.status(400).body(null);
+            }
+
+            CoordinatorTeamDetailDTO newTeam = coordinatorService.createTeamForStudent(request, departmentId);
+            return ResponseEntity.ok(newTeam);
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/join-team")
+    public ResponseEntity<?> joinTeam(@RequestBody JoinTeamRequest request,Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 👥 POST /api/coordinator/join-team");
+        try {
+                String email = authentication.getName();
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() : null;
+
+            if(departmentId == null) {
+                return ResponseEntity.status(400).body(null);
+            }
+            CoordinatorTeamDetailDTO updatedTeam = coordinatorService.joinTeam(request, departmentId);
+            return ResponseEntity.ok(updatedTeam);
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         }
     }

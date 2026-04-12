@@ -7,6 +7,9 @@ public class CompletedRequestResponse {
     private String status;
     private String rejectionReason;
 
+    // ✅ Empty constructor
+    public CompletedRequestResponse() {}
+
     public CompletedRequestResponse(Long requestId,
                                     String projectTitle,
                                     String facultyName,
@@ -29,8 +32,14 @@ public class CompletedRequestResponse {
     }
 
     public String getProjectTitle() { return projectTitle; }
+    public void setProjectTitle(String projectTitle) { this.projectTitle = projectTitle; }
+
     public String getFacultyName() { return facultyName; }
+    public void setFacultyName(String facultyName) { this.facultyName = facultyName; }
+
     public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 }

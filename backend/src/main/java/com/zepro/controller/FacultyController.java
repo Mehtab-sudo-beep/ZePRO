@@ -25,6 +25,7 @@ import com.zepro.service.DomainService;
 import com.zepro.service.FacultyService;
 import com.zepro.service.RequestService;
 import com.zepro.service.StudentService;
+import com.zepro.service.MeetingService;
 
 @RestController
 @RequestMapping("/faculty")
@@ -36,18 +37,21 @@ public class FacultyController {
     private final FacultyRepository facultyRepository;
     private final RequestService requestService;
     private final StudentService studentService;
+    private final MeetingService meetingService;
 
     public FacultyController(FacultyService facultyService,
                              DomainService domainService,
                              FacultyRepository facultyRepository,
                              RequestService requestService,
-                             StudentService studentService) {
+                             StudentService studentService,
+                             MeetingService meetingService) {
 
         this.facultyService = facultyService;
         this.domainService = domainService;
         this.facultyRepository = facultyRepository;
         this.requestService = requestService;
         this.studentService = studentService;
+        this.meetingService = meetingService;
     }
 
     // ✅ GET ALL INSTITUTES
@@ -142,8 +146,16 @@ public class FacultyController {
     @PutMapping("/project/{projectId}")
     public ProjectResponse updateProject(
             @PathVariable Long projectId,
-            @RequestBody CreateProjectRequest request) {
-        return facultyService.updateProject(projectId, request);
+            @RequestBody CreateProjectRequest request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        return facultyService.updateProject(projectId, request, faculty);
     }
 
     @GetMapping("/my-projects")
@@ -153,14 +165,26 @@ public class FacultyController {
     }
 
     @PostMapping("/project/{projectId}/activate")
-    public ProjectResponse activateProject(@PathVariable Long projectId) {
-        
-        return facultyService.activateProject(projectId);
+    public ProjectResponse activateProject(@PathVariable Long projectId, Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        return facultyService.activateProject(projectId, faculty);
     }
 
     @PostMapping("/project/{projectId}/deactivate")
-    public ProjectResponse deactivateProject(@PathVariable Long projectId) {
-        return facultyService.deactivateProject(projectId);
+    public ProjectResponse deactivateProject(@PathVariable Long projectId   , Authentication authentication) {
+        String email = authentication.getName();
+
+        Faculty faculty = facultyRepository
+                .findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+        return facultyService.deactivateProject(projectId, faculty);
     }
 
     @GetMapping("/pending-requests")
@@ -178,9 +202,8 @@ public class FacultyController {
     @PostMapping("/assign-project")
     public String assignProject(@RequestBody AssignProjectRequest request) {
 
-        facultyService.assignProject(
-                request.getProjectId(),
-                request.getTeamId()
+        meetingService.acceptProject(
+                request.getProjectId()
         );
 
         return "Project assigned";

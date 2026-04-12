@@ -11,7 +11,11 @@ import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
-
+import java.time.LocalDateTime;
+import com.zepro.repository.DeactivatedMeetingRepository;
+import com.zepro.model.DeactivatedMeeting;
+import com.zepro.model.Meeting;
+import com.zepro.model.MeetingStatus;
 
 @Service
 public class FacultyService {
@@ -29,7 +33,9 @@ public class FacultyService {
     private final UserRepository usersRepository;
     private final DepartmentRepository departmentRepository;    
     private final InstituteRepository instituteRepository;
-
+    private final MeetingRepository meetingRepository;
+    private final DeactivatedProjectRequestRepository deactivatedProjectRequestRepository;
+    private final DeactivatedMeetingRepository deactivatedMeetingRepository;
 
     public FacultyService(ProjectRepository projectRepository,
             FacultyRepository facultyRepository,
@@ -43,7 +49,10 @@ public class FacultyService {
             AllocationRulesRepository allocationRulesRepository,
             UserRepository usersRepository,
             DepartmentRepository departmentRepository,
-            InstituteRepository instituteRepository) {
+            InstituteRepository instituteRepository,
+            MeetingRepository meetingRepository,
+            DeactivatedProjectRequestRepository deactivatedProjectRequestRepository,
+            DeactivatedMeetingRepository deactivatedMeetingRepository) {
 
         this.projectRepository = projectRepository;
         this.facultyRepository = facultyRepository;
@@ -58,13 +67,15 @@ public class FacultyService {
         this.usersRepository = usersRepository;
         this.departmentRepository = departmentRepository;
         this.instituteRepository = instituteRepository;
+        this.meetingRepository = meetingRepository;
+        this.deactivatedProjectRequestRepository = deactivatedProjectRequestRepository;
+        this.deactivatedMeetingRepository = deactivatedMeetingRepository;
     }
 
     public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
         // ✅ GET RULES
-        AllocationRules rules = allocationRulesRepository.findById(1L)
-                .orElse(new AllocationRules());
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId()).orElse(new AllocationRules());
 
         // ✅ VALIDATE SLOTS
         int slots = request.getStudentSlots() != null ? request.getStudentSlots() : 0;
@@ -84,6 +95,9 @@ public class FacultyService {
             project.setFaculty(faculty);
             project.setStudentSlots(slots); // ✅ SET SLOTS
             project.setStatus("CLOSE"); // ✅ Mark as REQUESTED
+            project.setPreviousStatus(null);
+            project.setPresentStatus("CLOSE");
+            project.setMaximumSlotsReachedTillNow(0);
             project.setIsActive(false);
             Project saved = projectRepository.save(project);
             
@@ -106,7 +120,7 @@ public class FacultyService {
             projectSubDomain.setSubDomain(subDomain);
             projectSubDomainRepository.save(projectSubDomain);
 
-            ProjectResponse response = getProjectResponse(saved);
+            ProjectResponse response = getProjectResponse(saved, faculty);
             // ✅ SET presentSlots to the created studentSlots
             response.setPresentSlots(slots);
             return response;
@@ -118,6 +132,8 @@ public class FacultyService {
         project.setFaculty(faculty);
         project.setStudentSlots(slots); // ✅ SET SLOTS
         project.setStatus("OPEN"); // ✅ First project is OPEN
+        project.setPreviousStatus(null);
+        project.setPresentStatus("OPEN");
         project.setIsActive(true);}
 
         Project saved = projectRepository.save(project);
@@ -142,17 +158,17 @@ public class FacultyService {
         projectSubDomain.setSubDomain(subDomain);
         projectSubDomainRepository.save(projectSubDomain);
 
-        ProjectResponse response = getProjectResponse(saved);
+        ProjectResponse response = getProjectResponse(saved, faculty);
         // ✅ SET presentSlots to the created studentSlots
         response.setPresentSlots(slots);
         return response;
     }
 
-    public ProjectResponse updateProject(Long projectId, CreateProjectRequest request) {
+    public ProjectResponse updateProject(Long projectId, CreateProjectRequest request, Faculty faculty) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = allocationRulesRepository.findById(1L)
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId())
                 .orElse(new AllocationRules());
         
         if (request.getStudentSlots() != null) {
@@ -197,7 +213,7 @@ public class FacultyService {
             }
         }
 
-        ProjectResponse response = getProjectResponse(saved);
+        ProjectResponse response = getProjectResponse(saved, faculty);
         // ✅ SET presentSlots to the updated studentSlots value
         response.setPresentSlots(saved.getStudentSlots());
         return response;
@@ -207,7 +223,7 @@ public class FacultyService {
 
         List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId);
         return projects.stream()
-                .map(this::getProjectResponse)
+                .map(project -> getProjectResponse(project, facultyRepository.findById(facultyId).orElseThrow()))
                 .collect(Collectors.toList());
     }
 
@@ -217,38 +233,82 @@ public class FacultyService {
         return getProjects(faculty.getFacultyId());
     }
 
-    public ProjectResponse activateProject(Long projectId) {
+    public ProjectResponse activateProject(Long projectId, Faculty faculty) {
         
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = allocationRulesRepository.findById(1L)
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId())
                 .orElse(new AllocationRules());
 
         List<Project> activeProjects = projectRepository
                 .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "OPEN");
-
+        List<Project> assignedProjects = projectRepository
+                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "ASSIGNED");
+        List<Project> inprogressProjects = projectRepository
+                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "IN_PROGRESS");
         
-        if (activeProjects.size() >= rules.getMaxProjectsPerFaculty()) {
+        if (activeProjects.size()+assignedProjects.size()+inprogressProjects.size() >= rules.getMaxProjectsPerFaculty()) {
             throw new RuntimeException(
                 "Cannot activate this project. You have reached the maximum limit of " +
                 rules.getMaxProjectsPerFaculty() + " active projects. " +
                 "Please deactivate one project before activating another.");
         }
 
+        // ✅ NEW: RESTORE DEACTIVATED REQUESTS WITH PREVIOUS STATUS
+        List<DeactivatedProjectRequest> deactivatedRequests = 
+                deactivatedProjectRequestRepository.findByProjectRequestProjectProjectId(projectId);
+        
+        System.out.println("[FacultyService] 🔄 Restoring " + deactivatedRequests.size() + " deactivated requests...");
+        
+        for (DeactivatedProjectRequest deactivated : deactivatedRequests) {
+            ProjectRequest request = deactivated.getProjectRequest();
+            
+            // ✅ Restore to PREVIOUS status (before deactivation)
+            request.setStatus(deactivated.getPreviousStatus());
+            request.setRejectionReason(null);
+            projectRequestRepository.save(request);
+            
+            System.out.println("[FacultyService] ✅ Restored request: " + request.getRequestId() 
+                    + " to status: " + deactivated.getPreviousStatus());
+            
+            // Remove from deactivated repository
+            deactivatedProjectRequestRepository.delete(deactivated);
+        }
+
+        // ✅ NEW: RESTORE DEACTIVATED MEETINGS WITH PREVIOUS STATUS
+        List<DeactivatedMeeting> deactivatedMeetings = 
+                deactivatedMeetingRepository.findByMeetingRequestProjectProjectId(projectId);
+        
+        System.out.println("[FacultyService] 📞 Restoring " + deactivatedMeetings.size() + " deactivated meetings...");
+        
+        for (DeactivatedMeeting deactivated : deactivatedMeetings) {
+            Meeting meeting = deactivated.getMeeting();
+            
+            // ✅ Restore to PREVIOUS status (SCHEDULED)
+            meeting.setStatus(deactivated.getPreviousStatus());
+            meetingRepository.save(meeting);
+            
+            System.out.println("[FacultyService] ✅ Restored meeting: " + meeting.getMeetingId() 
+                    + " to status: " + deactivated.getPreviousStatus());
+            
+            // Remove from deactivated repository
+            deactivatedMeetingRepository.delete(deactivated);
+        }
+
         project.setIsActive(true);
         project.setStatus("OPEN");
         Project saved = projectRepository.save(project);
 
-        ProjectResponse response = getProjectResponse(saved);
+        ProjectResponse response = getProjectResponse(saved, faculty);
         response.setPresentSlots(saved.getStudentSlots());
         
-        System.out.println("✅ Project " + projectId + " activated successfully");
+        System.out.println("[FacultyService] ✅ Project " + projectId + " activated successfully");
         
         return response;
     }
 
-    public ProjectResponse deactivateProject(Long projectId) {
+    public ProjectResponse deactivateProject(Long projectId, Faculty faculty) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
         
@@ -257,13 +317,90 @@ public class FacultyService {
             throw new RuntimeException("Cannot close an assigned project");
         }
 
+        // ✅ NEW: Handle IN_PROGRESS projects
+        if ("IN_PROGRESS".equals(project.getStatus()) || "OPEN".equals(project.getStatus())) {
+            System.out.println("[FacultyService] 🚫 Deactivating IN_PROGRESS project: " + projectId);
+            
+            // 1️⃣ REJECT ALL PENDING REQUESTS & STORE IN DEACTIVATED TABLE
+            List<ProjectRequest> allRequests = projectRequestRepository.findByProjectProjectId(projectId);
+            String rejectionReason = "Project closed by Faculty";
+            
+            for (ProjectRequest request : allRequests) {
+                if (request.getStatus() == RequestStatus.PENDING || request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.SCHEDULED) {
+                    
+                    System.out.println("[FacultyService] ❌ Rejecting PENDING request: " + request.getRequestId());
+                    
+                    // ✅ Store in deactivated table with previous & present status
+                    DeactivatedProjectRequest deactivated = new DeactivatedProjectRequest();
+                    deactivated.setProjectRequest(request);
+                    deactivated.setPreviousStatus(request.getStatus());  // ✅ PENDING
+                    deactivated.setPresentStatus(RequestStatus.REJECTED);  // ✅ REJECTED
+                    deactivated.setDeactivationReason(rejectionReason);
+                    deactivated.setDeactivationDate(LocalDateTime.now());
+                    deactivatedProjectRequestRepository.save(deactivated);
+                    
+                    // Reject the request
+                    request.setStatus(RequestStatus.REJECTED);
+                    request.setRejectionReason(rejectionReason);
+                    projectRequestRepository.save(request);
+                }
+            }
+            
+            // 2️⃣ HANDLE SCHEDULED REQUESTS (those with meetings)
+            for (ProjectRequest request : allRequests) {
+                if (request.getStatus() == RequestStatus.SCHEDULED || request.getStatus() == RequestStatus.COMPLETED) {
+                    
+                    System.out.println("[FacultyService] ⏸️  Handling SCHEDULED request: " + request.getRequestId());
+                    
+                    // Find associated meeting
+                    java.util.Optional<Meeting> meetingOpt = meetingRepository.findByRequestRequestId(request.getRequestId());
+                    
+                    if (meetingOpt.isPresent()) {
+                        Meeting meeting = meetingOpt.get();
+                        
+                        // ✅ Store meeting in deactivated table
+                        DeactivatedMeeting deactivatedMeeting = new DeactivatedMeeting();
+                        deactivatedMeeting.setMeeting(meeting);
+                        deactivatedMeeting.setPreviousStatus(meeting.getStatus());  // ✅ SCHEDULED
+                        deactivatedMeeting.setPresentStatus(MeetingStatus.CANCELLED);  // ✅ CANCELLED
+                        deactivatedMeeting.setDeactivationReason(rejectionReason);
+                        deactivatedMeeting.setDeactivationDate(LocalDateTime.now());
+                        deactivatedMeetingRepository.save(deactivatedMeeting);
+                        
+                        // Cancel the meeting
+                        meeting.setStatus(MeetingStatus.CANCELLED);
+                        meetingRepository.save(meeting);
+                        
+                        System.out.println("[FacultyService] 📞 Meeting cancelled: " + meeting.getMeetingId());
+                    }
+                    
+                    // ✅ Store request in deactivated table
+                    DeactivatedProjectRequest deactivated = new DeactivatedProjectRequest();
+                    deactivated.setProjectRequest(request);
+                    deactivated.setPreviousStatus(request.getStatus());  // ✅ SCHEDULED
+                    deactivated.setPresentStatus(RequestStatus.REJECTED);  // ✅ REJECTED
+                    deactivated.setDeactivationReason(rejectionReason);
+                    deactivated.setDeactivationDate(LocalDateTime.now());
+                    deactivatedProjectRequestRepository.save(deactivated);
+                    
+                    // Reject the request
+                    request.setStatus(RequestStatus.REJECTED);
+                    request.setRejectionReason(rejectionReason);
+                    projectRequestRepository.save(request);
+                }
+            }
+        }
+
         project.setIsActive(false);
         project.setStatus("CLOSE");
         Project saved = projectRepository.save(project);
-        return getProjectResponse(saved);
+        
+        System.out.println("[FacultyService] ✅ Project deactivated successfully: " + projectId);
+        
+        return getProjectResponse(saved, faculty);
     }
 
-    private ProjectResponse getProjectResponse(Project p) {
+    private ProjectResponse getProjectResponse(Project p,Faculty faculty) {
         String domainStr = "";
         String subdomainStr = "";
         var pDomains = projectDomainRepository.findByProjectProjectId(p.getProjectId());
@@ -273,7 +410,7 @@ public class FacultyService {
         if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null)
             subdomainStr = pSubDomains.get(0).getSubDomain().getName();
             
-        AllocationRules rules = allocationRulesRepository.findById(1L).orElse(new AllocationRules());
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId()).orElse(new AllocationRules());
         int maxTeamSize = rules.getMaxTeamSize();
 
         int projectAssigned = (p.getTeam() != null && p.getTeam().getMembers() != null) ? p.getTeam().getMembers().size() : 0;
@@ -284,46 +421,46 @@ public class FacultyService {
                 subdomainStr, p.getIsActive(), projectAssigned, maxSlots, remainingSlots);
     }
 
-    @Transactional
-    public void assignProject(Long projectId, Long teamId) {
-        Project project = projectRepository.findById(projectId).orElseThrow();
+    // @Transactional
+    // public void assignProject(Long projectId, Long teamId) {
+    //     Project project = projectRepository.findById(projectId).orElseThrow();
 
-        if (!project.getStatus().equals("REQUESTED")) {
-            throw new RuntimeException("Project not requested yet");
-        }
+    //     if (!project.getStatus().equals("REQUESTED")) {
+    //         throw new RuntimeException("Project not requested yet");
+    //     }
 
-        Team team = teamRepository.findById(teamId).orElseThrow();
-        Faculty faculty = project.getFaculty();
+    //     Team team = teamRepository.findById(teamId).orElseThrow();
+    //     Faculty faculty = project.getFaculty();
 
-        // 1. Link Project to Team
-        project.setTeam(team);
-        project.setStatus("ASSIGNED");
-        projectRepository.save(project);
+    //     // 1. Link Project to Team
+    //     project.setTeam(team);
+    //     project.setStatus("ASSIGNED");
+    //     projectRepository.save(project);
 
-        // 2. Link Team to Faculty
-        team.setFaculty(faculty);
-        teamRepository.save(team);
+    //     // 2. Link Team to Faculty
+    //     team.setFaculty(faculty);
+    //     teamRepository.save(team);
 
-        // 3. Mark all students in the team as Allocated
-        List<Student> members = team.getMembers();
-        if (members != null && !members.isEmpty()) {
-            for (Student student : members) {
-                student.setAllocated(true);
-                student.setAllocatedFaculty(faculty);
-                studentRepository.save(student);
-            }
-            // 4. Update Faculty slot counter
-            faculty.setAllocatedStudents(faculty.getAllocatedStudents() + members.size());
-            facultyRepository.save(faculty);
-        }
+    //     // 3. Mark all students in the team as Allocated
+    //     List<Student> members = team.getMembers();
+    //     if (members != null && !members.isEmpty()) {
+    //         for (Student student : members) {
+    //             student.setAllocated(true);
+    //             student.setAllocatedFaculty(faculty);
+    //             studentRepository.save(student);
+    //         }
+    //         // 4. Update Faculty slot counter
+    //         faculty.setAllocatedStudents(faculty.getAllocatedStudents() + members.size());
+    //         facultyRepository.save(faculty);
+    //     }
 
-        // 5. Accept the request
-        ProjectRequest request = projectRequestRepository
-                .findByTeamTeamId(teamId).stream().findFirst()
-                .orElseThrow();
-        request.setStatus(RequestStatus.ACCEPTED);
-        projectRequestRepository.save(request);
-    }
+    //     // 5. Accept the request
+    //     ProjectRequest request = projectRequestRepository
+    //             .findByTeamTeamId(teamId).stream().findFirst()
+    //             .orElseThrow();
+    //     request.setStatus(RequestStatus.ACCEPTED);
+    //     projectRequestRepository.save(request);
+    // }
 
     public List<ProjectResponse> getPendingRequests(Long facultyId) {
 
@@ -331,56 +468,69 @@ public class FacultyService {
                 RequestStatus.PENDING,
                 facultyId);
 
-        return requests.stream().map(request -> {
-
-            ProjectResponse response = new ProjectResponse();
-
-            response.setRequestId(request.getRequestId());
-
-            Team team = request.getTeam();
-
-            if (team != null) {
-                response.setTeamId(team.getTeamId());
-                response.setTeamName(team.getTeamName());
-
-                // ✅ ADD COMPLETE TEAM MEMBER DETAILS
-                List<String> members = team.getMembers()
-                        .stream()
-                        .map(s -> s.getUser().getName())
-                        .toList();
-
-                response.setMembers(members);
+        // ✅ FILTER: Only requests for OPEN or IN_PROGRESS projects (NOT CLOSE)
+        return requests.stream()
+                .filter(request -> {
+                    Project project = request.getProject();
+                    boolean isNotClosed = project != null && 
+                           !("CLOSE".equals(project.getStatus()));
                 
-                // ✅ NEW: Add full team member info
-                List<TeamMemberDetailDTO> teamMemberDetails = team.getMembers()
-                        .stream()
-                        .map(s -> new TeamMemberDetailDTO(
-                                s.getStudentId(),
-                                s.getUser().getName(),
-                                s.getRollNumber() != null ? s.getRollNumber() : "N/A",
-                                s.getUser().getEmail(),
-                                s.getCgpa() != 0.0 ? s.getCgpa() : 0.0,
-                                s.getResumeLink() != null ? s.getResumeLink() : "N/A",
-                                s.getMarksheetLink() != null ? s.getMarksheetLink() : "N/A",
-                                s.isTeamLead()
-                        ))
-                        .toList();
+                    if (!isNotClosed) {
+                        System.out.println("[FacultyService] 🚫 Filtering out request for closed project: " + request.getRequestId());
+                    }
+                    
+                    return isNotClosed;
+                })
+                .map(request -> {
 
-                response.setTeamMemberDetails(teamMemberDetails);
-                
-                // ✅ NEW: Add parsed team member data from ProjectRequest
-                response.setTeamMembersNames(request.getTeamMembersNames());
-                response.setTeamMembersRollNumbers(request.getTeamMembersRollNumbers());
-                response.setTeamMembersCgpas(request.getTeamMembersCgpas());
-                response.setTeamMembersResumeLinks(request.getTeamMembersResumeLinks());
-                response.setTeamMembersMarkSheetLinks(request.getTeamMembersMarkSheetLinks());
-            }
+                    ProjectResponse response = new ProjectResponse();
 
-            response.setStatus(request.getStatus().name());
+                    response.setRequestId(request.getRequestId());
 
-            return response;
+                    Team team = request.getTeam();
 
-        }).toList();
+                    if (team != null) {
+                        response.setTeamId(team.getTeamId());
+                        response.setTeamName(team.getTeamName());
+
+                        // ✅ ADD COMPLETE TEAM MEMBER DETAILS
+                        List<String> members = team.getMembers()
+                                .stream()
+                                .map(s -> s.getUser().getName())
+                                .toList();
+
+                        response.setMembers(members);
+                        
+                        // ✅ NEW: Add full team member info
+                        List<TeamMemberDetailDTO> teamMemberDetails = team.getMembers()
+                                .stream()
+                                .map(s -> new TeamMemberDetailDTO(
+                                        s.getStudentId(),
+                                        s.getUser().getName(),
+                                        s.getRollNumber() != null ? s.getRollNumber() : "N/A",
+                                        s.getUser().getEmail(),
+                                        s.getCgpa() != 0.0 ? s.getCgpa() : 0.0,
+                                        s.getResumeLink() != null ? s.getResumeLink() : "N/A",
+                                        s.getMarksheetLink() != null ? s.getMarksheetLink() : "N/A",
+                                        s.isTeamLead()
+                                ))
+                                .toList();
+
+                        response.setTeamMemberDetails(teamMemberDetails);
+                        
+                        // ✅ NEW: Add parsed team member data from ProjectRequest
+                        response.setTeamMembersNames(request.getTeamMembersNames());
+                        response.setTeamMembersRollNumbers(request.getTeamMembersRollNumbers());
+                        response.setTeamMembersCgpas(request.getTeamMembersCgpas());
+                        response.setTeamMembersResumeLinks(request.getTeamMembersResumeLinks());
+                        response.setTeamMembersMarkSheetLinks(request.getTeamMembersMarkSheetLinks());
+                    }
+
+                    response.setStatus(request.getStatus().name());
+
+                    return response;
+
+                }).toList();
     }
 
     public SubDomain createSubDomain(String name, Long domainId) {

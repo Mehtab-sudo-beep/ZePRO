@@ -42,17 +42,27 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [faculties, setFaculties] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
-  const [team, setteam] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [studentTeamData, setStudentTeamData] = useState<any>(null);
   const [rules, setRules] = useState<any>({ maxTeamSize: 3, maxStudentsPerFaculty: 6, maxProjectsPerFaculty: 2 });
   const [tempRules, setTempRules] = useState(rules);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'faculties' | 'students' | 'download' | 'rules'>('overview');
   const [loading, setLoading] = useState(false);
 
-  const [showAllocationModal, setShowAllocationModal] = useState(false);
-  const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedFacultyId, setSelectedFacultyId] = useState('');
+  const [selectedTeamForAllocation, setSelectedTeamForAllocation] = useState<any>(null);
+  const [showAllocateFacultyModal, setShowAllocateFacultyModal] = useState(false);
+  const [facultyProjectsForTeam, setFacultyProjectsForTeam] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+
+  // ✅ NEW: Create & Join Team States
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [selectedStudentForJoin, setSelectedStudentForJoin] = useState<any>(null);
+  const [availableTeamsToJoin, setAvailableTeamsToJoin] = useState<any[]>([]);
 
   const [facultySearchQuery, setFacultySearchQuery] = useState('');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -67,6 +77,32 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   };
 
   // ───────── FETCH ─────────
+  const fetchStudentTeamData = async () => {
+    if (!user?.token) return;
+    try {
+      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching student and team details...');
+      const data = await coordinatorApi.getStudentAndTeamDetails(user.token);
+      setStudentTeamData(data);
+      console.log('[FacultyCoordinatorDashboard] ✅ Student and team data loaded');
+    } catch (err: any) {
+      console.log('[FacultyCoordinatorDashboard] ❌ Error fetching student team data:', err);
+    }
+  };
+
+  // ✅ NEW: Fetch Available Teams (Not Full)
+  const fetchAvailableTeamsToJoin = async () => {
+    if (!user?.token) return;
+    try {
+      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching available teams to join...');
+      const data = await coordinatorApi.getAvailableTeamsToJoin(user.token);
+      setAvailableTeamsToJoin(data || []);
+      console.log('[FacultyCoordinatorDashboard] ✅ Available teams loaded:', data?.length || 0);
+    } catch (err: any) {
+      console.log('[FacultyCoordinatorDashboard] ❌ Error fetching available teams:', err);
+      setAvailableTeamsToJoin([]);
+    }
+  };
+
   const fetchAll = async () => {
     if (!user?.token) {
       showLocalMsg("No authentication token", "error");
@@ -77,7 +113,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     try {
       console.log('[FacultyCoordinatorDashboard] 🔄 Fetching all data...');
       
-      // ✅ USE NEW API FUNCTIONS
       const [s, f, st, t, r] = await Promise.all([
         coordinatorApi.getDashboardStats(user.token).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Stats error:', e);
@@ -115,7 +150,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       }
       if (t) {
         console.log('[FacultyCoordinatorDashboard] ✅ Teams:', t);
-        setteam(t.map((item: any) => ({ ...item, id: String(item.teamId) })));
+        setTeams(t.map((item: any) => ({ ...item, id: String(item.teamId) })));
       }
       if (r) {
         console.log('[FacultyCoordinatorDashboard] ✅ Rules:', r);
@@ -137,36 +172,64 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     fetchAll();
   }, [user?.token]);
 
-  // ───────── ACTIONS ─────────
-  const handleAllocateStudent = async () => {
-    if (!selectedStudent || !selectedFacultyId) {
-      showLocalMsg("Please select faculty", "error");
+  useEffect(() => {
+    if (activeTab === 'students' && user?.token) {
+      fetchStudentTeamData();
+    }
+  }, [activeTab, user?.token]);
+
+  // ✅ NEW: Create Team Handler
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) {
+      showLocalMsg("Please enter team name", "error");
+      return;
+    }
+    if (!selectedStudent?.id && !selectedStudent?.studentId) {
+      showLocalMsg("Student not selected", "error");
       return;
     }
     try {
-      // ✅ USE NEW API FUNCTION
-      await coordinatorApi.allocateStudent(selectedStudent.id, selectedFacultyId, user!.token);
-      showLocalMsg("Student allocated successfully!", "success");
-      fetchAll();
-      setShowAllocationModal(false);
+      setLoading(true);
+      const studentId = selectedStudent.id || selectedStudent.studentId;
+      console.log('[FacultyCoordinatorDashboard] 🆕 Creating team:', newTeamName);
+      
+      const result = await coordinatorApi.createTeam(newTeamName, String(studentId), user!.token);
+      showLocalMsg("Team created successfully!", "success");
+      setNewTeamName('');
+      setShowCreateTeamModal(false);
+      setSelectedStudent(null);
+      fetchStudentTeamData();
     } catch (err: any) {
-      showLocalMsg(err.message || "Allocation failed", "error");
+      console.log('[FacultyCoordinatorDashboard] ❌ Create team error:', err);
+      showLocalMsg(err.error || "Failed to create team", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleOverrideAllocation = async () => {
-    if (!selectedStudent || !selectedFacultyId) {
-      showLocalMsg("Please select faculty", "error");
+  // ✅ NEW: Join Team Handler
+  const handleJoinTeam = async (team: any) => {
+    if (!selectedStudentForJoin?.id && !selectedStudentForJoin?.studentId) {
+      showLocalMsg("Student not selected", "error");
       return;
     }
     try {
-      // ✅ USE NEW API FUNCTION
-      await coordinatorApi.overrideAllocation(selectedStudent.id, selectedFacultyId, user!.token);
-      showLocalMsg("Allocation overridden successfully!", "success");
-      fetchAll();
-      setShowOverrideModal(false);
+      setLoading(true);
+      const studentId = selectedStudentForJoin.id || selectedStudentForJoin.studentId;
+      const teamId = team.teamId;
+      console.log('[FacultyCoordinatorDashboard] 👥 Joining team:', teamId);
+      
+      const result = await coordinatorApi.joinTeam(String(studentId), String(teamId), user!.token);
+      showLocalMsg("Student joined team successfully!", "success");
+      setShowJoinTeamModal(false);
+      setSelectedStudentForJoin(null);
+      setAvailableTeamsToJoin([]);
+      fetchStudentTeamData();
     } catch (err: any) {
-      showLocalMsg(err.message || "Override failed", "error");
+      console.log('[FacultyCoordinatorDashboard] ❌ Join team error:', err);
+      showLocalMsg(err.error || "Failed to join team", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -177,13 +240,12 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         maxStudentsPerFaculty: tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
       };
 
-      // ✅ USE NEW API FUNCTION
-      const result = await coordinatorApi.saveRules(computedRules, user!.token);
+      await coordinatorApi.saveRules(computedRules, user!.token);
       
       setRules(computedRules);
       showLocalMsg("Rules updated successfully!", "success");
       
-      console.log('[FacultyCoordinatorDashboard] ✅ Rules saved:', result);
+      console.log('[FacultyCoordinatorDashboard] ✅ Rules saved:', computedRules);
     } catch (err: any) {
       showLocalMsg(err.message || "Failed to save rules", "error");
     }
@@ -194,12 +256,24 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       setLoading(true);
       console.log('[FacultyCoordinatorDashboard] 📥 Downloading fresh report...');
       
-      // ✅ GENERATE READABLE TIMESTAMP FOR FILENAME
       const now = new Date();
-      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
       const fileName = `team_report_${dateStr}_${timeStr}_${Math.random().toString(36).substring(7)}.pdf`;
-      const filePath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${fileName}`;
+      
+      const folderPath = '/storage/emulated/0/ZEPRO';
+      const filePath = `${folderPath}/${fileName}`;
+      
+      try {
+        const isDir = await ReactNativeBlobUtil.fs.isDir(folderPath);
+        if (!isDir) {
+          await ReactNativeBlobUtil.fs.mkdir(folderPath);
+          console.log('[FacultyCoordinatorDashboard] ✅ ZEPRO folder created');
+        }
+      } catch (e) {
+        await ReactNativeBlobUtil.fs.mkdir(folderPath).catch(() => {});
+        console.log('[FacultyCoordinatorDashboard] ✅ ZEPRO folder created (catch)');
+      }
       
       await ReactNativeBlobUtil.config({
         path: filePath,
@@ -208,14 +282,18 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           notification: true,
           title: 'Team Report',
           mime: 'application/pdf',
-          description: 'Downloading team report',
+          description: 'Downloading team report to ZEPRO folder',
         },
-      }).fetch('GET', `http://localhost:8080/api/coordinator/teams/report/pdf`, {
+      }).fetch('GET', 'http://localhost:8080/api/coordinator/teams/report/pdf', {
         'Authorization': `Bearer ${user!.token}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       });
       
-      showLocalMsg("Report downloaded successfully!", "success");
+      showLocalMsg("Report downloaded to ZEPRO folder!", "success");
       console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded:', fileName);
+      console.log('[FacultyCoordinatorDashboard] 📁 Location:', filePath);
     } catch (err: any) {
       showLocalMsg("Download failed: " + err.message, "error");
       console.log('[FacultyCoordinatorDashboard] ❌ Download error:', err);
@@ -243,7 +321,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const handleSearchStudents = async (query: string) => {
     setStudentSearchQuery(query);
     if (query.length === 0) {
-      fetchAll();
+      fetchStudentTeamData();
       return;
     }
     try {
@@ -304,7 +382,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           <Card><ActivityIndicator color={colors.primary} /></Card>
         ) : (
           <>
-            {/* Main Stats Grid */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
               <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
                 <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}> 
@@ -339,7 +416,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
               </View>
             </View>
 
-            {/* Allocation Progress Card */}
             <Card>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 }}>
                 <View>
@@ -365,7 +441,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
               </View>
             </Card>
 
-            {/* General Summary Card */}
             <SectionLabel label="General Summary" />
             <Card>
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
@@ -433,247 +508,402 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   );
 
   const renderStudents = () => (
-    <>
-      <SearchBox value={studentSearchQuery} setValue={handleSearchStudents} />
-      {students.map(s => (
-        <Card key={s.id}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: accentSoft, justifyContent: 'center', alignItems: 'center' }}>
-              <Icon name="students" size={20} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>{s.name}</Text>
-                <View style={{
-                  backgroundColor: s.isAllocated ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20
-                }}>
-                  <Text style={{ color: s.isAllocated ? '#10b981' : '#f59e0b', fontSize: 10, fontWeight: '800' }}>
-                    {s.isAllocated ? 'ALLOCATED' : 'PENDING'}
+    <View style={{ gap: 16 }}>
+      <SectionLabel label="Teams in Department" />
+      {studentTeamData?.teamsInDepartment && studentTeamData.teamsInDepartment.length > 0 ? (
+        studentTeamData.teamsInDepartment.map((team: any) => {
+          const isFull = team.memberCount >= team.maxSlots;
+          return (
+            <Card key={team.teamId}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{team.teamName}</Text>
+                  <Text style={{ color: colors.subText, fontSize: 12, marginTop: 4 }}>
+                    Project: {team.projectTitle}
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: team.status === 'ALLOCATED' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ color: team.status === 'ALLOCATED' ? '#22c55e' : '#f59e0b', fontSize: 10, fontWeight: '800' }}>
+                    {team.status}
                   </Text>
                 </View>
               </View>
-              <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Roll: {s.rollNo}</Text>
-            </View>
-          </View>
 
-          <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
-            <TouchableOpacity
-              style={[styles.miniBtn, { backgroundColor: s.isAllocated ? '#6366f1' : colors.primary, flex: 1 }]} 
-              onPress={() => {
-                setSelectedStudent(s);
-                setMsg(null);
-                if (s.isAllocated) setShowOverrideModal(true);
-                else setShowAllocationModal(true);
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
-                {s.isAllocated ? 'Override Allocation' : 'Manual Allocation'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={{ backgroundColor: accentSoft, padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>Members ({team.memberCount}/{team.maxSlots})</Text>
+                  <View style={{ backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                    <Text style={{ color: isFull ? '#ef4444' : '#22c55e', fontSize: 9, fontWeight: '800' }}>
+                      {isFull ? 'FULL' : 'OPEN'}
+                    </Text>
+                  </View>
+                </View>
+                {team.memberNames && team.memberNames.map((name: string, idx: number) => (
+                  <Text key={idx} style={{ color: colors.text, fontSize: 11, paddingVertical: 2 }}>• {name}</Text>
+                ))}
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: divider }}>
+                <View>
+                  <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>GUIDE</Text>
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', marginTop: 2 }}>{team.facultyName}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.miniBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => {
+                    setSelectedTeamForAllocation(team);
+                    setShowAllocateFacultyModal(true);
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Allocate</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          );
+        })
+      ) : (
+        <Card>
+          <Text style={{ color: colors.subText, textAlign: 'center' }}>No teams in department</Text>
         </Card>
-      ))}
-    </>
-  );
+      )}
 
-  const renderteam = () => (
-    <>
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary, marginBottom: 16 }]} 
-        onPress={handleDownloadReport}
-      >
-        <Icon name="download" />
-        <Text style={{ color: '#fff', fontWeight: '700' }}>Export All Teams (PDF)</Text>
-      </TouchableOpacity>
-
-      <View style={[styles.tableContainer, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-        <View style={[styles.tableHeader, { backgroundColor: accentSoft, borderBottomColor: colors.border }]}> 
-          <Text style={[styles.columnHeader, { color: colors.subText, flex: 2 }]}>TEAM NAME</Text>
-          <Text style={[styles.columnHeader, { color: colors.subText, flex: 3 }]}>PROJECT TITLE</Text>
-          <Text style={[styles.columnHeader, { color: colors.subText, flex: 1, textAlign: 'center' }]}>SLOTS</Text>
-          <Text style={[styles.columnHeader, { color: colors.subText, flex: 2.5 }]}>DOWNLOAD INFO</Text>
-        </View>
-
-        {team.length === 0 ? (
-          <View style={{ padding: 20, alignItems: 'center' }}>
-            <Text style={{ color: colors.subText }}>No teams found</Text>
-          </View>
-        ) : (
-          team.map((t, idx) => (
-            <View key={t.id} style={[styles.tableRow, { borderBottomColor: colors.border, backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.02)' }]}> 
-              <Text style={[styles.cellText, { color: colors.text, fontWeight: '700', flex: 2 }]} numberOfLines={2}>
-                {t.teamName || t.name || 'Unnamed'}
-              </Text>
-              <Text style={[styles.cellText, { color: colors.text, flex: 3 }]} numberOfLines={2}>
-                {t.projectTitle || 'No Project'}
-              </Text>
-              <Text style={[styles.cellText, { color: colors.primary, flex: 1, textAlign: 'center', fontWeight: '800' }]}> 
-                {t.slots || 3}
-              </Text>
-              <View style={{ flex: 2.5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                 <View style={{ padding: 4, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 4 }}>
-                    <Icon name="download" size={12} />
-                 </View>
-                 <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
-                    {t.teamName} | {t.projectTitle ? (t.projectTitle.length > 12 ? t.projectTitle.substring(0,10)+'...' : t.projectTitle) : 'N/A'}
-                 </Text>
+      <SectionLabel label="Students Not in Team" />
+      <SearchBox value={studentSearchQuery} setValue={handleSearchStudents} />
+      {studentTeamData?.unallocatedStudents && studentTeamData.unallocatedStudents.length > 0 ? (
+        studentTeamData.unallocatedStudents.map((s: any) => (
+          <Card key={s.id || s.studentId}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: accentSoft, justifyContent: 'center', alignItems: 'center' }}>
+                <Icon name="students" size={20} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>{s.name || s.studentName}</Text>
+                <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Roll: {s.rollNo || s.rollNumber}</Text>
               </View>
             </View>
-          ))
-        )}
-      </View>
-    </>
+
+            <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
+              <TouchableOpacity
+                style={[styles.miniBtn, { backgroundColor: '#6366f1', flex: 1 }]}
+                onPress={() => {
+                  setSelectedStudent(s);
+                  setShowCreateTeamModal(true);
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Create Team</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.miniBtn, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={() => {
+                  setSelectedStudentForJoin(s);
+                  fetchAvailableTeamsToJoin();
+                  setShowJoinTeamModal(true);
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Join Team</Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        ))
+      ) : (
+        <Card>
+          <Text style={{ color: colors.subText, textAlign: 'center' }}>All students are in teams</Text>
+        </Card>
+      )}
+    </View>
+  );
+
+  const renderDownload = () => (
+    <Card>
+      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 12 }}>Download Team Report</Text>
+      <Text style={{ color: colors.subText, fontSize: 13, marginBottom: 16 }}>
+        Generate and download a fresh PDF report of all teams and their details.
+      </Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.primary }]}
+        onPress={handleDownloadReport}
+        disabled={loading}
+      >
+        <Icon name="download" size={20} />
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+          {loading ? 'Downloading...' : 'Download Report'}
+        </Text>
+      </TouchableOpacity>
+    </Card>
   );
 
   const renderRules = () => (
     <View style={{ gap: 16 }}>
-      {/* Configuration Section */}
       <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <View style={{ padding: 6, backgroundColor: colors.primary, borderRadius: 8 }}>
-            <Icon name="rules" size={14} />
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 16 }}>Allocation Rules</Text>
+        
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Max Team Size</Text>
+          <View style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <TextInput
+              value={String(tempRules.maxTeamSize)}
+              onChangeText={(val) => setTempRules({ ...tempRules, maxTeamSize: parseInt(val) || 0 })}
+              keyboardType="number-pad"
+              style={{ color: colors.text, flex: 1 }}
+            />
           </View>
-          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>Rule Configuration</Text>
         </View>
 
-        <View>
-          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-            MAX TEAM SIZE
-          </Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: divider }]} 
-            keyboardType="numeric"
-            value={tempRules.maxTeamSize ?? ""}
-            onChangeText={v => {
-              if (/^\d*$/.test(v)) {
-                setTempRules(prev => {
-                  const teamSize = v;
-                  const projects = prev.maxProjectsPerFaculty || "0";
-                  const computed = parseInt(teamSize || "0") * parseInt(projects || "0");
-                  return {
-                    ...prev,
-                    maxTeamSize: teamSize,
-                    maxStudentsPerFaculty: computed
-                  };
-                });
-              }
-            }}
-          />
-        </View>
-
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-            MAX PROJECTS PER FACULTY
-          </Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: divider }]} 
-            keyboardType="numeric"
-            value={tempRules.maxProjectsPerFaculty ?? ""}
-            onChangeText={v => {
-              if (/^\d*$/.test(v)) {
-                setTempRules(prev => {
-                  const projects = v;
-                  const teamSize = prev.maxTeamSize || "0";
-                  const computed = parseInt(teamSize || "0") * parseInt(projects || "0");
-                  return {
-                    ...prev,
-                    maxProjectsPerFaculty: projects,
-                    maxStudentsPerFaculty: computed
-                  };
-                });
-              }
-            }}
-          />
-        </View>
-
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700', marginBottom: 6 }}>
-            MAX STUDENTS PER FACULTY (AUTO)
-          </Text>
-          <View style={[styles.input, { justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}> 
-            <Text style={{ color: colors.text, fontWeight: '700' }}>
-              {tempRules.maxStudentsPerFaculty || 0}
-            </Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Max Projects Per Faculty</Text>
+          <View style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <TextInput
+              value={String(tempRules.maxProjectsPerFaculty)}
+              onChangeText={(val) => setTempRules({ ...tempRules, maxProjectsPerFaculty: parseInt(val) || 0 })}
+              keyboardType="number-pad"
+              style={{ color: colors.text, flex: 1 }}
+            />
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary, marginTop: 20 }]} 
+          style={[styles.button, { backgroundColor: colors.primary }]}
           onPress={handleSaveRules}
         >
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Save Changes</Text>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Save Rules</Text>
         </TouchableOpacity>
       </Card>
-
-      {/* Active Rules Display */}
-      <SectionLabel label="Currently Active Rules" />
-      <View style={[styles.activeRulesContainer, { backgroundColor: isDark ? 'rgba(31,41,55,0.5)' : '#f8fafc', borderColor: colors.border }]}> 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>PARAMETER</Text>
-          <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '700' }}>ACTIVE VALUE</Text>
-        </View>
-        
-        <View style={styles.activeRuleRow}>
-          <Text style={{ color: colors.text, fontSize: 13 }}>Team Max Size</Text>
-          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxTeamSize}</Text></View>
-        </View>
-        
-        <View style={styles.activeRuleRow}>
-          <Text style={{ color: colors.text, fontSize: 13 }}>Faculty Student Limit</Text>
-          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxStudentsPerFaculty}</Text></View>
-        </View>
-
-        <View style={styles.activeRuleRow}>
-          <Text style={{ color: colors.text, fontSize: 13 }}>Faculty Project Limit</Text>
-          <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>{rules.maxProjectsPerFaculty}</Text></View>
-        </View>
-
-        <View style={{ padding: 12, backgroundColor: accentSoft, alignItems: 'center' }}>
-          <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500' }}>
-            System Version: <Text style={{ fontWeight: '800' }}>v{rules.version || 1}</Text>
-          </Text>
-        </View>
-      </View>
     </View>
   );
 
-  const renderModal = (isOverride: boolean) => (
-    <Modal visible={isOverride ? showOverrideModal : showAllocationModal} transparent animationType="fade">
+  // ✅ NEW: Create Team Modal
+  const renderCreateTeamModal = () => (
+    <Modal visible={showCreateTeamModal} transparent animationType="fade">
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.card }]}> 
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 }}>
-            {isOverride ? 'Override' : 'Manual'} Allocation
+            Create New Team
           </Text>
 
+          <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 8, fontWeight: '700' }}>Student</Text>
+          <Card>
+            <Text style={{ color: colors.text, fontWeight: '600' }}>
+              {selectedStudent?.name || selectedStudent?.studentName}
+            </Text>
+            <Text style={{ color: colors.subText, fontSize: 11, marginTop: 2 }}>
+              Roll: {selectedStudent?.rollNo || selectedStudent?.rollNumber}
+            </Text>
+          </Card>
+
+          <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 8, marginTop: 16, fontWeight: '700' }}>Team Name</Text>
+          <View style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, marginBottom: 20 }]}>
+            <TextInput
+              value={newTeamName}
+              onChangeText={setNewTeamName}
+              placeholder="Enter team name"
+              placeholderTextColor={colors.subText}
+              style={{ color: colors.text, flex: 1 }}
+            />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: colors.border, flex: 1 }]}
+              onPress={() => {
+                setShowCreateTeamModal(false);
+                setNewTeamName('');
+                setSelectedStudent(null);
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]}
+              onPress={handleCreateTeam}
+              disabled={loading}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700' }}>
+                {loading ? 'Creating...' : 'Create Team'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // ✅ NEW: Join Team Modal
+  const renderJoinTeamModal = () => (
+    <Modal visible={showJoinTeamModal} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 }}>
+            Join Team
+          </Text>
+
+          <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 8, fontWeight: '700' }}>Student</Text>
+          <Card>
+            <Text style={{ color: colors.text, fontWeight: '600' }}>
+              {selectedStudentForJoin?.name || selectedStudentForJoin?.studentName}
+            </Text>
+            <Text style={{ color: colors.subText, fontSize: 11, marginTop: 2 }}>
+              Roll: {selectedStudentForJoin?.rollNo || selectedStudentForJoin?.rollNumber}
+            </Text>
+          </Card>
+
+          <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 12, marginTop: 16, fontWeight: '700' }}>Available Teams (Not Full)</Text>
           <ScrollView style={{ maxHeight: 300 }}>
-            {faculties.map(f => (
+            {availableTeamsToJoin && availableTeamsToJoin.length > 0 ? (
+              availableTeamsToJoin.map((team: any) => {
+                const isFull = team.memberCount >= team.maxSlots;
+                return (
+                  <TouchableOpacity
+                    key={team.teamId}
+                    disabled={isFull}
+                    onPress={() => handleJoinTeam(team)}
+                    style={[
+                      styles.teamJoinItem,
+                      { 
+                        borderColor: divider, 
+                        backgroundColor: isFull ? 'rgba(239,68,68,0.05)' : colors.background,
+                        opacity: isFull ? 0.5 : 1
+                      }
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{team.teamName}</Text>
+                      <Text style={{ color: colors.subText, fontSize: 10, marginTop: 4 }}>
+                        Members: {team.memberCount}/{team.maxSlots}
+                      </Text>
+                      <Text style={{ color: colors.subText, fontSize: 10, marginTop: 2 }}>
+                        Project: {team.projectTitle}
+                      </Text>
+                    </View>
+                    <View style={{ 
+                      backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft, 
+                      paddingHorizontal: 10, 
+                      paddingVertical: 6, 
+                      borderRadius: 8 
+                    }}>
+                      <Text style={{ 
+                        color: isFull ? '#ef4444' : colors.primary, 
+                        fontWeight: '700', 
+                        fontSize: 10 
+                      }}>
+                        {isFull ? 'FULL' : 'JOIN'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <Card>
+                <Text style={{ color: colors.subText, textAlign: 'center', fontSize: 12 }}>
+                  No available teams to join (all teams are full)
+                </Text>
+              </Card>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[styles.modalBtn, { backgroundColor: colors.border, marginTop: 16 }]}
+            onPress={() => {
+              setShowJoinTeamModal(false);
+              setSelectedStudentForJoin(null);
+              setAvailableTeamsToJoin([]);
+            }}
+          >
+            <Text style={{ color: colors.text, fontWeight: '600' }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderAllocateFacultyModal = () => (
+    <Modal visible={showAllocateFacultyModal} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 }}>
+            Allocate Team to Faculty & Project
+          </Text>
+
+          <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 8, fontWeight: '700' }}>Select Faculty</Text>
+          <ScrollView style={{ maxHeight: 250 }}>
+            {faculties.map((f) => (
               <TouchableOpacity
                 key={f.id}
-                style={[
-                  styles.facultyItem,
-                  { borderColor: divider, backgroundColor: selectedFacultyId === f.id ? accentSoft : 'transparent' }
-                ]}
-                onPress={() => setSelectedFacultyId(f.id)}
+                style={[styles.facultyItem, { borderColor: divider, backgroundColor: selectedFacultyId === f.id ? accentSoft : colors.background }]}
+                onPress={async () => {
+                  setSelectedFacultyId(f.id);
+                  try {
+                    const projects = await coordinatorApi.getFacultyProjects(f.id, user!.token);
+                    setFacultyProjectsForTeam(projects.map((p: any) => ({ ...p, id: String(p.projectId) })));
+                  } catch (err) {
+                    showLocalMsg("Failed to load projects", "error");
+                  }
+                }}
               >
                 <Text style={{ color: colors.text, fontWeight: '600' }}>{f.name}</Text>
-                <Text style={{ color: colors.subText, fontSize: 12 }}>{f.allocatedStudents} / {f.maxStudents} slots used</Text>
+                <Text style={{ color: colors.subText, fontSize: 11, marginTop: 2 }}>Specialization: {f.specialization || 'General'}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
+          {selectedFacultyId && facultyProjectsForTeam.length > 0 && (
+            <View style={{ marginTop: 16, padding: 12, backgroundColor: accentSoft, borderRadius: 12 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', marginBottom: 8 }}>Select Project</Text>
+              <ScrollView style={{ maxHeight: 150 }}>
+                {facultyProjectsForTeam.map((p: any) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[{ padding: 10, borderRadius: 8, marginBottom: 6, backgroundColor: selectedProject?.id === p.id ? colors.primary : colors.border }]}
+                    onPress={() => setSelectedProject(p)}
+                  >
+                    <Text style={{ color: selectedProject?.id === p.id ? '#fff' : colors.text, fontWeight: '600', fontSize: 12 }}>
+                      {p.projectTitle} ({p.status})
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.border }]} 
-              onPress={() => { setShowAllocationModal(false); setShowOverrideModal(false); setSelectedFacultyId(''); }}
+              style={[styles.modalBtn, { backgroundColor: colors.border, flex: 1 }]}
+              onPress={() => {
+                setShowAllocateFacultyModal(false);
+                setSelectedFacultyId('');
+                setSelectedProject(null);
+              }}
             >
-              <Text style={{ color: colors.text }}>Cancel</Text>
+              <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]} 
-              onPress={isOverride ? handleOverrideAllocation : handleAllocateStudent}
+              style={[styles.modalBtn, { backgroundColor: colors.primary, flex: 1 }]}
+              onPress={async () => {
+                if (!selectedTeamForAllocation || !selectedFacultyId || !selectedProject) {
+                  showLocalMsg("Please select team, faculty and project", "error");
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  await coordinatorApi.allocateTeamToFaculty(
+                    String(selectedTeamForAllocation.teamId),
+                    selectedFacultyId,
+                    selectedProject.id,
+                    user!.token
+                  );
+                  showLocalMsg("Team allocated successfully!", "success");
+                  fetchStudentTeamData();
+                  setShowAllocateFacultyModal(false);
+                  setSelectedFacultyId('');
+                  setSelectedProject(null);
+                } catch (err: any) {
+                  console.log('[FacultyCoordinatorDashboard] ❌ Allocation error:', err);
+                  showLocalMsg(err.message || "Allocation failed", "error");
+                } finally {
+                  setLoading(false);
+                }
+              }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700' }}>Confirm</Text>
+              <Text style={{ color: '#fff', fontWeight: '700' }}>Confirm Allocation</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -686,7 +916,6 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* HEADER */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}> 
         <View>
           <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>DASHBOARD</Text>
@@ -724,15 +953,14 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'faculties' && renderFaculties()}
         {activeTab === 'students' && renderStudents()}
-        {activeTab === 'download' && renderteam()}
+        {activeTab === 'download' && renderDownload()}
         {activeTab === 'rules' && renderRules()}
-
       </ScrollView>
 
-      {renderModal(false)}
-      {renderModal(true)}
+      {renderCreateTeamModal()}
+      {renderJoinTeamModal()}
+      {renderAllocateFacultyModal()}
 
-      {/* BOTTOM TAB */}
       <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}> 
         <View style={styles.tabItem}>
           <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
@@ -852,7 +1080,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600'
   },
-  alertIcon: { width: 18, height: 18 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -862,7 +1089,8 @@ const styles = StyleSheet.create({
   modalContent: {
     borderRadius: 20,
     padding: 24,
-    elevation: 10
+    elevation: 10,
+    maxHeight: '85%'
   },
   facultyItem: {
     padding: 14,
@@ -870,10 +1098,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8
   },
+  teamJoinItem: {
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
   modalBtn: {
-    padding: 12,
+    padding: 14,
     borderRadius: 10,
-    alignItems: 'center'
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   miniCard: {
     borderRadius: 16,
@@ -894,54 +1132,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  tableContainer: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    padding: 12,
-    borderBottomWidth: 1,
-  },
-  columnHeader: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    padding: 14,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  cellText: {
-    fontSize: 13,
-  },
-  activeRulesContainer: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  activeRuleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  activeBadge: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  activeBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '800',
-  }
 });

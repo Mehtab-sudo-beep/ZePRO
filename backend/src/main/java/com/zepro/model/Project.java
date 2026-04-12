@@ -3,15 +3,25 @@ package com.zepro.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "projects")
 public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long projectId;
 
+    @Column(name = "title")
     private String title;
 
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    // ✅ NEW: Track status history for reactivation
+    @Column(name = "present_status")
+    private String presentStatus = "OPEN";
+
+    @Column(name = "previous_status")
+    private String previousStatus = "OPEN";
 
     @ManyToOne
     private Faculty faculty;
@@ -19,15 +29,16 @@ public class Project {
     @ManyToOne
     private Team team;
 
-    private String status; // OPEN or CLOSE
+    @Column(name = "status")
+    private String status = "OPEN";
 
-    private boolean isActive;
+    @Column(name = "student_slots")
+    private Integer studentSlots;
 
-    @Column(name = "student_slots", nullable = false)
-    private int studentSlots = 0; // ✅ NEW - tracks manually set slots
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 
-    // ✅ ADD THIS FIELD - Track max slots reached
-    @Column(name = "maximum_slots_reached_till_now", nullable = false)
+    @Column(name = "maximum_slots_reached_till_now")
     private int maximumSlotsReachedTillNow = 0;
 
     // ─── Getters & Setters ─────────────────────────────────
@@ -88,16 +99,41 @@ public class Project {
         this.isActive = isActive;
     }
 
-    public int getStudentSlots() { // ✅ NEW
+    public int getStudentSlots() {
         return studentSlots;
     }
 
-    public void setStudentSlots(int studentSlots) { // ✅ NEW
+    public void setStudentSlots(int studentSlots) {
         this.studentSlots = studentSlots;
     }
 
     public int getMaximumSlotsReachedTillNow() { return maximumSlotsReachedTillNow; }
     public void setMaximumSlotsReachedTillNow(int maximumSlotsReachedTillNow) { 
         this.maximumSlotsReachedTillNow = maximumSlotsReachedTillNow; 
+    }
+
+    // ✅ NEW: Getters and Setters for status tracking
+    public String getPresentStatus() {
+        return presentStatus;
+    }
+
+    public void setPresentStatus(String presentStatus) {
+        this.presentStatus = presentStatus;
+        this.status = presentStatus; // Keep synchronized
+    }
+
+    public String getPreviousStatus() {
+        return previousStatus;
+    }
+
+    public void setPreviousStatus(String previousStatus) {
+        this.previousStatus = previousStatus;
+    }
+
+    // ✅ Helper method to update status with history
+    public void updateStatusWithHistory(String newStatus) {
+        this.previousStatus = this.presentStatus;
+        this.presentStatus = newStatus;
+        this.status = newStatus;
     }
 }
