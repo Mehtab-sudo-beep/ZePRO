@@ -7,9 +7,8 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DropDownPicker from 'react-native-dropdown-picker';
-
 import { createSubDomain, getDomains, getSubDomains } from '../api/facultyApi';
 
 import { AuthContext } from '../context/AuthContext';
@@ -18,6 +17,7 @@ import { ThemeContext } from '../theme/ThemeContext';
 const CreateSubDomainScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [success, setSuccess] = useState(false);
@@ -123,7 +123,18 @@ const CreateSubDomainScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View 
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: colors.background,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        }
+      ]}
+    >
       <View style={[styles.card, { backgroundColor: colors.card }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           Create SubDomain
@@ -188,7 +199,7 @@ const CreateSubDomainScreen = () => {
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

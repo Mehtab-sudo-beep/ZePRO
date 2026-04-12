@@ -10,6 +10,9 @@ public class UpcomingRequestResponse {
     private String location;
     private String meetingLink;
 
+    // ✅ Empty constructor
+    public UpcomingRequestResponse() {}
+
     public UpcomingRequestResponse(Long requestId,
                                    String projectTitle,
                                    String facultyName,
@@ -33,8 +36,17 @@ public class UpcomingRequestResponse {
     }
 
     public String getProjectTitle() { return projectTitle; }
+    public void setProjectTitle(String projectTitle) { this.projectTitle = projectTitle; }
+
     public String getFacultyName() { return facultyName; }
+    public void setFacultyName(String facultyName) { this.facultyName = facultyName; }
+
     public LocalDateTime getMeetingTime() { return meetingTime; }
+    public void setMeetingTime(LocalDateTime meetingTime) { this.meetingTime = meetingTime; }
+
     public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+
     public String getMeetingLink() { return meetingLink; }
+    public void setMeetingLink(String meetingLink) { this.meetingLink = meetingLink; }
 }

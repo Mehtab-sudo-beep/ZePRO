@@ -551,10 +551,29 @@ public class StudentService {
 
             for (ProjectRequest req : requests) {
 
+                Project project = req.getProject();
                 String status = req.getStatus() != null ? req.getStatus().name() : "";
 
-                // ✅ ACCEPTED — goes to completed
+                System.out.println("[StudentService] 📋 Processing request: " + req.getRequestId() 
+                        + " | Project: " + project.getTitle() 
+                        + " | Project Status: " + project.getStatus()
+                        + " | Request Status: " + status);
+
+                // ✅ CHECK 1: If project is CLOSE/DEACTIVATED, mark as completed with reason
+                if ("CLOSE".equals(project.getStatus())) {
+                    System.out.println("[StudentService] ❌ Project is CLOSED/DEACTIVATED");
+                    completed.add(new CompletedRequestResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "PROJECT CLOSED",
+                            "Faculty closed this project"));
+                    continue;
+                }
+
+                // ✅ CHECK 2: ACCEPTED — goes to completed
                 if (status.equals("ACCEPTED")) {
+                    System.out.println("[StudentService] ✅ Request ACCEPTED");
                     completed.add(new CompletedRequestResponse(
                             req.getRequestId(),
                             req.getProject().getTitle(),
@@ -564,26 +583,31 @@ public class StudentService {
                     continue;
                 }
 
-                // ✅ REJECTED — goes to completed
+                // ✅ CHECK 3: REJECTED — goes to completed
                 if (status.equals("REJECTED")) {
+                    System.out.println("[StudentService] ❌ Request REJECTED");
                     completed.add(new CompletedRequestResponse(
                             req.getRequestId(),
                             req.getProject().getTitle(),
                             req.getProject().getFaculty().getUser().getName(),
                             "REJECTED",
-                            req.getRejectionReason()));
+                            req.getRejectionReason() != null ? req.getRejectionReason() : "Request rejected by faculty"));
                     continue;
                 }
 
-                // ✅ Check meeting for this request
+                // ✅ CHECK 4: Check meeting for this request
                 java.util.Optional<Meeting> meetingOpt = meetingRepository
                         .findByRequestRequestId(req.getRequestId());
 
                 if (meetingOpt.isPresent()) {
                     Meeting meeting = meetingOpt.get();
 
+                    System.out.println("[StudentService] 📞 Meeting found: " + meeting.getMeetingId() 
+                            + " | Meeting Status: " + meeting.getStatus());
+
                     // ✅ SCHEDULED meeting → upcoming
                     if (meeting.getStatus() == com.zepro.model.MeetingStatus.SCHEDULED) {
+                        System.out.println("[StudentService] 📅 Meeting SCHEDULED - adding to upcoming");
                         upcoming.add(new UpcomingRequestResponse(
                                 req.getRequestId(),
                                 req.getProject().getTitle(),
@@ -591,25 +615,43 @@ public class StudentService {
                                 meeting.getMeetingTime(),
                                 meeting.getLocation(),
                                 meeting.getMeetingLink()));
+                        continue;
                     }
 
                     // ✅ DONE meeting but no accept/reject yet → completed
                     if (meeting.getStatus() == com.zepro.model.MeetingStatus.DONE) {
+                        System.out.println("[StudentService] ✅ Meeting DONE - waiting for faculty decision");
                         completed.add(new CompletedRequestResponse(
                                 req.getRequestId(),
                                 req.getProject().getTitle(),
                                 req.getProject().getFaculty().getUser().getName(),
-                                "MEETING COMPLETED", null));
+                                "MEETING COMPLETED",
+                                "Waiting for faculty decision"));
+                        continue;
                     }
 
                     // ✅ CANCELLED meeting → completed
                     if (meeting.getStatus() == com.zepro.model.MeetingStatus.CANCELLED) {
+                        System.out.println("[StudentService] ❌ Meeting CANCELLED");
                         completed.add(new CompletedRequestResponse(
                                 req.getRequestId(),
                                 req.getProject().getTitle(),
                                 req.getProject().getFaculty().getUser().getName(),
-                                "CANCELLED", null));
+                                "MEETING CANCELLED",
+                                "Meeting was cancelled"));
+                        continue;
                     }
+                }
+
+                // ✅ CHECK 5: If no meeting and status is PENDING → upcoming (waiting for faculty)
+                if (status.equals("PENDING")) {
+                    System.out.println("[StudentService] ⏳ Request PENDING - waiting for faculty");
+                    completed.add(new CompletedRequestResponse(
+                            req.getRequestId(),
+                            req.getProject().getTitle(),
+                            req.getProject().getFaculty().getUser().getName(),
+                            "PENDING",
+                            "Waiting for faculty review"));
                 }
             }
 
@@ -619,6 +661,8 @@ public class StudentService {
                     return 0;
                 return a.getMeetingTime().compareTo(b.getMeetingTime());
             });
+
+            System.out.println("[StudentService] 📊 Summary - Upcoming: " + upcoming.size() + " | Completed: " + completed.size());
 
             ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
             response.setUpcomingRequests(upcoming);
@@ -760,7 +804,7 @@ public class StudentService {
             teamRepository.save(team);
 
             // delete ALL requests in one SQL
-            joinRequestRepository.deleteAllByStudentId(student.getStudentId());
+            joinRequestRepository.deleteAllByStudentStudentId(student.getStudentId());
 
             return "Student added to team successfully";
         }

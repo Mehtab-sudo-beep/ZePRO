@@ -15,8 +15,18 @@ export const joinTeam = (data: {
 export const getProjectRequestsStatus = (studentId: number) =>
   API.get(`/student/project-requests/${studentId}`);
 
-export const getAssignedProject = (studentId: number) =>
-  API.get(`/student/assigned-project/${studentId}`);
+export const getAssignedProject = (studentId: number) => {
+  console.log('[studentApi] 📡 Fetching assigned project for student:', studentId);
+  return API.get(`/student/assigned-project/${studentId}`)
+    .then(res => {
+      console.log('[studentApi] ✅ Assigned project response:', res.data);
+      return res.data; // ✅ Return the data directly
+    })
+    .catch(err => {
+      console.log('[studentApi] ❌ Error fetching assigned project:', err);
+      throw err;
+    });
+};
 
 export const getTeamInfo = (studentId: number) =>
   API.get(`/student/team-info/${studentId}`);

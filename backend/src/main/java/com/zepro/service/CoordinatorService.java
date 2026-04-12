@@ -26,19 +26,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.zepro.dto.facultycoordinator.AllTeamsReportResponse;
-import com.zepro.dto.facultycoordinator.AllocateStudentRequest;
-import com.zepro.dto.facultycoordinator.AllocationRulesResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorFacultyResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorStudentResponse;
-import com.zepro.dto.facultycoordinator.CoordinatorTeamResponse;
-import com.zepro.dto.facultycoordinator.DashboardStatsResponse;
-import com.zepro.dto.facultycoordinator.OverrideAllocationRequest;
-import com.zepro.dto.facultycoordinator.SaveRulesRequest;
-import com.zepro.dto.facultycoordinator.TeamMemberInfo;
 import com.zepro.model.*;
 import com.zepro.repository.*;
+import com.zepro.dto.facultycoordinator.*;
 
 @Service
 public class CoordinatorService {
@@ -49,19 +39,22 @@ public class CoordinatorService {
     private final ProjectRepository projectRepository;
     private final AllocationRulesRepository allocationRulesRepository;
     private final DepartmentRepository departmentrepository;
+    private final TeamJoinRequestRepository teamJoinRequestRepository;
 
     public CoordinatorService(StudentRepository studentRepository,
             FacultyRepository facultyRepository,
             TeamRepository teamRepository,
             ProjectRepository projectRepository,
             AllocationRulesRepository allocationRulesRepository,
-            DepartmentRepository departmentrepository) {
+            DepartmentRepository departmentrepository,
+            TeamJoinRequestRepository teamJoinRequestRepository) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.teamRepository = teamRepository;
         this.projectRepository = projectRepository;
         this.allocationRulesRepository = allocationRulesRepository;
         this.departmentrepository = departmentrepository;
+        this.teamJoinRequestRepository = teamJoinRequestRepository;
     }
 
     // ✅ GET ALLOCATION RULES BY DEPARTMENT
@@ -729,5 +722,328 @@ public class CoordinatorService {
         int currentCount = (int) studentRepository.countByAllocatedFaculty(faculty);
         faculty.setAllocatedStudents(currentCount);
         facultyRepository.save(faculty);
+    }
+
+    // ✅ NEW: GET STUDENT AND TEAM DETAILS FOR DEPARTMENT
+    @Transactional(readOnly = true)
+    public StudentTeamDetailsDTO getStudentAndTeamDetails(Long departmentId) {
+        System.out.println("[CoordinatorService] 📋 Fetching student and team details for department: " + departmentId);
+        
+        // Get all teams in department
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+        List<CoordinatorTeamDetailDTO> teamDetails = allTeams.stream()
+                .map(team -> {
+                    Project project = projectRepository.findByTeam(team);
+                    String projectTitle = (project != null) ? project.getTitle() : "N/A";
+                    
+                    Faculty faculty = team.getFaculty();
+                    Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
+                    String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
+                    
+                    List<String> memberNames = (team.getMembers() != null)
+                            ? team.getMembers().stream().map(s -> s.getUser().getName()).toList()
+                            : List.of();
+                    
+                    Long deptId = faculty != null && faculty.getDepartment() != null 
+                        ? faculty.getDepartment().getDepartmentId() : 1L;
+                    AllocationRules rules = getAllocationRulesByDepartment(deptId);
+                    
+                    return new CoordinatorTeamDetailDTO(
+                            team.getTeamId(),
+                            team.getTeamName(),
+                            projectTitle,
+                            facultyId,
+                            facultyName,
+                            team.getStatus(),
+                            memberNames,
+                            team.getMembers() != null ? team.getMembers().size() : 0,
+                            rules.getMaxTeamSize()
+                    );
+                }).collect(Collectors.toList());
+        
+        // Get all unallocated students in department (not in any team)
+        List<CoordinatorStudentResponse> unallocatedStudents = studentRepository
+                .findByDepartment_DepartmentId(departmentId)
+                .stream()
+                .filter(student -> student.getTeam() == null)
+                .map(this::mapToStudentResponse)
+                .collect(Collectors.toList());
+        
+        System.out.println("[CoordinatorService] ✅ Found " + teamDetails.size() + " teams and " 
+                + unallocatedStudents.size() + " unallocated students");
+        
+        return new StudentTeamDetailsDTO(teamDetails, unallocatedStudents);
+    }
+
+    // ✅ NEW: GET AVAILABLE TEAMS TO JOIN (NOT FULL)
+    @Transactional(readOnly = true)
+    public List<CoordinatorTeamDetailDTO> getAvailableTeamsToJoin(Long departmentId) {
+        System.out.println("[CoordinatorService] 📋 Fetching available teams to join for department: " + departmentId);
+        
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+        
+        List<CoordinatorTeamDetailDTO> availableTeams = allTeams.stream()
+                .filter(team -> team.getMembers() != null && !team.getMembers().isEmpty())
+                .map(team -> {
+                    Long deptId = team.getFaculty() != null && team.getFaculty().getDepartment() != null 
+                        ? team.getFaculty().getDepartment().getDepartmentId() : 1L;
+                    AllocationRules rules = getAllocationRulesByDepartment(deptId);
+                    
+                    int memberCount = team.getMembers().size();
+                    int maxSlots = rules.getMaxTeamSize();
+                    
+                    // Only map teams that are not full
+                    if (memberCount < maxSlots) {
+                        Project project = projectRepository.findByTeam(team);
+                        String projectTitle = (project != null) ? project.getTitle() : "N/A";
+                        
+                        Faculty faculty = team.getFaculty();
+                        Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
+                        String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
+                        
+                        List<String> memberNames = team.getMembers().stream()
+                                .map(s -> s.getUser().getName())
+                                .toList();
+                        
+                        return new CoordinatorTeamDetailDTO(
+                                team.getTeamId(),
+                                team.getTeamName(),
+                                projectTitle,
+                                facultyId,
+                                facultyName,
+                                team.getStatus(),
+                                memberNames,
+                                memberCount,
+                                maxSlots
+                        );
+                    }
+                    return null;
+                })
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
+        
+        System.out.println("[CoordinatorService] ✅ Found " + availableTeams.size() + " available teams to join");
+        return availableTeams;
+    }
+
+    // ✅ NEW: GET FACULTY PROJECTS (OPEN OR IN_PROGRESS)
+    @Transactional(readOnly = true)
+    public List<FacultyProjectDTO> getFacultyProjects(Long facultyId) {
+        System.out.println("[CoordinatorService] 📋 Fetching projects for faculty: " + facultyId);
+        
+        List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId)
+                .stream()
+                .filter(p -> p.getIsActive() && 
+                       ("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus())))
+                .collect(Collectors.toList());
+        
+        List<FacultyProjectDTO> projectDTOs = projects.stream()
+                .map(p -> new FacultyProjectDTO(
+                        p.getProjectId(),
+                        p.getTitle(),
+                        p.getStatus(),
+                        p.getStudentSlots()
+                ))
+                .collect(Collectors.toList());
+        
+        System.out.println("[CoordinatorService] ✅ Found " + projectDTOs.size() + " projects");
+        return projectDTOs;
+    }
+
+    // ✅ NEW: ALLOCATE TEAM TO FACULTY AND PROJECT
+    @Transactional
+    public void allocateTeamToFacultyProject(AllocateTeamRequest request) {
+        System.out.println("[CoordinatorService] 📌 Allocating team: " + request.getTeamId() 
+                + " to faculty: " + request.getFacultyId() + " and project: " + request.getProjectId());
+        
+        Team team = teamRepository.findById(request.getTeamId())
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        
+        Faculty faculty = facultyRepository.findById(request.getFacultyId())
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        
+        Project project = projectRepository.findById(request.getProjectId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+        
+        // Set team faculty and status
+        team.setFaculty(faculty);
+        team.setStatus("ASSIGNED");
+        teamRepository.save(team);
+        
+        // ✅ If project is IN_PROGRESS, cancel all pending requests for team members
+        if ("IN_PROGRESS".equals(project.getStatus())) {
+            System.out.println("[CoordinatorService] ⚠️  Project is IN_PROGRESS. Cancelling all pending team join requests for team members...");
+            
+            String rejectionReason = "Allocated to other team by FC";
+            int rejectedCount = 0;
+            
+            // Get all team members
+            if (team.getMembers() != null && !team.getMembers().isEmpty()) {
+                for (Student teamMember : team.getMembers()) {
+                    System.out.println("[CoordinatorService] 🧑 Processing team member: " + teamMember.getUser().getName());
+                    
+                    // Find all PENDING requests for this student
+                    List<TeamJoinRequest> pendingRequests = teamJoinRequestRepository
+                            .findByStudentStudentIdAndStatus(teamMember.getStudentId(), "PENDING");
+                    
+                    System.out.println("[CoordinatorService] 📋 Found " + pendingRequests.size() 
+                            + " pending requests for student: " + teamMember.getUser().getName());
+                    
+                    for (TeamJoinRequest joinRequest : pendingRequests) {
+                        joinRequest.setStatus("REJECTED");
+                        joinRequest.setRejectionReason(rejectionReason);
+                        teamJoinRequestRepository.save(joinRequest);
+                        
+                        System.out.println("[CoordinatorService] ❌ Rejected request ID: " + joinRequest.getRequestId() 
+                                + " for team: " + joinRequest.getTeam().getTeamName()
+                                + " | Reason: " + rejectionReason);
+                        
+                        rejectedCount++;
+                    }
+                }
+            }
+            
+            System.out.println("[CoordinatorService] ✅ Total rejected: " + rejectedCount + " pending requests");
+            
+            // Keep project status as IN_PROGRESS
+            project.setStatus("IN_PROGRESS");
+            projectRepository.save(project);
+            
+        } else if ("OPEN".equals(project.getStatus())) {
+            System.out.println("[CoordinatorService] 🟢 Project is OPEN. Setting status to ASSIGNED");
+            project.setStatus("ASSIGNED");
+            projectRepository.save(project);
+            
+        } else {
+            System.out.println("[CoordinatorService] ℹ️  Project status is: " + project.getStatus() + ". Keeping it unchanged");
+            projectRepository.save(project);
+        }
+
+        // Mark all team members as allocated
+        if (team.getMembers() != null && !team.getMembers().isEmpty()) {
+            System.out.println("[CoordinatorService] 📊 Marking " + team.getMembers().size() + " team members as allocated");
+            
+            for (Student student : team.getMembers()) {
+                student.setAllocated(true);
+                student.setAllocatedFaculty(faculty);
+                studentRepository.save(student);
+                
+                System.out.println("[CoordinatorService] ✅ Student " + student.getUser().getName() + " marked as allocated");
+            }
+        }
+        
+        System.out.println("[CoordinatorService] ✅ Team allocated successfully to project: " + project.getTitle());
+    }
+
+    // ✅ NEW: CREATE TEAM FOR STUDENT
+    @Transactional
+    public CoordinatorTeamDetailDTO createTeamForStudent(CreateTeamRequest request, Long departmentId) {
+        System.out.println("[CoordinatorService] 🆕 Creating new team: " + request.getTeamName());
+        
+        Student student = studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        
+        if (student.getTeam() != null) {
+            throw new RuntimeException("Student is already in a team");
+        }
+        
+        // Create new team
+        Team newTeam = new Team();
+        newTeam.setTeamName(request.getTeamName());
+        newTeam.setStatus("ACTIVE");
+        newTeam.setMembers(new java.util.ArrayList<>());
+        newTeam.getMembers().add(student);
+        newTeam.setTeamLead(student);
+        Department dept = departmentrepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department not found"));
+        newTeam.setDepartment(dept);
+        Team savedTeam = teamRepository.save(newTeam);
+        
+        // Add student to team
+        student.setTeam(savedTeam);
+        studentRepository.save(student);
+        
+        System.out.println("[CoordinatorService] ✅ Team created: " + savedTeam.getTeamId());
+        
+        // Return team details
+        Project project = projectRepository.findByTeam(savedTeam);
+        String projectTitle = (project != null) ? project.getTitle() : "N/A";
+        
+        Long deptId = departmentId;
+        AllocationRules rules = getAllocationRulesByDepartment(deptId);
+        
+        return new CoordinatorTeamDetailDTO(
+                savedTeam.getTeamId(),
+                savedTeam.getTeamName(),
+                projectTitle,
+                null,
+                "Not Assigned",
+                savedTeam.getStatus(),
+                java.util.List.of(student.getUser().getName()),
+                1,
+                rules.getMaxTeamSize()
+        );
+    }
+
+    // ✅ NEW: JOIN EXISTING TEAM
+    @Transactional
+    public CoordinatorTeamDetailDTO joinTeam(JoinTeamRequest request, Long departmentId) {
+        System.out.println("[CoordinatorService] 👥 Student " + request.getStudentId() 
+                + " joining team " + request.getTeamId());
+        
+        Student student = studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        
+        if (student.getTeam() != null) {
+            throw new RuntimeException("Student is already in a team");
+        }
+        
+        Team team = teamRepository.findById(request.getTeamId())
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        
+        // Check if team is full
+        Long deptId = departmentId;
+        AllocationRules rules = getAllocationRulesByDepartment(deptId);
+        
+        int currentMembers = team.getMembers() != null ? team.getMembers().size() : 0;
+        if (currentMembers >= rules.getMaxTeamSize()) {
+            throw new RuntimeException("Team is full. Cannot add more members. (Max: " + rules.getMaxTeamSize() + ")");
+        }
+        
+        // Add student to team
+        if (team.getMembers() == null) {
+            team.setMembers(new java.util.ArrayList<>());
+        }
+        team.getMembers().add(student);
+        Team updatedTeam = teamRepository.save(team);
+        
+        student.setTeam(updatedTeam);
+        studentRepository.save(student);
+        
+        System.out.println("[CoordinatorService] ✅ Student joined team: " + team.getTeamName());
+        
+        // Return updated team details
+        Project project = projectRepository.findByTeam(updatedTeam);
+        String projectTitle = (project != null) ? project.getTitle() : "N/A";
+        
+        Faculty faculty = updatedTeam.getFaculty();
+        Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
+        String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
+        
+        List<String> memberNames = updatedTeam.getMembers().stream()
+                .map(s -> s.getUser().getName())
+                .toList();
+        
+        return new CoordinatorTeamDetailDTO(
+                updatedTeam.getTeamId(),
+                updatedTeam.getTeamName(),
+                projectTitle,
+                facultyId,
+                facultyName,
+                updatedTeam.getStatus(),
+                memberNames,
+                updatedTeam.getMembers().size(),
+                rules.getMaxTeamSize()
+        );
     }
 }
