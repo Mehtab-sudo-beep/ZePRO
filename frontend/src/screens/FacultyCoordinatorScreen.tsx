@@ -9,7 +9,8 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { coordinatorApi } from '../api/coordinatorApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
@@ -112,7 +113,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     setLoading(true);
     try {
       console.log('[FacultyCoordinatorDashboard] 🔄 Fetching all data...');
-      
+
       const [s, f, st, t, r] = await Promise.all([
         coordinatorApi.getDashboardStats(user.token).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Stats error:', e);
@@ -192,7 +193,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       setLoading(true);
       const studentId = selectedStudent.id || selectedStudent.studentId;
       console.log('[FacultyCoordinatorDashboard] 🆕 Creating team:', newTeamName);
-      
+
       const result = await coordinatorApi.createTeam(newTeamName, String(studentId), user!.token);
       showLocalMsg("Team created successfully!", "success");
       setNewTeamName('');
@@ -218,7 +219,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const studentId = selectedStudentForJoin.id || selectedStudentForJoin.studentId;
       const teamId = team.teamId;
       console.log('[FacultyCoordinatorDashboard] 👥 Joining team:', teamId);
-      
+
       const result = await coordinatorApi.joinTeam(String(studentId), String(teamId), user!.token);
       showLocalMsg("Student joined team successfully!", "success");
       setShowJoinTeamModal(false);
@@ -241,10 +242,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       };
 
       await coordinatorApi.saveRules(computedRules, user!.token);
-      
+
       setRules(computedRules);
       showLocalMsg("Rules updated successfully!", "success");
-      
+
       console.log('[FacultyCoordinatorDashboard] ✅ Rules saved:', computedRules);
     } catch (err: any) {
       showLocalMsg(err.message || "Failed to save rules", "error");
@@ -255,45 +256,39 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     try {
       setLoading(true);
       console.log('[FacultyCoordinatorDashboard] 📥 Downloading fresh report...');
-      
+
       const now = new Date();
       const dateStr = now.toISOString().split('T')[0];
       const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
       const fileName = `team_report_${dateStr}_${timeStr}_${Math.random().toString(36).substring(7)}.pdf`;
-      
-      const folderPath = '/storage/emulated/0/ZEPRO';
-      const filePath = `${folderPath}/${fileName}`;
-      
-      try {
-        const isDir = await ReactNativeBlobUtil.fs.isDir(folderPath);
-        if (!isDir) {
-          await ReactNativeBlobUtil.fs.mkdir(folderPath);
-          console.log('[FacultyCoordinatorDashboard] ✅ ZEPRO folder created');
+
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      const { uri } = await FileSystem.downloadAsync(
+        'http://localhost:8080/api/coordinator/teams/report/pdf',
+        fileUri,
+        {
+          headers: {
+            'Authorization': `Bearer ${user!.token}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
         }
-      } catch (e) {
-        await ReactNativeBlobUtil.fs.mkdir(folderPath).catch(() => {});
-        console.log('[FacultyCoordinatorDashboard] ✅ ZEPRO folder created (catch)');
+      );
+
+      console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded to:', uri);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share Team Report',
+          UTI: 'com.adobe.pdf'
+        });
+        showLocalMsg("Report downloaded and sharing opened!", "success");
+      } else {
+        showLocalMsg("Report downloaded to app storage!", "success");
       }
-      
-      await ReactNativeBlobUtil.config({
-        path: filePath,
-        addAndroidDownloads: {
-          useDownloadManager: true,
-          notification: true,
-          title: 'Team Report',
-          mime: 'application/pdf',
-          description: 'Downloading team report to ZEPRO folder',
-        },
-      }).fetch('GET', 'http://localhost:8080/api/coordinator/teams/report/pdf', {
-        'Authorization': `Bearer ${user!.token}`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      });
-      
-      showLocalMsg("Report downloaded to ZEPRO folder!", "success");
-      console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded:', fileName);
-      console.log('[FacultyCoordinatorDashboard] 📁 Location:', filePath);
     } catch (err: any) {
       showLocalMsg("Download failed: " + err.message, "error");
       console.log('[FacultyCoordinatorDashboard] ❌ Download error:', err);
@@ -360,7 +355,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   );
 
   const SearchBox = ({ value, setValue }: any) => (
-    <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+    <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Icon name="search" />
       <TextInput
         value={value}
@@ -375,7 +370,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   // ───────── RENDERERS ─────────
   const renderOverview = () => {
     const allocationRate = stats?.totalStudents ? Math.round((stats.allocatedStudents / stats.totalStudents) * 100) : 0;
-    
+
     return (
       <View style={{ gap: 16 }}>
         {loading && !stats ? (
@@ -383,32 +378,32 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         ) : (
           <>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}> 
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(59,130,246,0.1)' }]}>
                   <Icon name="students" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalStudents || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Total Students</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(16,185,129,0.1)' }]}> 
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
                   <Icon name="faculty" />
                 </View>
                 <Text style={[styles.statNum, { color: '#059669' }]}>{stats?.allocatedStudents || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Allocated</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(99,102,241,0.1)' }]}> 
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(99,102,241,0.1)' }]}>
                   <Icon name="team" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalTeams || 0}</Text>
                 <Text style={[styles.statLabel, { color: colors.subText }]}>Active Teams</Text>
               </View>
 
-              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}> 
-                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239,68,68,0.1)' }]}> 
+              <View style={[styles.miniCard, { backgroundColor: colors.card, width: '48%' }]}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
                   <Icon name="faculty" />
                 </View>
                 <Text style={[styles.statNum, { color: colors.text }]}>{stats?.totalFaculty || 0}</Text>
@@ -424,7 +419,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 </View>
                 <Text style={{ color: colors.primary, fontSize: 24, fontWeight: '800' }}>{allocationRate}%</Text>
               </View>
-              
+
               <View style={{ height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
                 <View style={{ height: '100%', width: `${allocationRate}%`, backgroundColor: colors.primary }} />
               </View>
@@ -444,8 +439,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             <SectionLabel label="General Summary" />
             <Card>
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>
-                Currently, <Text style={{fontWeight: '700', color: colors.primary}}>{stats?.allocatedStudents || 0}</Text> out of <Text style={{fontWeight: '700'}}>{stats?.totalStudents || 0}</Text> students have been successfully allocated to a faculty guide. 
-                There are <Text style={{fontWeight: '700', color: '#ef4444'}}>{stats?.unallocatedStudents || 0}</Text> students still awaiting allocation.
+                Currently, <Text style={{ fontWeight: '700', color: colors.primary }}>{stats?.allocatedStudents || 0}</Text> out of <Text style={{ fontWeight: '700' }}>{stats?.totalStudents || 0}</Text> students have been successfully allocated to a faculty guide.
+                There are <Text style={{ fontWeight: '700', color: '#ef4444' }}>{stats?.unallocatedStudents || 0}</Text> students still awaiting allocation.
               </Text>
             </Card>
           </>
@@ -459,7 +454,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       <SearchBox value={facultySearchQuery} setValue={handleSearchFaculties} />
       {faculties.map(f => {
         const isFull = f.allocatedStudents >= f.maxStudents;
-        
+
         return (
           <Card key={f.id}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -479,9 +474,9 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 <View>
                   <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700' }}>SLOT UTILIZATION</Text>
                   <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-                    Created: <Text style={{fontWeight: '800', color: colors.primary}}>{f.totalCreatedSlots || 0}</Text> | 
-                    Given: <Text style={{fontWeight: '800'}}>{f.allocatedStudents}</Text> | 
-                    Max: <Text style={{fontWeight: '800'}}>{rules.maxStudentsPerFaculty}</Text>
+                    Created: <Text style={{ fontWeight: '800', color: colors.primary }}>{f.totalCreatedSlots || 0}</Text> |
+                    Given: <Text style={{ fontWeight: '800' }}>{f.allocatedStudents}</Text> |
+                    Max: <Text style={{ fontWeight: '800' }}>{rules.maxStudentsPerFaculty}</Text>
                   </Text>
                 </View>
                 <Text style={{ color: isFull ? '#ef4444' : colors.primary, fontSize: 16, fontWeight: '800' }}>
@@ -636,7 +631,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     <View style={{ gap: 16 }}>
       <Card>
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 16 }}>Allocation Rules</Text>
-        
+
         <View style={{ marginBottom: 16 }}>
           <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>Max Team Size</Text>
           <View style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border }]}>
@@ -758,8 +753,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                     onPress={() => handleJoinTeam(team)}
                     style={[
                       styles.teamJoinItem,
-                      { 
-                        borderColor: divider, 
+                      {
+                        borderColor: divider,
                         backgroundColor: isFull ? 'rgba(239,68,68,0.05)' : colors.background,
                         opacity: isFull ? 0.5 : 1
                       }
@@ -774,16 +769,16 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                         Project: {team.projectTitle}
                       </Text>
                     </View>
-                    <View style={{ 
-                      backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft, 
-                      paddingHorizontal: 10, 
-                      paddingVertical: 6, 
-                      borderRadius: 8 
+                    <View style={{
+                      backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 8
                     }}>
-                      <Text style={{ 
-                        color: isFull ? '#ef4444' : colors.primary, 
-                        fontWeight: '700', 
-                        fontSize: 10 
+                      <Text style={{
+                        color: isFull ? '#ef4444' : colors.primary,
+                        fontWeight: '700',
+                        fontSize: 10
                       }}>
                         {isFull ? 'FULL' : 'JOIN'}
                       </Text>
@@ -916,7 +911,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}> 
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
         <View>
           <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>DASHBOARD</Text>
           <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>
@@ -934,10 +929,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             {['overview', 'faculties', 'students', 'download', 'rules'].map(tab => (
               <TouchableOpacity
                 key={tab}
-                style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]} 
+                style={[styles.menuItem, { backgroundColor: activeTab === tab ? accentSoft : 'transparent' }]}
                 onPress={() => { setMsg(null); setActiveTab(tab as any); }}
               >
-                <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}> 
+                <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}>
                   <Icon name={tab === 'faculties' ? 'faculty' : tab} size={16} />
                 </View>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: activeTab === tab ? colors.primary : colors.subText, marginTop: 4 }}>
@@ -961,7 +956,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       {renderJoinTeamModal()}
       {renderAllocateFacultyModal()}
 
-      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}> 
+      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: divider }]}>
         <View style={styles.tabItem}>
           <Image source={require('../assets/home-color.png')} style={styles.tabIcon} />
           <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700', marginTop: 2 }}>Home</Text>

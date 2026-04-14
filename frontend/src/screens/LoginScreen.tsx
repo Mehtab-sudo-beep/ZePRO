@@ -5,24 +5,29 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { login } from '../api/authApi';
+import { login, googleLogin } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 import { StudentAuthContext } from '../context/StudentAuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'react-native';
 import { getProfileStatus } from '../api/studentApi';
 import { getFacultyProfileStatus } from '../api/facultyApi';
-import { googleLogin } from '../api/authApi';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { useEffect } from 'react';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const { setUser } = useContext(AuthContext);
-  const {  setStudentUser } = useContext(StudentAuthContext);
+  const { setStudentUser } = useContext(StudentAuthContext);
   const { colors } = useContext(ThemeContext);
 
   const [email, setEmail] = useState('');
@@ -30,272 +35,139 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [secure, setSecure] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: '799118111005-4h1bgpjjurapg7jsv0euoq1i3png41j4.apps.googleusercontent.com',
+  });
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      if (authentication?.accessToken)
+      handleGoogleBackend(authentication.accessToken);
+    }
+  }, [response]);
+  // --- HELPER: SAVE SESSION & NAVIGATE ---
+  const processLoginSession = async (data: any) => {
+    const {
+      token, role, studentId, facultyId, isInTeam, isTeamLead,
+      email: resEmail, name, phone, fc: isFC
+    } = data;
 
-  const handleLogin = async () => {
-    setErrorMsg(null);
-    try {
+    // Save basic info
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('role', role);
+    await AsyncStorage.setItem('userEmail', resEmail || '');
+    await AsyncStorage.setItem('userName', name || '');
+    await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
 
-      if (!email || !password) {
-        setErrorMsg("Please enter email and password");
-        return;
+    if (studentId) await AsyncStorage.setItem('studentId', studentId.toString());
+    if (facultyId) await AsyncStorage.setItem('facultyId', facultyId.toString());
+
+    // Update Global Auth Context
+    setUser({
+      token, role, studentId, facultyId, isInTeam, isTeamLead,
+      email: resEmail, name, phone, isFC
+    });
+
+    if (role === 'STUDENT') {
+      const studentData = { ...data, isInTeam: data.inTeam, isTeamLead: data.teamLead };
+      await AsyncStorage.setItem('user', JSON.stringify(studentData));
+      setStudentUser(studentData);
+
+      try {
+        const profileStatusRes = await getProfileStatus(studentId);
+        const profileStatus = profileStatusRes.data;
+        const isComplete = profileStatus.isProfileComplete || profileStatus.profileComplete;
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: isComplete ? 'StudentHome' : 'CompleteProfile' as any }],
+        });
+      } catch (err) {
+        navigation.reset({ index: 0, routes: [{ name: 'CompleteProfile' as any }] });
       }
+    }
+    else if (role === 'FACULTY') {
+      try {
+        const facultyProfileRes = await getFacultyProfileStatus(facultyId, token);
+        const facultyProfile = facultyProfileRes.data;
+        const isComplete = facultyProfile.isProfileComplete || facultyProfile.profileComplete;
 
-      console.log('[Login] 🔐 Attempting login with:', email);
-
-      const res = await login({
-        email,
-        password
-      });
-
-      console.log('[Login] ✅ Login response:', res.data);
-
-      const { 
-        token, 
-        role, 
-        studentId, 
-        facultyId, 
-        isInTeam, 
-        isTeamLead, 
-        email: resEmail, 
-        name, 
-        phone, 
-        fc: isFC 
-      } = res.data;
-
-      await AsyncStorage.setItem('token', token);
-      await AsyncStorage.setItem('role', role);
-      await AsyncStorage.setItem('userEmail', resEmail || '');
-      await AsyncStorage.setItem('userName', name || '');
-      await AsyncStorage.setItem('userPhone', phone || '');
-      await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
-
-      if (studentId) {
-        await AsyncStorage.setItem('studentId', studentId.toString());
-      }
-      if (facultyId) {
-        await AsyncStorage.setItem('facultyId', facultyId.toString());
-      }
-
-      setUser({
-        token,
-        role,
-        studentId,
-        facultyId,
-        isInTeam,
-        isTeamLead,
-        email: resEmail,
-        name,
-        phone,
-        isFC
-      });
-
-      if (role === 'STUDENT') {
-        console.log('[Login] 👤 Student logged in - ID:', studentId);
-
-        const user = {
-          ...res.data,
-          isInTeam: res.data.inTeam,
-          isTeamLead: res.data.teamLead,
-        };
-
-        await AsyncStorage.setItem('user', JSON.stringify(user));
-        setStudentUser(user);
-
-        // ✅ CHECK PROFILE COMPLETION
-        console.log('\n[Login] 📊 CHECKING PROFILE STATUS...');
-        console.log('[Login] ═══════════════════════════════════════');
-        
-        try {
-          console.log('[Login] 🔍 Calling getProfileStatus with studentId:', studentId);
-          
-          const profileStatusRes = await getProfileStatus(studentId);
-          
-          console.log('[Login] ✅ Got response');
-          console.log('[Login] Response status:', profileStatusRes.status);
-          console.log('[Login] Response headers:', profileStatusRes.headers);
-          
-          // ✅ GET THE DATA PROPERLY
-          const profileStatus = profileStatusRes.data;
-          
-          console.log('\n[Login] 📥 RAW RESPONSE DATA:');
-          console.log('[Login] Full object:', JSON.stringify(profileStatus, null, 2));
-          
-          console.log('\n[Login] 📋 CHECKING FIELDS:');
-          console.log('[Login] Type of profileStatus:', typeof profileStatus);
-          console.log('[Login] Keys in object:', Object.keys(profileStatus));
-          console.log('[Login] profileStatus.isProfileComplete:', profileStatus.isProfileComplete);
-          console.log('[Login] typeof isProfileComplete:', typeof profileStatus.isProfileComplete);
-          console.log('[Login] Value (strict):', profileStatus.isProfileComplete === true);
-          console.log('[Login] Value (loose):', profileStatus.isProfileComplete == true);
-          
-          // ✅ ALTERNATIVE: Also check for field name variations
-          const isComplete = 
-            profileStatus.isProfileComplete === true ||
-            profileStatus['isProfileComplete'] === true ||
-            profileStatus.profileComplete === true ||
-            profileStatus['profileComplete'] === true;
-          
-          console.log('[Login] 🎯 Is Complete (any variation):', isComplete);
-          
-          if (isComplete) {
-            console.log('\n[Login] ✅✅✅ PROFILE COMPLETE - NAVIGATING TO STUDENT HOME');
-            console.log('[Login] ═══════════════════════════════════════\n');
-            
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'StudentHome' }],
-            });
-          } else {
-            console.log('\n[Login] ⚠️  PROFILE INCOMPLETE');
-            console.log('[Login] isProfileComplete value:', profileStatus.isProfileComplete);
-            console.log('[Login] All response fields:', profileStatus);
-            console.log('[Login] ═══════════════════════════════════════\n');
-            
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'CompleteProfile' as any }],
-            });
-          }
-        } catch (err: any) {
-          console.log('\n[Login] ❌ ERROR IN PROFILE CHECK');
-          console.log('[Login] Error name:', err.name);
-          console.log('[Login] Error message:', err.message);
-          console.log('[Login] Error code:', err.code);
-          console.log('[Login] Response status:', err.response?.status);
-          console.log('[Login] Response data:', err.response?.data);
-          console.log('[Login] ═══════════════════════════════════════');
-          console.log('[Login] ⚠️  DEFAULTING TO COMPLETE PROFILE\n');
-          
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'CompleteProfile' as any }],
-          });
+        if (isComplete) {
+          navigation.replace('FacultyHome');
+        } else {
+          navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
         }
+      } catch (err) {
+        navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
       }
-      else if (role === 'FACULTY') {
-        console.log('[Login] 👨‍🏫 Faculty logged in - ID:', facultyId);
-
-        // ✅ CHECK FACULTY PROFILE COMPLETION
-        console.log('\n[Login] 📊 CHECKING FACULTY PROFILE STATUS...');
-        console.log('[Login] ═══════════════════════════════════════');
-        
-        try {
-          console.log('[Login] 🔍 Calling getFacultyProfileStatus with facultyId:', facultyId);
-          
-          const facultyProfileRes = await getFacultyProfileStatus(facultyId, token);
-          
-          console.log('[Login] ✅ Got response');
-          console.log('[Login] Response status:', facultyProfileRes.status);
-          
-          // ✅ GET THE DATA PROPERLY
-          const facultyProfile = facultyProfileRes.data;
-          
-          console.log('\n[Login] 📥 RAW RESPONSE DATA:');
-          console.log('[Login] Full object:', JSON.stringify(facultyProfile, null, 2));
-          
-          console.log('\n[Login] 📋 CHECKING FIELDS:');
-          console.log('[Login] isProfileComplete:', facultyProfile.isProfileComplete);
-          console.log('[Login] Type:', typeof facultyProfile.isProfileComplete);
-          
-          const isComplete = 
-            facultyProfile.isProfileComplete === true ||
-            facultyProfile['isProfileComplete'] === true ||
-            facultyProfile.profileComplete === true ||
-            facultyProfile['profileComplete'] === true;
-          
-          console.log('[Login] 🎯 Is Complete:', isComplete);
-          
-          if (isComplete) {
-            console.log('\n[Login] ✅✅✅ FACULTY PROFILE COMPLETE - NAVIGATING TO FACULTY HOME');
-            console.log('[Login] ═══════════════════════════════════════\n');
-            
-            navigation.replace('FacultyHome');
-          } else {
-            console.log('\n[Login] ⚠️  FACULTY PROFILE INCOMPLETE');
-            console.log('[Login] isProfileComplete value:', facultyProfile.isProfileComplete);
-            console.log('[Login] All response fields:', facultyProfile);
-            console.log('[Login] ═══════════════════════════════════════\n');
-            
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'CompleteFacultyProfile' as any }],
-            });
-          }
-        } catch (err: any) {
-          console.log('\n[Login] ❌ ERROR IN FACULTY PROFILE CHECK');
-          console.log('[Login] Error message:', err.message);
-          console.log('[Login] Response status:', err.response?.status);
-          console.log('[Login] Response data:', err.response?.data);
-          console.log('[Login] ═══════════════════════════════════════');
-          console.log('[Login] ⚠️  DEFAULTING TO COMPLETE PROFILE\n');
-          
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'CompleteFacultyProfile' as any }],
-          });
-        }
-      }
-      else if (role === 'ADMIN') {
-        console.log('[Login] 🔐 Admin logged in');
-        navigation.replace('InstituteList');
-      }
-
-      const handleGoogleLogin = async () => {
-        try {
-          setLoading(true);
-          await GoogleSignin.hasPlayServices();
-          const response = await GoogleSignin.signIn();
-          const { user } = response;
-
-          // Send the Google ID Token to backend
-          const googleRequest = {
-            idToken: response.idToken,
-            role: 'STUDENT', // Defaulting role for new users
-          };
-
-          const res = await googleLogin(googleRequest);
-          
-          // Handle response same as regular login
-          const { token, role, studentId, facultyId, isInTeam, isTeamLead, email, name, phone, isFC } = res.data;
-          
-          await setUser({
-            token,
-            role,
-            studentId,
-            facultyId,
-            isInTeam,
-            isTeamLead,
-            email,
-            name,
-            isFC,
-          });
-
-          // Navigate based on role
-          navigation.reset({
-            index: 0,
-            routes: [{ name: role === 'STUDENT' ? 'StudentHome' : 'FacultyHome' }],
-          });
-        } catch (error: any) {
-          setErrorMsg('OAuth login failed');
-        } finally {
-          setLoading(false);
-        }
-      };
-
-    } catch (error: any) {
-
-      console.log('[Login] ❌ Login error:', error);
-
-      if (error.response) {
-        setErrorMsg(error.response.data.message || "Invalid credentials");
-      } else if (error.request) {
-        setErrorMsg("Cannot connect to server");
-      } else {
-        setErrorMsg("Something went wrong");
-      }
+    }
+    else if (role === 'ADMIN') {
+      navigation.replace('InstituteList');
     }
   };
 
+  // --- HANDLER: STANDARD LOGIN ---
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMsg("Please enter email and password");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      const res = await login({ email, password });
+      await processLoginSession(res.data);
+    } catch (error: any) {
+      setErrorMsg(error.response?.data?.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- HANDLER: GOOGLE LOGIN ---
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      await promptAsync(); // opens Google login
+    } catch (error) {
+      console.log('[Google Login Error]', error);
+      setErrorMsg('Google login failed');
+      setLoading(false);
+    }
+  };
+  const handleGoogleBackend = async (accessToken: string) => {
+    try {
+      const res = await fetch(
+        'https://www.googleapis.com/userinfo/v2/me',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const user = await res.json();
+
+      const googleRequest = {
+        email: user.email,
+        name: user.name,
+        googleId: user.id,
+        role: 'STUDENT',
+      };
+
+      const backendRes = await googleLogin(googleRequest);
+
+      await processLoginSession(backendRes.data);
+    } catch (error) {
+      console.log('[Backend Google Error]', error);
+      setErrorMsg('Google login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>
@@ -314,10 +186,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
         {errorMsg && (
           <View style={styles.inlineAlert}>
-            <Image
-              source={require('../assets/info.png')}
-              style={[styles.alertIcon, { tintColor: '#ef4444' }]}
-            />
+            <Image source={require('../assets/info.png')} style={[styles.alertIcon, { tintColor: '#ef4444' }]} />
             <Text style={styles.inlineAlertText}>{errorMsg}</Text>
           </View>
         )}
@@ -349,14 +218,25 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.loginBtn, { backgroundColor: colors.primary }]} onPress={handleLogin}>
-          <Text style={styles.loginText}>Login</Text>
+        <TouchableOpacity
+          style={[styles.loginBtn, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>Login</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.googleBtn}
+          onPress={handleGoogleLogin}
+          disabled={loading}
+        >
+          <Image source={require('../assets/google_icon.png')} style={styles.googleIcon} />
+          <Text style={styles.googleBtnText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <View style={styles.footerLinks}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ForgotPassword')}
-          >
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={[styles.link, { color: colors.primary }]}>Forgot Password?</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -371,132 +251,34 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7fb',
+  container: { flex: 1, justifyContent: 'center', padding: 20 },
+  brandContainer: { alignItems: 'center', marginBottom: 25 },
+  logo: { width: 120, height: 120, marginBottom: 5 },
+  brandTitle: { fontSize: 30, fontWeight: '800' },
+  brandSubtitle: { fontSize: 14, marginTop: 4 },
+  card: { borderRadius: 12, padding: 20, elevation: 4 },
+  signInTitle: { fontSize: 22, fontWeight: '600' },
+  signInSubtitle: { marginBottom: 16 },
+  input: { borderWidth: 1, borderRadius: 6, padding: 12, marginBottom: 15 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, marginBottom: 15 },
+  passwordInput: { flex: 1, paddingVertical: 12 },
+  loginBtn: { padding: 14, borderRadius: 6, alignItems: 'center', marginBottom: 12 },
+  loginText: { color: '#ffffff', fontWeight: '600' },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-
-  brandContainer: {
-    alignItems: 'center',
-    marginBottom: 25,
-    marginTop: 20,
-  },
-
-  logo: {
-    width: 140,
-    height: 140,
-    marginBottom: 5,
-    // Added a subtle shadow to help it pop from the background without harsh lines
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-
-  brandTitle: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#1e293b',
-  },
-
-  brandSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
-  },
-
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 20,
-    elevation: 6,
-  },
-
-  signInTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-  },
-
-  signInSubtitle: {
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-
-  input: {
-    color: '#000000',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 6,
     padding: 12,
-    marginBottom: 15,
-    backgroundColor: '#ffffff',
-  },
-
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff'
   },
-
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 12,
-    color: '#000000',
-  },
-
-  eyeText: {
-    color: '#3b82f6',
-    fontWeight: '500',
-  },
-
-  loginBtn: {
-    backgroundColor: '#3b82f6',
-    padding: 14,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-
-  loginText: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-
-  footerLinks: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-
-  link: {
-    color: '#2563eb',
-    fontSize: 12,
-  },
-  inlineAlert: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  alertIcon: {
-    width: 16,
-    height: 16,
-    marginRight: 8,
-  },
-  inlineAlertText: {
-    color: '#b91c1c',
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
+  googleIcon: { width: 20, height: 20, marginRight: 10 },
+  googleBtnText: { color: '#374151', fontWeight: '600' },
+  footerLinks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
+  link: { fontSize: 13, fontWeight: '500' },
+  inlineAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', padding: 10, borderRadius: 8, marginBottom: 15 },
+  alertIcon: { width: 16, height: 16, marginRight: 8 },
+  inlineAlertText: { color: '#b91c1c', fontSize: 13, flex: 1 },
 });

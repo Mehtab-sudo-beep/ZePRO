@@ -8,8 +8,9 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { StudentAuthProvider } from './src/context/StudentAuthContext';
 
 export default function App() {
+  console.log('App rendered');
+  
   return (
-    console.log('App rendered'),  
     <AuthProvider>
       <StudentAuthProvider>
         <ThemeProvider>
@@ -21,6 +22,5 @@ export default function App() {
         </ThemeProvider>
       </StudentAuthProvider>
     </AuthProvider>
-
   );
 }

@@ -21,7 +21,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
-    
+
     @Autowired
     private UserRepository userRepository;
 
@@ -29,7 +29,7 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-   // ✅ HELPER METHOD - CHECK IF ADMIN
+    // ✅ HELPER METHOD - CHECK IF ADMIN
     private boolean isAdmin(Authentication authentication) {
         if (authentication == null) {
             System.out.println("[AdminController] ❌ Authentication is null");
@@ -51,14 +51,13 @@ public class AdminController {
         return isAdmin;
     }
 
-
     // ── INSTITUTE ─────────────────────────────────────────────
 
     @PostMapping("/institute")
     public ResponseEntity<?> createInstitute(
             @RequestBody CreateInstituteRequest request,
             Authentication authentication) {
-        
+
         // ✅ AUTHENTICATION CHECK
         if (authentication == null || !authentication.isAuthenticated()) {
             Map<String, Object> error = new HashMap<>();
@@ -85,6 +84,9 @@ public class AdminController {
 
     @GetMapping("/institutes")
     public ResponseEntity<?> getAllInstitutes() {
+        System.out.println("\n========== GET ALL INSTITUTES ==========");
+        System.out.println("[AdminController] 📤 GET /admin/institutes");
+
         try {
             List<InstituteResponse> institutes = adminService.getAllInstitutes();
             return ResponseEntity.ok(institutes);
@@ -99,7 +101,7 @@ public class AdminController {
     public ResponseEntity<?> deleteInstitute(
             @PathVariable Long id,
             Authentication authentication) {
-        
+
         // ✅ ADMIN CHECK
         if (!isAdmin(authentication)) {
             Map<String, Object> error = new HashMap<>();
@@ -125,7 +127,7 @@ public class AdminController {
     public ResponseEntity<?> createDepartment(
             @RequestBody CreateDepartmentRequest request,
             Authentication authentication) {
-        
+
         // ✅ ADMIN CHECK
         if (!isAdmin(authentication)) {
             Map<String, Object> error = new HashMap<>();
@@ -159,7 +161,7 @@ public class AdminController {
     public ResponseEntity<?> deleteDepartment(
             @PathVariable Long id,
             Authentication authentication) {
-        
+
         // ✅ ADMIN CHECK
         if (!isAdmin(authentication)) {
             Map<String, Object> error = new HashMap<>();
@@ -186,7 +188,7 @@ public class AdminController {
     public ResponseEntity<?> createUser(
             @RequestBody CreateUserRequest request,
             Authentication authentication) {
-        
+
         // ✅ ADMIN CHECK
         if (!isAdmin(authentication)) {
             Map<String, Object> error = new HashMap<>();
@@ -233,7 +235,7 @@ public class AdminController {
             @PathVariable Long id,
             @RequestParam String role,
             Authentication authentication) {
-        
+
         // ✅ ADMIN CHECK
         if (!isAdmin(authentication)) {
             Map<String, Object> error = new HashMap<>();
@@ -298,7 +300,8 @@ public class AdminController {
 
         System.out.println("\n========== ASSIGN FACULTY COORDINATOR ==========");
         System.out.println("[AdminController] 📤 POST /admin/department/" + departmentId + "/coordinator");
-        System.out.println("[AdminController] Request - FacultyId: " + request.getFacultyId() + ", DepartmentId: " + request.getDepartmentId());
+        System.out.println("[AdminController] Request - FacultyId: " + request.getFacultyId() + ", DepartmentId: "
+                + request.getDepartmentId());
         System.out.println("[AdminController] 🔐 Authentication: " + authentication);
 
         if (authentication == null) {
@@ -317,12 +320,11 @@ public class AdminController {
 
         try {
             System.out.println("[AdminController] 🔄 Processing assignment...");
-            
+
             DepartmentResponse response = adminService.assignFacultyCoordinator(
                     request.getFacultyId(),
-                    departmentId
-            );
-            
+                    departmentId);
+
             System.out.println("[AdminController] ✅ Success - Coordinator assigned");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -336,7 +338,7 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
-    
+
     // ✅ REMOVE FACULTY COORDINATOR
     @DeleteMapping("/department/{departmentId}/coordinator/{facultyId}")
     public ResponseEntity<?> removeFacultyCoordinator(
@@ -345,7 +347,8 @@ public class AdminController {
             Authentication authentication) {
 
         System.out.println("\n========== REMOVE FACULTY COORDINATOR ==========");
-        System.out.println("[AdminController] 📤 DELETE /admin/department/" + departmentId + "/coordinator/" + facultyId);
+        System.out
+                .println("[AdminController] 📤 DELETE /admin/department/" + departmentId + "/coordinator/" + facultyId);
         System.out.println("[AdminController] 🔐 Authentication: " + authentication);
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -353,14 +356,15 @@ public class AdminController {
         }
 
         if (!isAdmin(authentication)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only ADMIN can remove coordinators"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only ADMIN can remove coordinators"));
         }
 
         try {
             System.out.println("[AdminController] 🔄 Processing removal...");
-            
+
             DepartmentResponse response = adminService.removeFacultyCoordinator(facultyId, departmentId);
-            
+
             System.out.println("[AdminController] ✅ Success - Coordinator removed");
             return ResponseEntity.ok(response);
         } catch (Exception e) {

@@ -2,19 +2,17 @@ package com.zepro.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
 
 import com.zepro.dto.ForgotPasswordRequest;
 import com.zepro.dto.LoginRequest;
 import com.zepro.dto.LoginResponse;
 import com.zepro.dto.SignupRequest;
-import com.zepro.dto.SignupRequest;
 import com.zepro.dto.GoogleLoginRequest;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.Collections;
+import java.util.Map;
 import com.zepro.model.Admin;
 import com.zepro.model.Faculty;
 import com.zepro.model.Student;
@@ -51,38 +49,37 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
-    private String googleClientId;
-
-    // ✅ NEW: Google Login Endpoint
+    // ✅ Google Login Endpoint
     public LoginResponse googleLogin(GoogleLoginRequest request) {
-        if (request.getIdToken() == null || request.getIdToken().isEmpty()) {
-            throw new RuntimeException("ID Token is required");
+        if (request.getAccessToken() == null || request.getAccessToken().isEmpty()) {
+            throw new RuntimeException("Access Token is required");
         }
 
         try {
-            GoogleIdToken idToken;
-            if (googleClientId != null && !googleClientId.isEmpty() && !googleClientId.equals("YOUR_GOOGLE_CLIENT_ID")) {
-                GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
-                        .setAudience(Collections.singletonList(googleClientId))
-                        .build();
-                idToken = verifier.verify(request.getIdToken());
-                if (idToken == null) {
-                    throw new RuntimeException("Invalid Google ID token.");
-                }
-            } else {
-                // Fallback for development if client ID is not configured
-                idToken = GoogleIdToken.parse(GsonFactory.getDefaultInstance(), request.getIdToken());
-                System.out.println("WARNING: Skipping strict Google token verification because client ID is not configured.");
-            }
+            String url = "https://www.googleapis.com/oauth2/v2/userinfo";
 
-            GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
-            boolean emailVerified = Boolean.TRUE.equals(payload.getEmailVerified());
-            String name = (String) payload.get("name");
-            String pictureUrl = (String) payload.get("picture");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(request.getAccessToken());
 
-            if (!emailVerified) {
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+            );
+
+            Map body = response.getBody();
+
+            String email = (String) body.get("email");
+            String name = (String) body.get("name");
+            String googleId = (String) body.get("id");
+            String pictureUrl = (String) body.get("picture");
+            Boolean emailVerified = (Boolean) body.get("verified_email");
+
+            if (emailVerified == null || !emailVerified) {
                 throw new RuntimeException("Google email not verified.");
             }
 
@@ -93,13 +90,13 @@ public class AuthService {
                 user = new Users();
                 user.setName(name != null ? name : "Unknown Google User");
                 user.setEmail(email);
-                user.setRole(request.getRole() != null ? request.getRole() : UserRole.STUDENT);
+                user.setRole(request.getRole() != null ? UserRole.valueOf(request.getRole()) : UserRole.STUDENT);
                 user.setOauthProvider("google");
-                user.setOauthId(payload.getSubject());
+                user.setOauthId(googleId);
                 user.setProfilePictureUrl(pictureUrl);
                 user.setOAuthUser(true);
 
-                user.setPassword(passwordEncoder.encode("oauth-google-" + payload.getSubject()));
+                user.setPassword(passwordEncoder.encode("oauth-google-" + googleId));
 
                 user = userRepository.save(user);
                 createUserRoleProfile(user);
@@ -159,7 +156,7 @@ public class AuthService {
                     isFC
             );
         } catch (Exception e) {
-            throw new RuntimeException("Google token verification failed: " + e.getMessage(), e);
+            throw new RuntimeException("Google authentication failed: " + e.getMessage(), e);
         }
     }
 
@@ -193,64 +190,46 @@ public class AuthService {
     // ------------------------------------------------
 
     public String signup(SignupRequest request){
-
         Users user = new Users();
-
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
-
         Users savedUser = userRepository.save(user);
-
         createUserRoleProfile(savedUser);
-
         return "User created successfully";
     }
     
     public LoginResponse login(LoginRequest request){
-
         String email = request.getEmail().trim();
-
         Users user = userRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
             throw new RuntimeException("Invalid password");
         }
-
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-
         Long studentId = null;
         Long facultyId = null;
         boolean isInTeam = false;
         boolean isTeamLead = false;
-
         if(user.getRole() == UserRole.STUDENT){
-
             Student student = studentRepository
                     .findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Student profile not found"));
-
             studentId = student.getStudentId();
             isInTeam = student.isInTeam();
             isTeamLead = student.isTeamLead();
         }
-
         boolean isFC = false;
-
         if(user.getRole() == UserRole.FACULTY){
-
             Faculty faculty = facultyRepository
                     .findByUser_Email(user.getEmail())
                     .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
-            
             facultyId = faculty.getFacultyId();
             isFC = (faculty.getIsFC() != null && faculty.getIsFC());
         }   
         if(user.getRole() == UserRole.ADMIN){
-
             adminRepository
                     .findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Admin profile not found"));
@@ -274,45 +253,27 @@ public class AuthService {
     // ------------------------------------------------
 
     public String forgotPassword(ForgotPasswordRequest request){
-
         Users user = userRepository
                 .findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // Later you can implement email sending here
-
         return "Password reset link sent";
     }
-
-    // ------------------------------------------------
-    // RESET PASSWORD
-    // ------------------------------------------------
 
     public void resetPassword(String token,String newPassword){
         // implement reset logic later
     }
 
-    // ------------------------------------------------
-    // CHANGE PASSWORD
-    // ------------------------------------------------
-
     public String changePassword(String email, String currentPassword, String newPassword) {
         Users user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new RuntimeException("Incorrect current password");
         }
-
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-
         return "Password changed successfully";
     }
 
-    // ------------------------------------------------
-    // UPDATE PROFILE
-    // ------------------------------------------------
     public String updateProfile(String currentEmail, String newName, String newPhone) {
         Users user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -322,9 +283,6 @@ public class AuthService {
         return "Profile updated successfully";
     }
 
-    // ------------------------------------------------
-    // DELETE ACCOUNT
-    // ------------------------------------------------
     public String deleteAccount(String email) {
         Users user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));

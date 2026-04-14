@@ -1,31 +1,29 @@
 package com.zepro.dto;
 
-import com.zepro.model.UserRole;
-
 public class GoogleLoginRequest {
-    private String idToken;
-    private UserRole role; // Expected role for new users (e.g., STUDENT, FACULTY)
+    private String accessToken;
+    private String role;
 
     public GoogleLoginRequest() {}
 
-    public GoogleLoginRequest(String idToken, UserRole role) {
-        this.idToken = idToken;
+    public GoogleLoginRequest(String accessToken, String role) {
+        this.accessToken = accessToken;
         this.role = role;
     }
 
-    public String getIdToken() {
-        return idToken;
+    public String getAccessToken() {
+        return accessToken;
     }
 
-    public void setIdToken(String idToken) {
-        this.idToken = idToken;
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
     }
 
-    public UserRole getRole() {
+    public String getRole() {
         return role;
     }
 
-    public void setRole(UserRole role) {
+    public void setRole(String role) {
         this.role = role;
     }
 }
