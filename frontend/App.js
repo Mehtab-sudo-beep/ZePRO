@@ -9,7 +9,7 @@ import { StudentAuthProvider } from './src/context/StudentAuthContext';
 
 export default function App() {
   return (
-
+    console.log('App rendered'),  
     <AuthProvider>
       <StudentAuthProvider>
         <ThemeProvider>

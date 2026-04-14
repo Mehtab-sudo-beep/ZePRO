@@ -9,7 +9,10 @@ api.interceptors.request.use(async (config) => {
   try {
     const token = await AsyncStorage.getItem('token');
     if (token) {
+      console.log('[API] 🔐 Token attached:', token.substring(0, 20) + '...');
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('[API] ⚠️ No token found!');
     }
   } catch (e) {
     console.log('❌ Token error:', e);
@@ -44,4 +47,35 @@ export const deleteDepartment = (id: string) => {
 export const getUsersByDepartment = (departmentId: string) => {
   console.log('📡 GET /admin/users/', departmentId);
   return api.get(`/admin/users/${departmentId}`);
+};
+
+// ✅ GET FACULTY BY DEPARTMENT
+export const getFacultyByDepartment = (departmentId: string) => {
+  console.log('📡 GET /admin/department/' + departmentId + '/faculty');
+  return api.get(`/admin/department/${departmentId}/faculty`);
+};
+
+// ✅ ASSIGN FACULTY COORDINATOR - FIXED ENDPOINT
+export const assignFacultyCoordinator = (departmentId: string, facultyId: string) => {
+  const payload = {
+    facultyId: parseInt(facultyId),
+    departmentId: parseInt(departmentId),
+  };
+  
+  console.log('📤 POST /admin/department/' + departmentId + '/coordinator');
+  console.log('Payload:', payload);
+  
+  return api.post(`/admin/department/${departmentId}/coordinator`, payload);
+};
+
+// ✅ REMOVE FACULTY COORDINATOR
+export const removeFacultyCoordinator = (departmentId: string, facultyId: string) => {
+  console.log('🗑 DELETE /admin/department/' + departmentId + '/coordinator/' + facultyId);
+  return api.delete(`/admin/department/${departmentId}/coordinator/${facultyId}`);
+};
+
+// ✅ GET DEPARTMENT STATS
+export const getDepartmentStats = (departmentId: string) => {
+  console.log('📊 GET /admin/department/' + departmentId + '/stats');
+  return api.get(`/admin/department/${departmentId}/stats`);
 };

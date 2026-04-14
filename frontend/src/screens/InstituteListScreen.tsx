@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
 import { AlertContext } from '../context/AlertContext';
-import { getInstitutes, deleteInstitute } from '../api/instituteApi';
+import { getInstitutes, deleteInstitute, getAdminDashboardStats } from '../api/instituteApi';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'InstituteList'>;
 
@@ -45,8 +45,33 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // ✅ ADD STATS STATE
+  const [stats, setStats] = useState({
+    institutes: 0,
+    departments: 0,
+    users: 0,
+    students: 0,
+    faculty: 0,
+  });
 
-  // ✅ FETCH INSTITUTES
+  // ✅ FETCH STATS
+  const loadStats = async () => {
+    try {
+      const statsRes = await getAdminDashboardStats();
+      console.log('[InstituteList] ✅ Stats loaded:', statsRes.data);
+      setStats({
+        institutes: statsRes.data.totalInstitutes || 0,
+        departments: statsRes.data.totalDepartments || 0,
+        users: statsRes.data.totalUsers || 0,
+        students: statsRes.data.totalStudents || 0,
+        faculty: statsRes.data.totalFaculty || 0,
+      });
+    } catch (e) {
+      console.log('[InstituteList] ❌ Error loading stats:', e);
+    }
+  };
+
+  // ✅ UPDATED LOAD INSTITUTES
   const loadInstitutes = async () => {
     if (!user?.token) {
       showAlert('Error', 'Authentication token not found');
@@ -61,6 +86,9 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
       console.log('[InstituteList] ✅ Institutes loaded:', response.data);
       
       setInstitutes(response.data || []);
+      
+      // ✅ LOAD STATS TOO
+      await loadStats();
     } catch (error: any) {
       console.log('[InstituteList] ❌ Error:', error.message);
       showAlert('Error', error.response?.data?.error || 'Failed to fetch institutes');
@@ -122,18 +150,18 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.headerSubtitle}>Manage Institutes</Text>
         </View>
 
-        {/* Stats */}
+        {/* ✅ UPDATED Stats with dynamic data */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#4F46E5' }]}>{institutes.length}</Text>
+            <Text style={[styles.statValue, { color: '#4F46E5' }]}>{stats.institutes}</Text>
             <Text style={styles.statLabel}>Institutes</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#059669' }]}>-</Text>
+            <Text style={[styles.statValue, { color: '#059669' }]}>{stats.departments}</Text>
             <Text style={styles.statLabel}>Departments</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#D97706' }]}>-</Text>
+            <Text style={[styles.statValue, { color: '#D97706' }]}>{stats.users}</Text>
             <Text style={styles.statLabel}>Users</Text>
           </View>
         </View>

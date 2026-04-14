@@ -15,8 +15,18 @@ export const joinTeam = (data: {
 export const getProjectRequestsStatus = (studentId: number) =>
   API.get(`/student/project-requests/${studentId}`);
 
-export const getAssignedProject = (studentId: number) =>
-  API.get(`/student/assigned-project/${studentId}`);
+export const getAssignedProject = (studentId: number) => {
+  console.log('[studentApi] 📡 Fetching assigned project for student:', studentId);
+  return API.get(`/student/assigned-project/${studentId}`)
+    .then(res => {
+      console.log('[studentApi] ✅ Assigned project response:', res.data);
+      return res.data; // ✅ Return the data directly
+    })
+    .catch(err => {
+      console.log('[studentApi] ❌ Error fetching assigned project:', err);
+      throw err;
+    });
+};
 
 export const getTeamInfo = (studentId: number) =>
   API.get(`/student/team-info/${studentId}`);
@@ -85,4 +95,36 @@ export const getStudentProfile = async () => {
 export const updateStudentProfile = async (data: any) => {
   const res = await API.put('/student/profile', data);
   return res.data; // ✅ IMPORTANT
+};
+
+// ================= STUDENT PROFILE COMPLETION =================
+
+export const getProfileStatus = (studentId: number) => {
+  console.log('[studentApi] 📡 Calling getProfileStatus for studentId:', studentId);
+  return API.get(`/student/profile-status/${studentId}`);
+};
+
+export const completeStudentProfile = (studentId: number, data: {
+  rollNumber: string;
+  cgpa: number;
+  year: string;
+  instituteId: number;
+  departmentId: number;
+  resumeLink: string;
+  marksheetLink: string;
+  phone: string;
+}) => {
+  console.log('[studentApi] 📤 Calling completeStudentProfile for studentId:', studentId);
+  console.log('[studentApi] Payload:', data);
+  return API.post(`/student/complete-profile/${studentId}`, data);
+};
+
+export const getAllInstitutes = () => {
+  console.log('[studentApi] 📡 Calling getAllInstitutes');
+  return API.get('/student/institutes');
+};
+
+export const getDepartmentsByInstitute = (instituteId: number) => {
+  console.log('[studentApi] 📡 Calling getDepartmentsByInstitute for instituteId:', instituteId);
+  return API.get(`/student/departments/${instituteId}`);
 };

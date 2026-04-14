@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
 import { ThemeContext } from '../theme/ThemeContext';
@@ -17,12 +18,10 @@ import {
   getRequestedProjects,
 } from "../api/studentApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
-// import { AuthContext } from "../context/AuthContext";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
 
-/* ================= ICON ================= */
 const Icon = ({ name, size = 16, colors }: any) => {
   const isDark = colors.background === '#111827';
 
@@ -49,8 +48,6 @@ const Icon = ({ name, size = 16, colors }: any) => {
   );
 };
 
-// type SearchFilter = 'DOMAIN' | 'FACULTY' | 'PROJECT';
-
 const ProjectListScreen: React.FC = () => {
 
   const navigation = useNavigation<any>();
@@ -64,27 +61,59 @@ const ProjectListScreen: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [requestedProjects, setRequestedProjects] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sendingRequestId, setSendingRequestId] = useState<number | null>(null);
 
   const isTeamLead = studentUser?.isTeamLead === true;
 
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const studentId = await AsyncStorage.getItem("studentId");
+  // ✅ LOAD PROJECTS WITH ERROR HANDLING
+  const loadProjects = async () => {
+    try {
+      setLoading(true);
+      const studentId = await AsyncStorage.getItem("studentId");
 
-        const res = await getAllProjects();
-        setProjects(Array.isArray(res.data) ? res.data : []);
+      console.log('[ViewProjects] 📥 Fetching projects...');
+      const res = await getAllProjects();
+      console.log('[ViewProjects] ✅ Projects loaded:', res.data);
+      setProjects(Array.isArray(res.data) ? res.data : []);
 
+      if (studentId) {
         const req = await getRequestedProjects(Number(studentId));
-        setRequestedProjects(req.data);
-
-      } catch (err) {
-        console.log("PROJECT LOAD ERROR:", err);
+        console.log('[ViewProjects] 📋 Requested projects:', req.data);
+        setRequestedProjects(req.data || []);
       }
-    };
 
-    loadProjects();
-  }, []);
+    } catch (err: any) {
+      console.log('[ViewProjects] ❌ Error:', err.response?.data?.error || err.message);
+
+      // ✅ HANDLE PROFILE INCOMPLETE ERROR
+      if (err.response?.data?.error?.includes('profile')) {
+        showAlert(
+          'Complete Profile',
+          'Please complete your profile first to view projects.',
+          [
+            {
+              text: 'Complete Profile',
+              onPress: () => navigation.navigate('CompleteProfile' as any),
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        return;
+      }
+
+      showAlert('Error', err.response?.data?.error || 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ USE FOCUS EFFECT TO RELOAD
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProjects();
+    }, [])
+  );
 
   const filteredProjects = projects.filter(project => {
     const query = search.toLowerCase();
@@ -96,22 +125,65 @@ const ProjectListScreen: React.FC = () => {
     );
   });
 
+  // ✅ SEND PROJECT REQUEST WITH ERROR HANDLING
   const sendRequest = async (projectId: number, projectTitle: string) => {
     try {
+      setSendingRequestId(projectId);
       const studentId = await AsyncStorage.getItem("studentId");
+
+      console.log('[ViewProjects] 📨 Requesting project:', projectId);
 
       await sendProjectRequest({
         studentId: Number(studentId),
         projectId,
       });
 
+      console.log('[ViewProjects] ✅ Request sent successfully');
       setRequestedProjects(prev => [...prev, projectId]);
 
-      showAlert("Request Sent", `Request sent for "${projectTitle}"`);
+      showAlert("Request Sent", `Request sent for "${projectTitle}"`, [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Reload to update UI
+            loadProjects();
+          },
+        },
+      ]);
 
-    } catch (err) {
-      console.log("PROJECT REQUEST ERROR:", err);
-      showAlert("Error", "Could not send request");
+    } catch (err: any) {
+      console.log('[ViewProjects] ❌ Error:', err.response?.data?.error || err.message);
+
+      const errorMsg = err.response?.data?.error || 'Failed to send request';
+
+      // ✅ SPECIFIC ERROR MESSAGES
+      if (errorMsg.includes('different department')) {
+        showAlert(
+          '❌ Department Mismatch',
+          'Faculty is from a different department. Cannot request this project.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('different institute')) {
+        showAlert(
+          '❌ Institute Mismatch',
+          'Faculty is from a different institute. Cannot request this project.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('team lead')) {
+        showAlert(
+          '👥 Team Lead Only',
+          'Only the team lead can send project requests.',
+          [{ text: 'OK' }]
+        );
+      } else if (errorMsg.includes('already')) {
+        showAlert('⚠️ Already Requested', errorMsg, [{ text: 'OK' }]);
+      } else if (errorMsg.includes('No slots available')) {
+        showAlert('👥 No Slots', 'This project is full. No more slots available.', [{ text: 'OK' }]);
+      } else {
+        showAlert('Error', errorMsg, [{ text: 'OK' }]);
+      }
+    } finally {
+      setSendingRequestId(null);
     }
   };
 
@@ -119,6 +191,7 @@ const ProjectListScreen: React.FC = () => {
   const renderItem = ({ item }: any) => {
 
     const isRequested = requestedProjects.includes(item.projectId);
+    const isSending = sendingRequestId === item.projectId;
 
     return (
       <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -137,7 +210,7 @@ const ProjectListScreen: React.FC = () => {
         <View style={styles.row}>
           <Icon name="tag" colors={colors} />
           <Text style={[styles.meta, { color: colors.subText }]}>
-            {item.domain}
+            {item.domain || 'N/A'}
           </Text>
         </View>
 
@@ -170,25 +243,35 @@ const ProjectListScreen: React.FC = () => {
             },
           ]}
           onPress={() => {
-            if (!isTeamLead) return;
+            if (!isTeamLead) {
+              showAlert('⚠️ Not Team Lead', 'Only the team lead can send requests');
+              return;
+            }
 
             if (isRequested) {
-              showAlert("Request already sent");
+              showAlert("⚠️ Already Requested", "You already requested this project");
               return;
             }
 
             sendRequest(item.projectId, item.title);
           }}
+          disabled={!isTeamLead || isRequested || isSending}
         >
           <View style={styles.btnContent}>
-            {!isRequested && <Icon name="tag" size={14} colors={colors} />}
-            <Text style={styles.btnText}>
-              {isRequested
-                ? "Requested"
-                : !isTeamLead
-                  ? "Only Team Lead"
-                  : "Send Request"}
-            </Text>
+            {isSending ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                {!isRequested && <Icon name="tag" size={14} colors={colors} />}
+                <Text style={styles.btnText}>
+                  {isRequested
+                    ? "✓ Requested"
+                    : !isTeamLead
+                      ? "Team Lead Only"
+                      : "Send Request"}
+                </Text>
+              </>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -226,14 +309,25 @@ const ProjectListScreen: React.FC = () => {
           />
         </View>
 
-
         {/* LIST */}
-        <FlatList
-          data={filteredProjects}
-          keyExtractor={item => item.projectId.toString()}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-        />
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : filteredProjects.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: colors.subText, fontSize: 16 }}>
+              No projects available in your department
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProjects}
+            keyExtractor={item => item.projectId.toString()}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
       </View>
     </SafeAreaView>
@@ -241,8 +335,6 @@ const ProjectListScreen: React.FC = () => {
 };
 
 export default ProjectListScreen;
-
-/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
   container: {
@@ -333,29 +425,5 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#fff',
     fontWeight: '700',
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)', // 🔥 darker overlay
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  dropdownBox: {
-    width: 220,
-    borderRadius: 12,
-    paddingVertical: 6,
-
-    elevation: 8,              // Android shadow
-    shadowColor: '#000',       // iOS shadow
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-
-  dropdownOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
   },
 });

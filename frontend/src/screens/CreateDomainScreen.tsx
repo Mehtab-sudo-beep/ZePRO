@@ -26,8 +26,10 @@ const CreateDomainScreen = () => {
     console.log('===== CreateDomainScreen Loaded =====');
     console.log('User token:', user?.token);
 
-    loadDomains();
-  }, []);
+    if (user?.token) {
+      loadDomains();
+    }
+  }, [user]);
 
   /* ================= LOAD DOMAINS ================= */
 
@@ -35,7 +37,7 @@ const CreateDomainScreen = () => {
     try {
       console.log('Calling getDomains API...');
 
-      const data = await getDomains();
+      const data = await getDomains(user!.token);
 
       console.log('Domains received:', data);
 

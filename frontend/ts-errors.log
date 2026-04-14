@@ -1,8 +1,0 @@
-__tests__/App.test.tsx(9,1): error TS2593: Cannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
-src/context/AuthContext.tsx(4,22): error TS2307: Cannot find module '../auth/mockUsers' or its corresponding type declarations.
-src/screens/MeetingDeatialsScreen.tsx(35,41): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'number'.
-  Type 'undefined' is not assignable to type 'number'.
-src/screens/ScheduledMeetingsScreen.tsx(186,44): error TS2552: Cannot find name 'navigation'. Did you mean 'useNavigation'?
-src/screens/ScheduledMeetingsScreen.tsx(251,21): error TS2552: Cannot find name 'navigation'. Did you mean 'useNavigation'?
-src/screens/ScheduledMeetingsScreen.tsx(315,20): error TS2552: Cannot find name 'navigation'. Did you mean 'useNavigation'?
-src/screens/ScheduledMeetingsScreen.tsx(336,20): error TS2552: Cannot find name 'navigation'. Did you mean 'useNavigation'?

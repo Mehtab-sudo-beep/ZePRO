@@ -42,7 +42,8 @@ import TeamProjectRequestsScreen from '../screens/TeamProjectRequestsScreen';
 import AllocatedProjectScreen from '../screens/AllocatedProjectScreen';
 import DeadlineDetailScreen from '../screens/DeadlinedetailsScreen';
 import DepartmentDetailsScreen from '../screens/DepartmentDetailsScreen';
-
+import CompleteProfileScreen from '../screens/CompleteProfileScreen';
+import CompleteFacultyProfileScreen from '../screens/CompleteFacultyProfileScreen';
 export type RootStackParamList = {
   Login: undefined;
   StudentHome: undefined;
@@ -99,6 +100,8 @@ export type RootStackParamList = {
     instituteId: string;
     instituteName: string;
   };
+  CompleteProfile: undefined;
+  CompleteFacultyProfile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -168,9 +171,36 @@ const AppNavigator = () => {
       <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen}/>
       <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen}/>
       <Stack.Screen name="DeadlineDetail" component={DeadlineDetailScreen} />
+      <Stack.Screen 
+        name="CompleteProfile" 
+        component={CompleteProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+  name="CompleteFacultyProfile" 
+  component={CompleteFacultyProfileScreen}
+  options={{ headerShown: false }}
+/>
     </Stack.Navigator>
   );
 };
 
 export default AppNavigator;
+
+// ✅ When creating the Student stack, ensure CompleteProfile is NOT part of StudentHome stack
+// export const StudentStack = () => {
+//   return (
+//     <Stack.Navigator
+//       screenOptions={{
+//         headerShown: false,
+//         animationEnabled: true,
+//       }}
+//     >
+//       {/* Profile completion must happen BEFORE StudentHome */}
+//       <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+//       <Stack.Screen name="StudentHome" component={StudentHomeScreen} />
+//       {/* other screens */}
+//     </Stack.Navigator>
+//   );
+// };
 

@@ -290,30 +290,60 @@ const StudentHomeScreen: React.FC = () => {
     setTeamLoaded(false);
   };
   // Handlers
-  const handleViewAllocatedProject = async () => {
-    setLoadingAllocated(true);
-    setAllocatedMessage(null);
-    try {
-      if (!studentUser?.studentId) return;
-      const res = await getAssignedProject(Number(studentUser!.studentId));
+  // ✅ FIXED: handleViewAllocatedProject
+const handleViewAllocatedProject = async () => {
+  setLoadingAllocated(true);
+  setAllocatedMessage(null);
+  try {
+    if (!studentUser?.studentId) {
+      setAllocatedMessage('Student ID not found');
+      return;
+    }
+
+    console.log('[StudentHomeScreen] 📡 Fetching allocated project for student:', studentUser.studentId);
+    
+    const res = await getAssignedProject(Number(studentUser.studentId));
+    
+    console.log('[StudentHomeScreen] Response:', res);
+    console.log('[StudentHomeScreen] Response data:', res.data);
+
+    // ✅ FIXED: Better condition checking
+    if (res.data) {
+      const { projectTitle, status, projectId } = res.data;
+      
+      console.log('[StudentHomeScreen] Project Title:', projectTitle);
+      console.log('[StudentHomeScreen] Status:', status);
+      console.log('[StudentHomeScreen] Project ID:', projectId);
+
+      // Check if project is actually assigned (don't compare to specific string)
       if (
-        res.data &&
-        res.data.projectTitle !== 'Project not assigned yet' &&
-        res.data.status === 'ASSIGNED'
+        projectTitle && 
+        projectTitle !== 'Project not assigned yet' && 
+        projectTitle !== null &&
+        projectTitle.trim() !== ''
       ) {
+        console.log('[StudentHomeScreen] ✅ Navigating to AllocatedProject');
         navigation.navigate('AllocatedProject' as any);
       } else {
-        setAllocatedMessage('Your project has not been allocated yet.');
+        console.log('[StudentHomeScreen] ❌ Project not allocated');
+        setAllocatedMessage('Your project has not been allocated yet. Please wait for Faculty Coordinator assignment.');
       }
-    } catch (err: any) {
-      setAllocatedMessage(
-        err?.response?.data?.message || 'Your project has not been allocated yet.',
-      );
-    } finally {
-      setLoadingAllocated(false);
+    } else {
+      setAllocatedMessage('Unable to fetch project information. Please try again.');
     }
-  };
-
+  } catch (err: any) {
+    console.log('[StudentHomeScreen] ❌ Error fetching allocated project:', err);
+    console.log('[StudentHomeScreen] Error response:', err?.response?.data);
+    
+    setAllocatedMessage(
+      err?.response?.data?.message || 
+      err?.message ||
+      'Your project has not been allocated yet.'
+    );
+  } finally {
+    setLoadingAllocated(false);
+  }
+};
   const handleViewProjectStatus = async () => {
     setLoadingStatus(true);
     setShowProjectStatusModal(true);
