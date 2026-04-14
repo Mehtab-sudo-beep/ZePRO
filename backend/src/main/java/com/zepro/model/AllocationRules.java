@@ -7,7 +7,8 @@ import jakarta.persistence.*;
 public class AllocationRules {
 
     @Id
-    private Long id = 1L;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "max_team_size", nullable = false)
     private int maxTeamSize;
@@ -19,6 +20,16 @@ public class AllocationRules {
     private int maxProjectsPerFaculty;
 
     @Column(name = "max_slots_per_project", nullable = false)
+    private int maxSlotsPerProject;
+
+    // ✅ ADD DEPARTMENT & INSTITUTE RELATIONS
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @ManyToOne
+    @JoinColumn(name = "institute_id")
+    private Institute institute;
 
     // ─── Getters & Setters ─────────────────────────────────
 
@@ -50,5 +61,28 @@ public class AllocationRules {
         this.maxProjectsPerFaculty = maxProjectsPerFaculty;
     }
 
-    
+    public int getMaxSlotsPerProject() {
+        return maxSlotsPerProject;
+    }
+
+    public void setMaxSlotsPerProject(int maxSlotsPerProject) {
+        this.maxSlotsPerProject = maxSlotsPerProject;
+    }
+
+    // ✅ ADD DEPARTMENT & INSTITUTE GETTERS/SETTERS
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public Institute getInstitute() {
+        return institute;
+    }
+
+    public void setInstitute(Institute institute) {
+        this.institute = institute;
+    }
 }

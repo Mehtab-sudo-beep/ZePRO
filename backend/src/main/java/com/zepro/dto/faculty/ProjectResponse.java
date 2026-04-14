@@ -30,7 +30,7 @@ public class ProjectResponse {
     private String teamMembersRollNumbers;
     private String teamMembersCgpas;
     private String teamMembersResumeLinks;
-    private String teamMembersMakeSheetLinks;
+    private String teamMembersMarkSheetLinks;
 
     public ProjectResponse() {}
 
@@ -136,6 +136,6 @@ public class ProjectResponse {
     public String getTeamMembersResumeLinks() { return teamMembersResumeLinks; }
     public void setTeamMembersResumeLinks(String teamMembersResumeLinks) { this.teamMembersResumeLinks = teamMembersResumeLinks; }
 
-    public String getTeamMembersMakeSheetLinks() { return teamMembersMakeSheetLinks; }
-    public void setTeamMembersMakeSheetLinks(String teamMembersMakeSheetLinks) { this.teamMembersMakeSheetLinks = teamMembersMakeSheetLinks; }
+    public String getTeamMembersMarkSheetLinks() { return teamMembersMarkSheetLinks; }
+    public void setTeamMembersMarkSheetLinks(String teamMembersMarkSheetLinks) { this.teamMembersMarkSheetLinks = teamMembersMarkSheetLinks; }
 }

@@ -32,27 +32,35 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // public APIs
+                // ✅ PUBLIC APIs
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/domains/**").permitAll()
-            .requestMatchers("/api/subdomains/**").permitAll()
+                
+                // ✅ PUBLIC INSTITUTE & DEPARTMENT ENDPOINTS (for profile completion)
+                .requestMatchers("/student/institutes").permitAll()
+                .requestMatchers("/student/departments/**").permitAll()
+                .requestMatchers("/faculty/institutes").permitAll()
+                .requestMatchers("/faculty/departments/**").permitAll()
 
-                // admin APIs
+                // ✅ ADMIN APIs
                 .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                // faculty APIs
+                // ✅ FACULTY APIs (profile status & complete require auth)
+                .requestMatchers("/faculty/profile-status/**").hasRole("FACULTY")
+                .requestMatchers("/faculty/complete-profile/**").hasRole("FACULTY")
                 .requestMatchers("/faculty/**").hasRole("FACULTY")
 
-                // coordinator APIs
+                // ✅ COORDINATOR APIs
                 .requestMatchers("/coordinator/**").hasRole("FACULTY")
 
-                // student APIs
+                // ✅ STUDENT APIs (profile status & complete require auth)
+                .requestMatchers("/student/profile-status/**").hasRole("STUDENT")
+                .requestMatchers("/student/complete-profile/**").hasRole("STUDENT")
                 .requestMatchers("/student/**").hasRole("STUDENT")
 
-                // project viewing allowed for all logged users
+                // ✅ PROJECT viewing allowed for all logged users
                 .requestMatchers("/projects/**").hasAnyRole("STUDENT","FACULTY","ADMIN")
 
-                // everything else requires login
+                // ✅ Everything else requires login
                 .anyRequest().authenticated()
             )
 

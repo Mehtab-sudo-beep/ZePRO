@@ -4,29 +4,32 @@ import com.zepro.model.UserRole;
 import java.time.LocalDateTime;
 
 public class DeadlineResponse {
-    
     private Long deadlineId;
     private String title;
     private String description;
     private LocalDateTime deadlineDate;
     private Boolean isActive;
     private UserRole roleSpecificity;
+    private Long departmentId;
+    private String departmentName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Boolean isPassed;
+
+    public DeadlineResponse() {}
 
     public DeadlineResponse(Long deadlineId, String title, String description, LocalDateTime deadlineDate,
-                 Boolean isActive, UserRole roleSpecificity,
-                           LocalDateTime createdAt, LocalDateTime updatedAt) {
+                          Boolean isActive, UserRole roleSpecificity, Long departmentId, String departmentName,
+                          LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.deadlineId = deadlineId;
         this.title = title;
         this.description = description;
         this.deadlineDate = deadlineDate;
         this.isActive = isActive;
         this.roleSpecificity = roleSpecificity;
+        this.departmentId = departmentId;
+        this.departmentName = departmentName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.isPassed = LocalDateTime.now().isAfter(deadlineDate);
     }
 
     // Getters and Setters
@@ -42,20 +45,21 @@ public class DeadlineResponse {
     public LocalDateTime getDeadlineDate() { return deadlineDate; }
     public void setDeadlineDate(LocalDateTime deadlineDate) { this.deadlineDate = deadlineDate; }
 
-    
-
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
     public UserRole getRoleSpecificity() { return roleSpecificity; }
     public void setRoleSpecificity(UserRole roleSpecificity) { this.roleSpecificity = roleSpecificity; }
 
+    public Long getDepartmentId() { return departmentId; }
+    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+
+    public String getDepartmentName() { return departmentName; }
+    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public Boolean getIsPassed() { return isPassed; }
-    public void setIsPassed(Boolean isPassed) { this.isPassed = isPassed; }
 }

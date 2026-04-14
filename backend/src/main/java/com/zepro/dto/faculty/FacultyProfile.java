@@ -1,19 +1,24 @@
 package com.zepro.dto.faculty;
 
+import com.zepro.model.Institute;
+
 public class FacultyProfile {
 
+    private Long facultyId;           // ✅ ADD THIS
     private String name;
     private String email;
     private String phone;
 
+    private Long departmentId;        // ✅ ADD THIS
     private String department;
+    private Long instituteId;         // ✅ ADD THIS
     private String designation;
     private String employeeId;
     private String specialization;
     private String experience;
     private String qualification;
     private String cabinNo;
-    private String institute;
+    private Institute institute;
 
     private String problemStatementLink;
     private String domains;
@@ -22,7 +27,13 @@ public class FacultyProfile {
     private int allocatedStudents;
     private int maxStudentsPerFaculty;
 
-    // getters and setters
+    // ========== CONSTRUCTORS ==========
+    public FacultyProfile() {}
+
+    // ========== GETTERS AND SETTERS ==========
+
+    public Long getFacultyId() { return facultyId; }
+    public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -33,8 +44,14 @@ public class FacultyProfile {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
+    public Long getDepartmentId() { return departmentId; }  // ✅ ADD THIS
+    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
+
+    public Long getInstituteId() { return instituteId; }  // ✅ ADD THIS
+    public void setInstituteId(Long instituteId) { this.instituteId = instituteId; }
 
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
@@ -54,8 +71,8 @@ public class FacultyProfile {
     public String getCabinNo() { return cabinNo; }
     public void setCabinNo(String cabinNo) { this.cabinNo = cabinNo; }
 
-    public String getInstitute() { return institute; }
-    public void setInstitute(String institute) { this.institute = institute; }
+    public Institute getInstitute() { return institute; }
+    public void setInstitute(Institute institute) { this.institute = institute; }
 
     public String getProblemStatementLink() { return problemStatementLink; }
     public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }

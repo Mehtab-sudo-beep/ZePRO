@@ -11,15 +11,18 @@ import java.util.Optional;
 @Repository
 public interface DeadlineRepository extends JpaRepository<Deadline, Long> {
     
-    // ✅ Find deadlines by role
-    List<Deadline> findByRoleSpecificity(UserRole role);
+    // ✅ Find deadlines by role and department
+    List<Deadline> findByRoleSpecificityAndDepartment_DepartmentId(UserRole role, Long departmentId);
     
-    // ✅ Find active deadlines by role
-    List<Deadline> findByRoleSpecificityAndIsActiveTrue(UserRole role);
+    // ✅ Find active deadlines by role and department
+    List<Deadline> findByRoleSpecificityAndIsActiveTrueAndDepartment_DepartmentId(UserRole role, Long departmentId);
     
-    // ✅ Find all active deadlines
-    List<Deadline> findByIsActiveTrue();
+    // ✅ Find all active deadlines by department
+    List<Deadline> findByIsActiveTrueAndDepartment_DepartmentId(Long departmentId);
     
     // ✅ Find deadline by ID
     Optional<Deadline> findByDeadlineId(Long deadlineId);
+    
+    // ✅ Find all deadlines by department
+    List<Deadline> findByDepartment_DepartmentId(Long departmentId);
 }

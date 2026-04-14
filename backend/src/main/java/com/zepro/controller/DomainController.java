@@ -20,12 +20,12 @@ public class DomainController {
     }
 
     @GetMapping("/domains")
-    public List<DomainResponse> getDomains() {
-        return domainService.getDomains();
+    public List<DomainResponse> getDomains(org.springframework.security.core.Authentication authentication) {
+        return domainService.getDomains(authentication);
     }
 
     @GetMapping("/subdomains/{domainId}")
-public List<SubDomainResponse> getSubDomains(@PathVariable("domainId") Long domainId) {
-    return domainService.getSubDomains(domainId);
-}
+    public List<SubDomainResponse> getSubDomains(@PathVariable("domainId") Long domainId, org.springframework.security.core.Authentication authentication) {
+        return domainService.getSubDomains(domainId, authentication);
+    }
 }

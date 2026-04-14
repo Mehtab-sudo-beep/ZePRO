@@ -3,6 +3,7 @@ package com.zepro.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import com.zepro.model.UserRole;
+
 @Entity
 @Table(name = "deadlines")
 public class Deadline {
@@ -27,6 +28,10 @@ public class Deadline {
     @Column(nullable = false)
     private UserRole roleSpecificity;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id", nullable = false)
+    private Department department;
+    
     @Column(nullable = false)
     private LocalDateTime createdAt;
     
@@ -48,11 +53,12 @@ public class Deadline {
     public Deadline() {}
 
     public Deadline(String title, String description, LocalDateTime deadlineDate, 
-                 UserRole roleSpecificity) {
+                 UserRole roleSpecificity, Department department) {
         this.title = title;
         this.description = description;
         this.deadlineDate = deadlineDate;
         this.roleSpecificity = roleSpecificity;
+        this.department = department;
         this.isActive = true;
     }
 
@@ -69,13 +75,14 @@ public class Deadline {
     public LocalDateTime getDeadlineDate() { return deadlineDate; }
     public void setDeadlineDate(LocalDateTime deadlineDate) { this.deadlineDate = deadlineDate; }
 
-    
-
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
     public UserRole getRoleSpecificity() { return roleSpecificity; }
     public void setRoleSpecificity(UserRole roleSpecificity) { this.roleSpecificity = roleSpecificity; }
+    
+    public Department getDepartment() { return department; }
+    public void setDepartment(Department department) { this.department = department; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

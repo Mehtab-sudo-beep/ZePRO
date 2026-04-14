@@ -22,6 +22,12 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    // ✅ NEW: OAuth fields
+    private String oauthProvider;
+    private String oauthId;
+    private String profilePictureUrl;
+    private boolean isOAuthUser = false;
+
     // ---------- GETTERS ----------
 
     public Long getUserId() {
@@ -48,6 +54,22 @@ public class Users {
         return role;
     }
 
+    public String getOauthProvider() {
+        return oauthProvider;
+    }
+
+    public String getOauthId() {
+        return oauthId;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public boolean isOAuthUser() {
+        return isOAuthUser;
+    }
+
     // ---------- SETTERS ----------
 
     public void setUserId(Long userId) {
@@ -72,5 +94,21 @@ public class Users {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public void setOauthProvider(String oauthProvider) {
+        this.oauthProvider = oauthProvider;
+    }
+
+    public void setOauthId(String oauthId) {
+        this.oauthId = oauthId;
+    }
+
+    public void setProfilePictureUrl(String profilePictureUrl) {
+        this.profilePictureUrl = profilePictureUrl;
+    }
+
+    public void setOAuthUser(boolean oAuthUser) {
+        this.isOAuthUser = oAuthUser;
     }
 }

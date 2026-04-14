@@ -8,5 +8,5 @@ import java.util.List;;
   public interface SubDomainRepository extends JpaRepository<SubDomain, Long> {
 
         List<SubDomain> findByDomainDomainId(Long domainId);
-
+        List<SubDomain> findByDepartment_DepartmentId(Long departmentId);
 }

@@ -22,6 +22,14 @@ public class Team {
     @JoinColumn(name = "faculty_id")
     private Faculty faculty;
 
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @ManyToOne
+    @JoinColumn(name = "institute_id")
+    private Institute institute;
+
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
     private List<Student> members;
 
@@ -55,6 +63,14 @@ public class Team {
         return members;
     }
 
+    public Department getDepartment() {
+        return department;
+    }
+
+    public Institute getInstitute() {
+        return institute;
+    }
+
     // ----------- SETTERS -----------
 
     public void setTeamId(Long teamId) {
@@ -81,9 +97,15 @@ public class Team {
         this.faculty = faculty;
     }
 
-
-
     public void setMembers(List<Student> members) {
         this.members = members;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public void setInstitute(Institute institute) {
+        this.institute = institute;
     }
 }
