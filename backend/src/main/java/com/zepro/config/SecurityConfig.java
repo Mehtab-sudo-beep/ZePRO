@@ -34,8 +34,6 @@ public class SecurityConfig {
 
                 // ✅ PUBLIC APIs
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/domains/**").permitAll()
-                .requestMatchers("/api/subdomains/**").permitAll()
                 
                 // ✅ PUBLIC INSTITUTE & DEPARTMENT ENDPOINTS (for profile completion)
                 .requestMatchers("/student/institutes").permitAll()

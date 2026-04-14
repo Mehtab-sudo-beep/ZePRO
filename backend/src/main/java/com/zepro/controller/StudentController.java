@@ -61,6 +61,18 @@ public class StudentController {
         return studentService.joinTeam(request);
     }
 
+    // LEAVE TEAM
+    @PostMapping("/leave-team/{studentId}")
+    public String leaveTeam(@PathVariable("studentId") Long studentId) {
+        return studentService.leaveTeam(studentId);
+    }
+
+    // TRANSFER TEAM LEAD
+    @PostMapping("/transfer-lead")
+    public String transferTeamLead(@RequestBody TransferLeadRequest request) {
+        return studentService.transferTeamLead(request.getTeamId(), request.getCurrentLeadId(), request.getNewLeadId());
+    }
+
     // TEAM LEAD SENDS PROJECT REQUEST
     @PostMapping("/request-project")
     public String requestProject(@RequestBody ProjectRequestDTO request) {

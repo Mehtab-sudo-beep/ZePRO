@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'react-native';
 import { getProfileStatus } from '../api/studentApi';
 import { getFacultyProfileStatus } from '../api/facultyApi';
+import { googleLogin } from '../api/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -28,7 +29,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setErrorMsg(null);
@@ -238,6 +239,48 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         console.log('[Login] 🔐 Admin logged in');
         navigation.replace('InstituteList');
       }
+
+      const handleGoogleLogin = async () => {
+        try {
+          setLoading(true);
+          await GoogleSignin.hasPlayServices();
+          const response = await GoogleSignin.signIn();
+          const { user } = response;
+
+          // Send the Google ID Token to backend
+          const googleRequest = {
+            idToken: response.idToken,
+            role: 'STUDENT', // Defaulting role for new users
+          };
+
+          const res = await googleLogin(googleRequest);
+          
+          // Handle response same as regular login
+          const { token, role, studentId, facultyId, isInTeam, isTeamLead, email, name, phone, isFC } = res.data;
+          
+          await setUser({
+            token,
+            role,
+            studentId,
+            facultyId,
+            isInTeam,
+            isTeamLead,
+            email,
+            name,
+            isFC,
+          });
+
+          // Navigate based on role
+          navigation.reset({
+            index: 0,
+            routes: [{ name: role === 'STUDENT' ? 'StudentHome' : 'FacultyHome' }],
+          });
+        } catch (error: any) {
+          setErrorMsg('OAuth login failed');
+        } finally {
+          setLoading(false);
+        }
+      };
 
     } catch (error: any) {
 

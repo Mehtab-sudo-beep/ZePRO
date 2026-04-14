@@ -21,12 +21,17 @@ public class DeadlineService {
     private final DeadlineRepository deadlineRepository;
     private final DepartmentRepository departmentRepository;
     private final FacultyRepository facultyRepository;
+    private final com.zepro.repository.StudentRepository studentRepository;
+    private final EmailService emailService;
 
     public DeadlineService(DeadlineRepository deadlineRepository, DepartmentRepository departmentRepository,
-                          FacultyRepository facultyRepository) {
+                          FacultyRepository facultyRepository, com.zepro.repository.StudentRepository studentRepository,
+                          EmailService emailService) {
         this.deadlineRepository = deadlineRepository;
         this.departmentRepository = departmentRepository;
         this.facultyRepository = facultyRepository;
+        this.studentRepository = studentRepository;
+        this.emailService = emailService;
     }
 
     // ✅ CREATE DEADLINE (Auto-bind to Coordinator's Department)
@@ -59,6 +64,9 @@ public class DeadlineService {
         
         System.out.println("[DeadlineService] ✅ Deadline created: " + savedDeadline.getDeadlineId() 
                 + " for department: " + department.getDepartmentName());
+
+        // ✅ ASYNC EMAIL DISPATCH
+        dispatchDeadlineEmail(savedDeadline);
         
         return mapToResponse(savedDeadline);
     }
@@ -181,6 +189,9 @@ public class DeadlineService {
         Deadline updatedDeadline = deadlineRepository.save(deadline);
         
         System.out.println("[DeadlineService] ✅ Deadline updated: " + updatedDeadline.getDeadlineId());
+
+        // ✅ ASYNC EMAIL DISPATCH
+        dispatchDeadlineEmail(updatedDeadline);
         
         return mapToResponse(updatedDeadline);
     }
@@ -243,5 +254,40 @@ public class DeadlineService {
                 deadline.getCreatedAt(),
                 deadline.getUpdatedAt()
         );
+    }
+
+    // ✅ HELPER: DISPATCH EMAILS BASED ON ROLE
+    private void dispatchDeadlineEmail(Deadline deadline) {
+        Long deptId = deadline.getDepartment().getDepartmentId();
+        
+        if (deadline.getRoleSpecificity() == UserRole.STUDENT) {
+            List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(deptId)
+                    .stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+            
+            emailService.sendDeadlineNotification(
+                studentEmails,
+                "Student",
+                deadline.getTitle(),
+                deadline.getDescription(),
+                deadline.getDeadlineDate()
+            );
+        } else if (deadline.getRoleSpecificity() == UserRole.FACULTY) {
+            List<String> facultyEmails = facultyRepository.findByDepartment_DepartmentId(deptId)
+                    .stream()
+                    .filter(f -> f.getUser() != null && f.getUser().getEmail() != null)
+                    .map(f -> f.getUser().getEmail())
+                    .toList();
+            
+            emailService.sendDeadlineNotification(
+                facultyEmails,
+                "Faculty",
+                deadline.getTitle(),
+                deadline.getDescription(),
+                deadline.getDeadlineDate()
+            );
+        }
     }
 }

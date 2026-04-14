@@ -15,6 +15,10 @@ public class SubDomain {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Domain domain;
 
+    @ManyToOne
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Department department;
+
     public Long getSubDomainId() {
         return subDomainId;
     }
@@ -37,5 +41,13 @@ public class SubDomain {
 
     public void setDomain(Domain domain) {
         this.domain = domain;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
     }
 }

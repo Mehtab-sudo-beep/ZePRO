@@ -37,6 +37,8 @@ public class MeetingService {
     private final FacultyService facultyService;
     private final TeamRepository teamRepository;
     private final DeactivatedMeetingRepository deactivatedMeetingRepository;
+    private final com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository;
+    private final EmailService emailService;
 
     public MeetingService(MeetingRepository meetingRepository,
             ProjectRequestRepository requestRepository,
@@ -46,7 +48,9 @@ public class MeetingService {
             StudentRepository studentRepository,
             FacultyService facultyService,
             TeamRepository teamRepository,
-            DeactivatedMeetingRepository deactivatedMeetingRepository) {
+            DeactivatedMeetingRepository deactivatedMeetingRepository,
+            com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository,
+            EmailService emailService) {
         this.meetingRepository = meetingRepository;
         this.requestRepository = requestRepository;
         this.projectRepository = projectRepository;
@@ -56,6 +60,22 @@ public class MeetingService {
         this.facultyService = facultyService;
         this.teamRepository = teamRepository;
         this.deactivatedMeetingRepository = deactivatedMeetingRepository;
+        this.departmentDeadlinesRepository = departmentDeadlinesRepository;
+        this.emailService = emailService;
+    }
+
+    // ------------------------------------------------
+    // DEADLINE CHECKER
+    // ------------------------------------------------
+    private void checkMeetingSchedulingDeadline(Long departmentId, LocalDateTime proposedTime) {
+        if (departmentId == null || proposedTime == null) return;
+        departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+            .ifPresent(deadlines -> {
+                if (deadlines.getMeetingSchedulingDeadline() != null && 
+                    proposedTime.isAfter(deadlines.getMeetingSchedulingDeadline())) {
+                    throw new RuntimeException("The selected meeting date cannot be after the official department deadline.");
+                }
+            });
     }
 
     // ✅ SCHEDULE MEETING
@@ -82,6 +102,11 @@ public class MeetingService {
         if (meetingRepository.findByRequestRequestId(request.getRequestId()).isPresent()) {
             throw new RuntimeException("Meeting already scheduled for this request");
         }
+
+        // ✅ CHECK 3: Meeting Scheduling Deadline
+        Long departmentId = projectRequest.getFaculty().getDepartment() != null 
+            ? projectRequest.getFaculty().getDepartment().getDepartmentId() : null;
+        checkMeetingSchedulingDeadline(departmentId, request.getMeetingTime());
 
         // ✅ Create meeting
         Meeting meeting = new Meeting();
@@ -319,6 +344,20 @@ public class MeetingService {
             }
         }
 
+        // ✅ ASYNC EMAIL DISPATCH TO TEAM MEMBERS
+        if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+            List<String> studentEmails = request.getTeam().getMembers().stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+            
+            String facultyName = (faculty != null && faculty.getUser() != null && faculty.getUser().getName() != null) 
+                    ? faculty.getUser().getName() : "Your Faculty";
+            String projectName = project.getTitle() != null ? project.getTitle() : "Project";
+
+            emailService.sendProjectAcceptanceEmail(studentEmails, projectName, facultyName);
+        }
+
         System.out.println("[MeetingService] ✅ Project ACCEPTED and ASSIGNED");
     }
 
@@ -373,6 +412,11 @@ public class MeetingService {
         if (meeting.getStatus() == MeetingStatus.CANCELLED) {
             throw new RuntimeException("Cannot reschedule a cancelled meeting");
         }
+
+        // ✅ Check 3: Meeting Scheduling Deadline
+        Long departmentId = meeting.getRequest().getFaculty().getDepartment() != null 
+            ? meeting.getRequest().getFaculty().getDepartment().getDepartmentId() : null;
+        checkMeetingSchedulingDeadline(departmentId, req.getMeetingTime());
 
         meeting.setMeetingLink(req.getMeetingLink());
         meeting.setMeetingTime(req.getMeetingTime());

@@ -363,6 +363,62 @@ public class FacultyCoordinatorController {
         }
     }
 
+    // ✅ GET DEADLINES FOR COORDINATOR'S DEPARTMENT
+    @GetMapping("/deadlines")
+    public ResponseEntity<?> getDeadlines(Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/deadlines");
+        try {
+            String email = authentication.getName();
+            
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() 
+                : null;
+
+            if (departmentId == null) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Coordinator is not assigned to any department"
+                ));
+            }
+
+            DepartmentDeadlinesDTO deadlines = coordinatorService.getDeadlines(departmentId);
+            return ResponseEntity.ok(deadlines);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ SAVE DEADLINES FOR COORDINATOR'S DEPARTMENT
+    @PostMapping("/deadlines")
+    public ResponseEntity<?> saveDeadlines(@RequestBody DepartmentDeadlinesDTO request, Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 💾 POST /api/coordinator/deadlines");
+        try {
+            String email = authentication.getName();
+            
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() 
+                : null;
+
+            if (departmentId == null) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Coordinator is not assigned to any department"
+                ));
+            }
+
+            coordinatorService.saveDeadlines(departmentId, request);
+            return ResponseEntity.ok(Map.of("message", "Deadlines updated successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/student-team-details")
     public ResponseEntity<?> getStudentAndTeamDetails(Authentication authentication) {
         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/student-team-details");

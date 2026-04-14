@@ -41,12 +41,14 @@ const CreateProjectScreen = () => {
   /* LOAD DOMAINS */
 
   useEffect(() => {
-    loadDomains();
-  }, []);
+    if (user?.token) {
+      loadDomains();
+    }
+  }, [user]);
 
   const loadDomains = async () => {
     try {
-      const data = await getDomains();
+      const data = await getDomains(user!.token);
 
       if (!data || data.length === 0) {
         setDomains([{ domainId: null, name: 'None Available' }]);
@@ -61,10 +63,10 @@ const CreateProjectScreen = () => {
   /* LOAD SUBDOMAINS */
 
   useEffect(() => {
-    if (!domainId) return;
+    if (!domainId || !user?.token) return;
 
     const fetchSub = async () => {
-      const data = await getSubDomains(domainId);
+      const data = await getSubDomains(domainId, user!.token);
 
       if (!data || data.length === 0) {
         setSubDomains([{ subDomainId: null, name: 'None Available' }]);

@@ -15,6 +15,10 @@ public class Domain {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Faculty faculty;
 
+    @ManyToOne
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Department department;
+
     // getters
 
     public Long getDomainId() {
@@ -41,5 +45,13 @@ public class Domain {
 
     public void setFaculty(Faculty faculty) {
         this.faculty = faculty;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
     }
 }
