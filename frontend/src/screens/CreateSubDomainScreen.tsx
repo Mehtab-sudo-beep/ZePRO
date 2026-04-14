@@ -33,13 +33,15 @@ const CreateSubDomainScreen = () => {
   /* ================= LOAD DOMAINS ================= */
 
   useEffect(() => {
-    loadDomains();
-  }, []);
+    if (user?.token) {
+      loadDomains();
+    }
+  }, [user]);
 
   const loadDomains = async () => {
     try {
       console.log('[CreateSubDomainScreen] 📥 Loading domains...');
-      const data = await getDomains();
+      const data = await getDomains(user!.token);
       setDomains(data || []);
 
       setItems(
@@ -58,12 +60,12 @@ const CreateSubDomainScreen = () => {
   /* ================= LOAD SUBDOMAINS ================= */
 
   useEffect(() => {
-    if (!domainId) return;
+    if (!domainId || !user?.token) return;
 
     const fetchSubDomains = async () => {
       try {
         console.log('[CreateSubDomainScreen] 📥 Loading subdomains for domain:', domainId);
-        const data = await getSubDomains(domainId);
+        const data = await getSubDomains(domainId, user!.token);
         setSubDomains(data || []);
         console.log('[CreateSubDomainScreen] ✅ Subdomains loaded:', data.length);
       } catch (err) {
@@ -109,7 +111,7 @@ const CreateSubDomainScreen = () => {
       setName('');
 
       // Reload subdomains
-      const data = await getSubDomains(domainId);
+      const data = await getSubDomains(domainId, user!.token);
       setSubDomains(data || []);
 
       // Clear success message after 2 seconds

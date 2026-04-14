@@ -541,6 +541,9 @@ public class FacultyService {
         SubDomain sub = new SubDomain();
         sub.setName(name);
         sub.setDomain(domain);
+        if (domain.getDepartment() != null) {
+            sub.setDepartment(domain.getDepartment());
+        }
 
         return subDomainRepository.save(sub);
     }

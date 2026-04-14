@@ -44,9 +44,6 @@ import DeadlineDetailScreen from '../screens/DeadlinedetailsScreen';
 import DepartmentDetailsScreen from '../screens/DepartmentDetailsScreen';
 import CompleteProfileScreen from '../screens/CompleteProfileScreen';
 import CompleteFacultyProfileScreen from '../screens/CompleteFacultyProfileScreen';
-
-
-
 export type RootStackParamList = {
   Login: undefined;
   StudentHome: undefined;

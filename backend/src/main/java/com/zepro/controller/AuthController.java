@@ -2,6 +2,7 @@ package com.zepro.controller;
 
 import com.zepro.dto.LoginRequest;
 import com.zepro.dto.SignupRequest;
+// import com.zepro.dto.OAuthSignupRequest;
 import com.zepro.dto.ChangePasswordRequest;
 import com.zepro.dto.ForgotPasswordRequest;
 import org.springframework.security.core.Authentication;
@@ -23,6 +24,11 @@ public class AuthController {
     @PostMapping("/signup")
     public Object signup(@RequestBody SignupRequest request) {
         return authService.signup(request);
+    }
+
+    @PostMapping("/google")
+    public Object googleLogin(@RequestBody com.zepro.dto.GoogleLoginRequest request) {
+        return authService.googleLogin(request);
     }
 
     @PostMapping("/login")

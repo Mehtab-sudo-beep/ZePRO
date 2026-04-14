@@ -1,22 +1,10 @@
 package com.zepro.service;
 
-import com.itextpdf.io.font.constants.StandardFonts;
-import com.itextpdf.kernel.colors.Color;
-import com.itextpdf.kernel.colors.ColorConstants;
-import com.itextpdf.kernel.colors.DeviceRgb;
-import com.itextpdf.kernel.font.PdfFont;
-import com.itextpdf.kernel.font.PdfFontFactory;
-import com.itextpdf.kernel.geom.PageSize;
-import com.itextpdf.kernel.pdf.PdfDocument;
-import com.itextpdf.kernel.pdf.PdfWriter;
-import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.borders.SolidBorder;
-import com.itextpdf.layout.element.Cell;
-import com.itextpdf.layout.element.Paragraph;
-import com.itextpdf.layout.element.Table;
-import com.itextpdf.layout.properties.TextAlignment;
-import com.itextpdf.layout.properties.UnitValue;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
@@ -29,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zepro.model.*;
 import com.zepro.repository.*;
 import com.zepro.dto.facultycoordinator.*;
-
 @Service
 public class CoordinatorService {
 
@@ -40,6 +27,8 @@ public class CoordinatorService {
     private final AllocationRulesRepository allocationRulesRepository;
     private final DepartmentRepository departmentrepository;
     private final TeamJoinRequestRepository teamJoinRequestRepository;
+    private final DepartmentDeadlinesRepository departmentDeadlinesRepository;
+    private final EmailService emailService;
 
     public CoordinatorService(StudentRepository studentRepository,
             FacultyRepository facultyRepository,
@@ -47,7 +36,9 @@ public class CoordinatorService {
             ProjectRepository projectRepository,
             AllocationRulesRepository allocationRulesRepository,
             DepartmentRepository departmentrepository,
-            TeamJoinRequestRepository teamJoinRequestRepository) {
+            TeamJoinRequestRepository teamJoinRequestRepository,
+            DepartmentDeadlinesRepository departmentDeadlinesRepository,
+            EmailService emailService) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.teamRepository = teamRepository;
@@ -55,6 +46,8 @@ public class CoordinatorService {
         this.allocationRulesRepository = allocationRulesRepository;
         this.departmentrepository = departmentrepository;
         this.teamJoinRequestRepository = teamJoinRequestRepository;
+        this.departmentDeadlinesRepository = departmentDeadlinesRepository;
+        this.emailService = emailService;
     }
 
     // ✅ GET ALLOCATION RULES BY DEPARTMENT
@@ -365,170 +358,174 @@ public class CoordinatorService {
             List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
             System.out.println("[CoordinatorService]  Total teams in department: " + allTeams.size());
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PdfWriter writer = new PdfWriter(baos);
-            PdfDocument pdfDocument = new PdfDocument(writer);
-            Document document = new Document(pdfDocument, PageSize.A4);
+            PDDocument document = new PDDocument();
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
             
-            PdfFont titleFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-            PdfFont regularFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
-            PdfFont boldFont = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+            
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
             String generatedDate = LocalDate.now().format(dateFormatter);
-
-            Color lightBlue = new DeviceRgb(230, 245, 255);
-            Color darkText = new DeviceRgb(33, 33, 33);
-
-            Paragraph header = new Paragraph("Teams Report")
-                    .setFont(titleFont)
-                    .setFontSize(24)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(10);
-            document.add(header);
-
-            Paragraph deptInfo = new Paragraph("Department: " + department.getDepartmentName())
-                    .setFont(regularFont)
-                    .setFontSize(12)
-                    .setMarginBottom(5);
-            document.add(deptInfo);
-
-            Paragraph dateInfo = new Paragraph("Generated on: " + generatedDate)
-                    .setFont(regularFont)
-                    .setFontSize(10)
-                    .setFontColor(ColorConstants.DARK_GRAY)
-                    .setMarginBottom(20);
-            document.add(dateInfo);
-
-            Table summaryTable = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1}))
-                    .useAllAvailableWidth()
-                    .setMarginBottom(20);
-
-            summaryTable.addCell(summaryCell("Total Teams", String.valueOf(allTeams.size()), 
-                    boldFont, regularFont, lightBlue, darkText));
             
+            float margin = 50;
+            float yStart = page.getMediaBox().getHeight() - margin;
+            float yPosition = yStart;
+            
+            // Title
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 24);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("Teams Report");
+            contentStream.endText();
+            yPosition -= 40;
+            
+            // Department Info
+            contentStream.setFont(PDType1Font.HELVETICA, 12);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("Department: " + department.getDepartmentName());
+            contentStream.endText();
+            yPosition -= 20;
+            
+            // Generated Date
+            contentStream.setFont(PDType1Font.HELVETICA, 10);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("Generated on: " + generatedDate);
+            contentStream.endText();
+            yPosition -= 30;
+            
+            // Summary Stats
             int totalMembers = (int) allTeams.stream()
                     .mapToLong(team -> team.getMembers() != null ? team.getMembers().size() : 0)
                     .sum();
-            summaryTable.addCell(summaryCell("Total Members", String.valueOf(totalMembers), 
-                    boldFont, regularFont, lightBlue, darkText));
-            
             long allocatedTeams = allTeams.stream()
                     .filter(team -> team.getFaculty() != null)
                     .count();
-            summaryTable.addCell(summaryCell("Allocated Teams", String.valueOf(allocatedTeams), 
-                    boldFont, regularFont, lightBlue, darkText));
-            
             long unallocatedTeams = allTeams.size() - allocatedTeams;
-            summaryTable.addCell(summaryCell("Unallocated Teams", String.valueOf(unallocatedTeams), 
-                    boldFont, regularFont, lightBlue, darkText));
             
-            document.add(summaryTable);
-
-            Table teamTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 2, 2, 1}))
-                    .useAllAvailableWidth()
-                    .setMarginBottom(20);
-
-            Color headerBg = new DeviceRgb(41, 128, 185);
-            Color headerText = ColorConstants.WHITE;
-
-            teamTable.addHeaderCell(new Cell()
-                    .add(new Paragraph("Team ID").setFont(boldFont).setFontColor(headerText))
-                    .setBackgroundColor(headerBg)
-                    .setPadding(10)
-                    .setTextAlignment(TextAlignment.CENTER));
-
-            teamTable.addHeaderCell(new Cell()
-                    .add(new Paragraph("Team Name").setFont(boldFont).setFontColor(headerText))
-                    .setBackgroundColor(headerBg)
-                    .setPadding(10));
-
-            teamTable.addHeaderCell(new Cell()
-                    .add(new Paragraph("Guide").setFont(boldFont).setFontColor(headerText))
-                    .setBackgroundColor(headerBg)
-                    .setPadding(10));
-
-            teamTable.addHeaderCell(new Cell()
-                    .add(new Paragraph("Members").setFont(boldFont).setFontColor(headerText))
-                    .setBackgroundColor(headerBg)
-                    .setPadding(10)
-                    .setTextAlignment(TextAlignment.CENTER));
-
-            teamTable.addHeaderCell(new Cell()
-                    .add(new Paragraph("Status").setFont(boldFont).setFontColor(headerText))
-                    .setBackgroundColor(headerBg)
-                    .setPadding(10)
-                    .setTextAlignment(TextAlignment.CENTER));
-
-            Color altBg = new DeviceRgb(245, 248, 250);
-            int rowCount = 0;
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("Summary:");
+            contentStream.endText();
+            yPosition -= 20;
             
+            contentStream.setFont(PDType1Font.HELVETICA, 11);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin + 10, yPosition);
+            contentStream.showText("Total Teams: " + allTeams.size() + " | Total Members: " + totalMembers);
+            contentStream.endText();
+            yPosition -= 15;
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin + 10, yPosition);
+            contentStream.showText("Allocated: " + allocatedTeams + " | Unallocated: " + unallocatedTeams);
+            contentStream.endText();
+            yPosition -= 30;
+            
+            // Table Header
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
+            float[] columnWidths = {50, 100, 100, 80, 80};
+            float tableWidth = 410;
+            float tableX = margin;
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(tableX, yPosition);
+            contentStream.showText("Team ID");
+            contentStream.endText();
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(tableX + columnWidths[0], yPosition);
+            contentStream.showText("Team Name");
+            contentStream.endText();
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1], yPosition);
+            contentStream.showText("Guide");
+            contentStream.endText();
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2], yPosition);
+            contentStream.showText("Members");
+            contentStream.endText();
+            
+            contentStream.beginText();
+            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], yPosition);
+            contentStream.showText("Status");
+            contentStream.endText();
+            
+            yPosition -= 20;
+            
+            // Draw line under header
+            contentStream.setLineWidth(1);
+            contentStream.moveTo(tableX, yPosition);
+            contentStream.lineTo(tableX + tableWidth, yPosition);
+            contentStream.stroke();
+            yPosition -= 15;
+            
+            // Table Rows
+            contentStream.setFont(PDType1Font.HELVETICA, 10);
             for (Team team : allTeams) {
-                rowCount++;
-                Color rowBg = (rowCount % 2 == 0) ? altBg : null;
-
-                Cell teamIdCell = new Cell()
-                        .add(new Paragraph(String.valueOf(team.getTeamId()))
-                                .setFont(regularFont)
-                                .setFontSize(10))
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(8);
-                if (rowBg != null) teamIdCell.setBackgroundColor(rowBg);
-                teamTable.addCell(teamIdCell);
-
-                Cell teamNameCell = new Cell()
-                        .add(new Paragraph(team.getTeamName() != null ? team.getTeamName() : "N/A")
-                                .setFont(regularFont)
-                                .setFontSize(10))
-                        .setPadding(8);
-                if (rowBg != null) teamNameCell.setBackgroundColor(rowBg);
-                teamTable.addCell(teamNameCell);
-
+                if (yPosition < margin + 50) {
+                    contentStream.endText();
+                    contentStream.close();
+                    
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    contentStream = new PDPageContentStream(document, page);
+                    yPosition = yStart;
+                }
+                
                 String guideName = (team.getFaculty() != null) 
                         ? team.getFaculty().getUser().getName() 
                         : "Not Assigned";
-                Cell guideCell = new Cell()
-                        .add(new Paragraph(guideName)
-                                .setFont(regularFont)
-                                .setFontSize(10))
-                        .setPadding(8);
-                if (rowBg != null) guideCell.setBackgroundColor(rowBg);
-                teamTable.addCell(guideCell);
-
                 int memberCount = (team.getMembers() != null) ? team.getMembers().size() : 0;
-                Cell memberCell = new Cell()
-                        .add(new Paragraph(String.valueOf(memberCount))
-                                .setFont(regularFont)
-                                .setFontSize(10))
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(8);
-                if (rowBg != null) memberCell.setBackgroundColor(rowBg);
-                teamTable.addCell(memberCell);
-
                 String status = team.getStatus() != null ? team.getStatus() : "UNKNOWN";
-                Color statusColor = getStatusColor(status);
-                Cell statusCell = new Cell()
-                        .add(new Paragraph(status)
-                                .setFont(regularFont)
-                                .setFontSize(9)
-                                .setFontColor(statusColor))
-                        .setTextAlignment(TextAlignment.CENTER)
-                        .setPadding(8);
-                if (rowBg != null) statusCell.setBackgroundColor(rowBg);
-                teamTable.addCell(statusCell);
+                
+                contentStream.beginText();
+                contentStream.newLineAtOffset(tableX, yPosition);
+                contentStream.showText(String.valueOf(team.getTeamId()));
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.newLineAtOffset(tableX + columnWidths[0], yPosition);
+                contentStream.showText(team.getTeamName() != null ? team.getTeamName() : "N/A");
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1], yPosition);
+                contentStream.showText(guideName);
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2], yPosition);
+                contentStream.showText(String.valueOf(memberCount));
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], yPosition);
+                contentStream.showText(status);
+                contentStream.endText();
+                
+                yPosition -= 20;
             }
-
-            document.add(teamTable);
-
-            Paragraph footer = new Paragraph("This is an auto-generated report from ZePRO System")
-                    .setFont(regularFont)
-                    .setFontSize(8)
-                    .setFontColor(ColorConstants.DARK_GRAY)
-                    .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginTop(30);
-            document.add(footer);
-
+            
+            // Footer
+            yPosition -= 20;
+            contentStream.setFont(PDType1Font.HELVETICA, 8);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin, yPosition);
+            contentStream.showText("This is an auto-generated report from ZePRO System");
+            contentStream.endText();
+            
+            contentStream.close();
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
             document.close();
+            
+            System.out.println("[CoordinatorService] ✅ PDF generated successfully");
             return baos.toByteArray();
 
         } catch (Exception e) {
@@ -536,52 +533,6 @@ public class CoordinatorService {
             e.printStackTrace();
             throw new RuntimeException("Failed to generate PDF report: " + e.getMessage(), e);
         }
-    }
-
-    // ✅ Helper method to get status color
-    private Color getStatusColor(String status) {
-        return switch (status) {
-            case "ACTIVE" -> new DeviceRgb(46, 204, 113); // Green
-            case "INACTIVE" -> new DeviceRgb(231, 76, 60); // Red
-            case "PENDING" -> new DeviceRgb(241, 196, 15); // Yellow
-            default -> new DeviceRgb(52, 152, 219); // Blue
-        };
-    }
-
-    // ✅ Helper method: summaryCell
-    private Cell summaryCell(String label, String value, PdfFont bold, PdfFont regular, Color bg,
-            Color textDark) {
-        return new Cell()
-                .add(new Paragraph(value).setFont(bold).setFontSize(22).setFontColor(textDark))
-                .add(new Paragraph(label).setFont(regular).setFontSize(10).setFontColor(textDark))
-                .setBackgroundColor(bg)
-                .setBorder(Border.NO_BORDER)
-                .setPadding(14)
-                .setTextAlignment(TextAlignment.CENTER);
-    }
-
-    // ✅ Helper method: metaCell
-    private Cell metaCell(String label, String value, PdfFont bold, PdfFont regular, Color textDark,
-            Color textMuted) {
-        return new Cell()
-                .add(new Paragraph(label).setFont(bold).setFontSize(9).setFontColor(textMuted))
-                .add(new Paragraph(value).setFont(regular).setFontSize(11).setFontColor(textDark))
-                .setBorder(Border.NO_BORDER).setPaddingLeft(4).setPaddingTop(4).setPaddingBottom(4);
-    }
-
-    // ✅ Helper method: memberCell
-    private Cell memberCell(String text, PdfFont font, float size, Color textColor, Color borderColor,
-            Color bgColor) {
-        Cell cell = new Cell()
-                .add(new Paragraph(text != null ? text : "N/A").setFont(font).setFontSize(size)
-                        .setFontColor(textColor))
-                .setBorderBottom(new SolidBorder(borderColor, 0.5f))
-                .setBorderTop(Border.NO_BORDER).setBorderLeft(Border.NO_BORDER)
-                .setBorderRight(Border.NO_BORDER)
-                .setPadding(5);
-        if (bgColor != null)
-            cell.setBackgroundColor(bgColor);
-        return cell;
     }
 
     // =========================================================================
@@ -633,6 +584,72 @@ public class CoordinatorService {
         
         System.out.println("[CoordinatorService] ✅ Updated " + departmentFaculties.size() + " faculties with maxStudents = "
                 + request.getMaxStudentsPerFaculty());
+    }
+
+    // =========================================================================
+    // DEADLINES TAB
+    // =========================================================================
+
+    public DepartmentDeadlinesDTO getDeadlines(Long departmentId) {
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+                .orElse(new DepartmentDeadlines());
+
+        DepartmentDeadlinesDTO dto = new DepartmentDeadlinesDTO();
+        dto.setTeamFormationDeadline(deadlines.getTeamFormationDeadline());
+        dto.setMeetingSchedulingDeadline(deadlines.getMeetingSchedulingDeadline());
+        return dto;
+    }
+
+    @Transactional
+    public void saveDeadlines(Long departmentId, DepartmentDeadlinesDTO request) {
+        Department dept = departmentrepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
+
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+                .orElseGet(() -> {
+                    DepartmentDeadlines newObj = new DepartmentDeadlines();
+                    newObj.setDepartment(dept);
+                    return newObj;
+                });
+
+        deadlines.setTeamFormationDeadline(request.getTeamFormationDeadline());
+        deadlines.setMeetingSchedulingDeadline(request.getMeetingSchedulingDeadline());
+
+        departmentDeadlinesRepository.save(deadlines);
+        System.out.println("[CoordinatorService] ✅ Deadlines saved for department: " + departmentId);
+
+        // ✅ ASYNC EMAIL DISPATCH
+        if (request.getTeamFormationDeadline() != null) {
+            List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+            
+            emailService.sendDeadlineNotification(
+                studentEmails,
+                "Student",
+                "Team Formation Deadline",
+                "The Faculty Coordinator has set a strict deadline for forming your teams.",
+                request.getTeamFormationDeadline()
+            );
+        }
+
+        if (request.getMeetingSchedulingDeadline() != null) {
+            List<String> facultyEmails = facultyRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(f -> f.getUser() != null && f.getUser().getEmail() != null)
+                    .map(f -> f.getUser().getEmail())
+                    .toList();
+            
+            emailService.sendDeadlineNotification(
+                facultyEmails,
+                "Faculty",
+                "Meeting Scheduling Deadline",
+                "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings.",
+                request.getMeetingSchedulingDeadline()
+            );
+        }
     }
 
     // =========================================================================

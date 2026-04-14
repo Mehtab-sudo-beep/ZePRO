@@ -121,13 +121,17 @@ export const createSubDomain = async (
   return res.data;
 };
 
-export const getDomains = async () => {
-  const res = await axios.get(`${API}/api/domains`);
+export const getDomains = async (token: string) => {
+  const res = await axios.get(`${API}/api/domains`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return res.data;
 };
 
-export const getSubDomains = async (domainId: number) => {
-  const res = await axios.get(`${API}/api/subdomains/${domainId}`);
+export const getSubDomains = async (domainId: number, token: string) => {
+  const res = await axios.get(`${API}/api/subdomains/${domainId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
   return res.data;
 };
 

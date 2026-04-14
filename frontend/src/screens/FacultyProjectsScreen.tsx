@@ -55,12 +55,14 @@ const FacultyProjectsScreen = () => {
   const [subDomainModal, setSubDomainModal] = useState(false);
 
   useEffect(() => {
-    getDomains().then(d => setDomains(d || [])).catch(() => console.log("No domains"));
-  }, []);
+    if (user?.token) {
+      getDomains(user.token).then(d => setDomains(d || [])).catch(() => console.log("No domains"));
+    }
+  }, [user]);
 
   useEffect(() => {
-    if (editDomainId) {
-      getSubDomains(editDomainId).then(d => setSubDomains(d || [])).catch(() => console.log("No subdomains"));
+    if (editDomainId && user?.token) {
+      getSubDomains(editDomainId, user.token).then(d => setSubDomains(d || [])).catch(() => console.log("No subdomains"));
     }
   }, [editDomainId]);
 
