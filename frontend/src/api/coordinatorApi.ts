@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8080/api/coordinator';
+const BASE_URL = 'http://4.186.27.158:8080/api/coordinator';
 
 export const coordinatorApi = {
   // ✅ STATS
@@ -122,7 +122,7 @@ export const coordinatorApi = {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         teamName: teamName.trim(),
         studentId: String(studentId)
       }),
