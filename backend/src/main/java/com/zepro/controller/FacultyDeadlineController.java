@@ -382,4 +382,42 @@ public class FacultyDeadlineController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    // ✅ SEND DEADLINE EMAIL MANUALLY (TEST/RESEND)
+    @PostMapping("/{deadlineId}/send-email")
+    public ResponseEntity<?> sendDeadlineEmail(@PathVariable Long deadlineId, Authentication authentication) {
+        try {
+            System.out.println("[FacultyDeadlineController] 📧 POST /api/deadlines/" + deadlineId + "/send-email");
+            
+            if (!isFacultyCoordinator(authentication)) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Only Faculty Coordinators can send deadline emails");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
+            
+            String coordinatorEmail = getCoordinatorEmail(authentication);
+            DeadlineResponse response = deadlineService.getDeadlineById(deadlineId);
+            
+            // ✅ Send email via service
+            deadlineService.sendDeadlineEmailManually(deadlineId, coordinatorEmail);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "Deadline email sent successfully");
+            result.put("deadline", response);
+            
+            System.out.println("[FacultyDeadlineController] ✅ Email sent for deadline: " + deadlineId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            System.out.println("[FacultyDeadlineController] ❌ Error: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        } catch (Exception e) {
+            System.out.println("[FacultyDeadlineController] ❌ Error sending email: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to send email");
+            error.put("details", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }

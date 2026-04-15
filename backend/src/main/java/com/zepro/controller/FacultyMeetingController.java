@@ -11,6 +11,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import static org.springframework.http.HttpStatus.OK;
+import org.springframework.http.ResponseEntity;
+import java.util.HashMap;
+import java.util.Map;
 @RestController
 @RequestMapping("/faculty/meetings")
 public class FacultyMeetingController {
@@ -71,5 +77,35 @@ public void rejectProject(@PathVariable("requestId") Long requestId, @RequestBod
 @PutMapping("/request/{requestId}/reschedule")
 public MeetingResponse rescheduleMeeting(@PathVariable("requestId") Long requestId, @RequestBody CreateMeetingRequest request) {
     return meetingService.rescheduleMeeting(requestId, request);
+}
+
+@PostMapping("/{projectId}/assign-team/{teamId}")
+public ResponseEntity<?> assignProjectToTeam(
+        @PathVariable("projectId") Long projectId,
+        @PathVariable("teamId") Long teamId) {
+    try {
+        System.out.println("[FacultyMeetingController] 📧 Assigning project to team with email notification");
+        
+        meetingService.assignProjectAndSendEmail(projectId, teamId);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "Project assigned successfully and email sent to team members");
+        result.put("projectId", projectId);
+        result.put("teamId", teamId);
+        
+        System.out.println("[FacultyMeetingController] ✅ Project assigned: " + projectId);
+        return ResponseEntity.ok(result);
+    } catch (RuntimeException e) {
+        System.out.println("[FacultyMeetingController] ❌ Error: " + e.getMessage());
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", e.getMessage());
+        return ResponseEntity.status(BAD_REQUEST).body(error);
+    } catch (Exception e) {
+        System.out.println("[FacultyMeetingController] ❌ Error: " + e.getMessage());
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Failed to assign project");
+        error.put("details", e.getMessage());
+        return ResponseEntity.status(INTERNAL_SERVER_ERROR).body(error);
+    }
 }
 }

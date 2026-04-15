@@ -31,7 +31,7 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("zepro.system@gmail.com"); // Normally set to your configured mail proxy
+            helper.setFrom("zepro205@gmail.com"); // Normally set to your configured mail proxy
             helper.setSubject("ZePRO Notification: " + title);
 
             // Bcc everyone so emails stay private
@@ -57,10 +57,13 @@ public class EmailService {
         }
 
         try {
+            System.out.println("[EmailService] 📧 Preparing email for recipients: " + bccRecipients);
+            System.out.println("[EmailService] 📧 Project: " + projectName + " | Faculty: " + facultyName);
+            
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom("zepro.system@gmail.com");
+            helper.setFrom("zepro205@gmail.com");
             helper.setSubject("ZePRO Notification: Project Request Accepted!");
 
             String[] bccArray = bccRecipients.toArray(new String[0]);
@@ -73,7 +76,11 @@ public class EmailService {
             System.out.println("[EmailService] ✅ Successfully sent project acceptance email to " + bccRecipients.size() + " recipients.");
 
         } catch (MessagingException e) {
-            System.err.println("[EmailService] ❌ Failed to send project acceptance email: " + e.getMessage());
+            System.err.println("[EmailService] ❌ MessagingException: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("[EmailService] ❌ Exception: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

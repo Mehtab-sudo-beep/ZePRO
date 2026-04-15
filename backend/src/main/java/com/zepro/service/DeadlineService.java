@@ -290,4 +290,24 @@ public class DeadlineService {
             );
         }
     }
+
+    // ✅ SEND DEADLINE EMAIL MANUALLY
+    @Transactional(readOnly = true)
+    public void sendDeadlineEmailManually(Long deadlineId, String coordinatorEmail) {
+        System.out.println("[DeadlineService] 📧 Sending deadline email manually: " + deadlineId);
+        
+        Deadline deadline = deadlineRepository.findByDeadlineId(deadlineId)
+                .orElseThrow(() -> new RuntimeException("Deadline not found with ID: " + deadlineId));
+
+        Faculty coordinator = facultyRepository.findByUser_Email(coordinatorEmail)
+                .orElseThrow(() -> new RuntimeException("Coordinator not found with email: " + coordinatorEmail));
+
+        // Verify coordinator owns this deadline
+        if (!deadline.getDepartment().getDepartmentId().equals(coordinator.getDepartment().getDepartmentId())) {
+            throw new RuntimeException("Coordinator can only send emails for deadlines from their own department");
+        }
+
+        dispatchDeadlineEmail(deadline);
+        System.out.println("[DeadlineService] ✅ Deadline email sent manually: " + deadlineId);
+    }
 }

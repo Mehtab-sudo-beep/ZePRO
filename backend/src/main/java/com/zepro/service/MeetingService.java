@@ -8,6 +8,7 @@ import com.zepro.model.MeetingStatus;
 import com.zepro.model.Project;
 import com.zepro.model.ProjectRequest;
 import com.zepro.model.RequestStatus;
+import com.zepro.model.Team;
 import com.zepro.repository.MeetingRepository;
 import com.zepro.repository.ProjectRepository;
 import com.zepro.repository.ProjectRequestRepository;
@@ -24,7 +25,12 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
-
+import com.zepro.repository.DepartmentDeadlinesRepository;
+import com.zepro.service.EmailService;
+import com.zepro.repository.FacultyRepository;
+import java.util.Optional;
+import java.util.ArrayList;
+import com.zepro.repository.*;
 @Service
 public class MeetingService {
 
@@ -39,6 +45,8 @@ public class MeetingService {
     private final DeactivatedMeetingRepository deactivatedMeetingRepository;
     private final com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository;
     private final EmailService emailService;
+    private final FacultyRepository facultyRepository;
+    private final ProjectRequestRepository projectRequestRepository;
 
     public MeetingService(MeetingRepository meetingRepository,
             ProjectRequestRepository requestRepository,
@@ -50,7 +58,9 @@ public class MeetingService {
             TeamRepository teamRepository,
             DeactivatedMeetingRepository deactivatedMeetingRepository,
             com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            FacultyRepository facultyRepository,
+            ProjectRequestRepository projectRequestRepository) {
         this.meetingRepository = meetingRepository;
         this.requestRepository = requestRepository;
         this.projectRepository = projectRepository;
@@ -62,6 +72,8 @@ public class MeetingService {
         this.deactivatedMeetingRepository = deactivatedMeetingRepository;
         this.departmentDeadlinesRepository = departmentDeadlinesRepository;
         this.emailService = emailService;
+        this.facultyRepository = facultyRepository;
+        this.projectRequestRepository = projectRequestRepository;
     }
 
     // ------------------------------------------------
@@ -484,5 +496,74 @@ public class MeetingService {
         }
 
         return response;
+    }
+
+    @Transactional
+    public void assignProjectAndSendEmail(Long projectId, Long teamId) {
+        System.out.println("[MeetingService] 📧 Assigning project and sending email to team students");
+        
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getStatus().equals("REQUESTED")) {
+            throw new RuntimeException("Project not requested yet");
+        }
+
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        
+        Faculty faculty = project.getFaculty();
+
+        // 1. Link Project to Team
+        project.setTeam(team);
+        project.setStatus("ASSIGNED");
+        projectRepository.save(project);
+
+        // 2. Link Team to Faculty
+        team.setFaculty(faculty);
+        teamRepository.save(team);
+
+        // 3. Mark all students in the team as Allocated
+        List<Student> members = team.getMembers();
+        if (members != null && !members.isEmpty()) {
+            for (Student student : members) {
+                student.setAllocated(true);
+                student.setAllocatedFaculty(faculty);
+                studentRepository.save(student);
+            }
+            // 4. Update Faculty slot counter
+            faculty.setAllocatedStudents(faculty.getAllocatedStudents() + members.size());
+            facultyRepository.save(faculty);
+        }
+
+        // 5. Accept the request
+        ProjectRequest request = projectRequestRepository
+                .findByTeamTeamId(teamId).stream().findFirst()
+                .orElseThrow();
+        request.setStatus(RequestStatus.ACCEPTED);
+        projectRequestRepository.save(request);
+
+        // ✅ 6. SEND EMAIL TO ALL TEAM MEMBERS
+        if (members != null && !members.isEmpty()) {
+            List<String> studentEmails = members.stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .collect(Collectors.toList());
+
+            if (!studentEmails.isEmpty()) {
+                String projectName = project.getTitle();
+                String facultyName = faculty != null && faculty.getUser() != null 
+                        ? faculty.getUser().getName() 
+                        : "Faculty";
+
+                emailService.sendProjectAcceptanceEmail(
+                    new ArrayList<>(studentEmails),
+                    projectName,
+                    facultyName
+                );
+                
+                System.out.println("[MeetingService] ✅ Project assignment email sent to " + studentEmails.size() + " students");
+            }
+        }
     }
 }
