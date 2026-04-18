@@ -3,6 +3,7 @@
     "name": "ZePRO",
     "slug": "frontend",
     "version": "1.0.0",
+    "scheme": "zepro",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
