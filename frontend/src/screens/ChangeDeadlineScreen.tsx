@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,29 +12,73 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { coordinatorApi } from '../api/coordinatorApi';
 
 interface Deadlines {
-  formTeam: string;
-  sendRequest: string;
-  midtermEvaluation: string;
-  finalEvaluation: string;
+  teamFormationDeadline: string;
+  projectRequestDeadline: string;
+  meetingSchedulingDeadline: string;
 }
 
 const ChangeDeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
 
   const [deadlines, setDeadlines] = useState<Deadlines>({
-    formTeam: '',
-    sendRequest: '',
-    midtermEvaluation: '',
-    finalEvaluation: '',
+    teamFormationDeadline: '',
+    projectRequestDeadline: '',
+    meetingSchedulingDeadline: '',
   });
 
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [emailLoading, setEmailLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchDeadlines();
+  }, []);
+
+  const formatDateForFrontend = (isoString: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatDateForBackend = (ddmmyyyy: string) => {
+    if (!ddmmyyyy) return null;
+    const parts = ddmmyyyy.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}T23:59:59`;
+    }
+    return null;
+  };
+
+  const fetchDeadlines = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) throw new Error('Authentication token missing');
+
+      const data = await coordinatorApi.getDeadlines(token);
+      setDeadlines({
+        teamFormationDeadline: formatDateForFrontend(data.teamFormationDeadline),
+        projectRequestDeadline: formatDateForFrontend(data.projectRequestDeadline),
+        meetingSchedulingDeadline: formatDateForFrontend(data.meetingSchedulingDeadline),
+      });
+    } catch (error: any) {
+      console.log('Error fetching deadlines', error);
+      Alert.alert('Error', error.message || 'Failed to fetch deadlines');
+    } finally {
+      setFetching(false);
+    }
+  };
 
   // Simple date validation: DD/MM/YYYY
   const isValidDate = (value: string) => {
+    if (!value) return true; // Optional logic: let API decide or allow empty (to clear)
     const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     if (!regex.test(value)) return false;
     const [, day, month, year] = value.match(regex)!;
@@ -49,16 +93,13 @@ const ChangeDeadlinesScreen: React.FC = () => {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     const fields: { key: keyof Deadlines; label: string }[] = [
-      { key: 'formTeam', label: 'Form Team Deadline' },
-      { key: 'sendRequest', label: 'Send Request Deadline' },
-      { key: 'midtermEvaluation', label: 'Midterm Evaluation Deadline' },
-      { key: 'finalEvaluation', label: 'Final Evaluation Deadline' },
+      { key: 'teamFormationDeadline', label: 'Team Formation Deadline' },
+      { key: 'projectRequestDeadline', label: 'Project Request Deadline' },
+      { key: 'meetingSchedulingDeadline', label: 'Meeting Scheduling Deadline' },
     ];
 
     fields.forEach(({ key, label }) => {
-      if (!deadlines[key].trim()) {
-        newErrors[key] = `${label} is required`;
-      } else if (!isValidDate(deadlines[key])) {
+      if (deadlines[key] && !isValidDate(deadlines[key])) {
         newErrors[key] = 'Enter a valid date in DD/MM/YYYY format';
       }
     });
@@ -66,7 +107,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -75,15 +116,43 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) throw new Error('Authentication token missing');
+
+      const payload = {
+        teamFormationDeadline: formatDateForBackend(deadlines.teamFormationDeadline),
+        projectRequestDeadline: formatDateForBackend(deadlines.projectRequestDeadline),
+        meetingSchedulingDeadline: formatDateForBackend(deadlines.meetingSchedulingDeadline),
+      };
+
+      await coordinatorApi.saveDeadlines(payload, token);
+      
       Alert.alert(
         '✅ Deadlines Updated',
         'All deadlines have been successfully updated.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 1200);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to save deadlines');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendEmails = async () => {
+    setEmailLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) throw new Error('Authentication token missing');
+
+      const response = await coordinatorApi.sendDepartmentDeadlineEmail(token);
+      Alert.alert('✅ Success', response.message || 'Emails sent successfully.');
+    } catch (error: any) {
+      Alert.alert('❌ Error', error.message || 'Failed to send emails. Make sure there are deadlines configured.');
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   const handleChange = (field: keyof Deadlines, value: string) => {
@@ -101,15 +170,23 @@ const ChangeDeadlinesScreen: React.FC = () => {
     }
   };
 
+  if (fetching) {
+    return (
+      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Image
-                                          source={require('../assets/angle.png')}
-                                          style={styles.backIcon}
-                                        />
+            source={require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Deadline Management</Text>
         <View style={{ width: 40 }} />
@@ -117,81 +194,67 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
-        {/* Team Formation */}
+        {/* Team Formation & Projects */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Team & Request Deadlines</Text>
+          <Text style={styles.sectionTitle}>Students phase</Text>
 
           <DeadlineField
-            label="Form Team Deadline *"
+            label="Team Formation Deadline"
             placeholder="DD/MM/YYYY"
-            value={deadlines.formTeam}
-            onChangeText={v => handleChange('formTeam', v)}
-            error={errors.formTeam}
+            value={deadlines.teamFormationDeadline}
+            onChangeText={v => handleChange('teamFormationDeadline', v)}
+            error={errors.teamFormationDeadline}
             description="Last date for students to form their project teams"
           />
 
           <DeadlineField
-            label="Send Request Deadline *"
+            label="Project Request Deadline"
             placeholder="DD/MM/YYYY"
-            value={deadlines.sendRequest}
-            onChangeText={v => handleChange('sendRequest', v)}
-            error={errors.sendRequest}
+            value={deadlines.projectRequestDeadline}
+            onChangeText={v => handleChange('projectRequestDeadline', v)}
+            error={errors.projectRequestDeadline}
             description="Last date for teams to send faculty allocation requests"
           />
         </View>
 
-        {/* Evaluation */}
+        {/* Faculty phase */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Evaluation Deadlines</Text>
+          <Text style={styles.sectionTitle}>Faculty Phase</Text>
 
           <DeadlineField
-            label="Midterm Evaluation Deadline *"
+            label="Meeting Scheduling Deadline"
             placeholder="DD/MM/YYYY"
-            value={deadlines.midtermEvaluation}
-            onChangeText={v => handleChange('midtermEvaluation', v)}
-            error={errors.midtermEvaluation}
-            description="Date of midterm project evaluation"
-          />
-
-          <DeadlineField
-            label="Final Evaluation Deadline *"
-            placeholder="DD/MM/YYYY"
-            value={deadlines.finalEvaluation}
-            onChangeText={v => handleChange('finalEvaluation', v)}
-            error={errors.finalEvaluation}
-            description="Date of final project evaluation and submission"
+            value={deadlines.meetingSchedulingDeadline}
+            onChangeText={v => handleChange('meetingSchedulingDeadline', v)}
+            error={errors.meetingSchedulingDeadline}
+            description="Latest possible date to schedule a meeting with a student"
           />
         </View>
 
-        {/* Current Deadlines Summary */}
-        {Object.values(deadlines).some(v => v.length === 10) && (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Deadline Summary</Text>
-            {deadlines.formTeam.length === 10 && (
-              <SummaryRow label="Form Team" value={deadlines.formTeam} />
-            )}
-            {deadlines.sendRequest.length === 10 && (
-              <SummaryRow label="Send Request" value={deadlines.sendRequest} />
-            )}
-            {deadlines.midtermEvaluation.length === 10 && (
-              <SummaryRow label="Midterm Evaluation" value={deadlines.midtermEvaluation} />
-            )}
-            {deadlines.finalEvaluation.length === 10 && (
-              <SummaryRow label="Final Evaluation" value={deadlines.finalEvaluation} />
-            )}
-          </View>
-        )}
-
+        {/* Action Buttons */}
         <TouchableOpacity
           style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
           onPress={handleSave}
-          disabled={loading}
+          disabled={loading || emailLoading}
           activeOpacity={0.85}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.submitText}>Update Deadlines</Text>
+            <Text style={styles.submitText}>Save Deadlines</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.emailBtn, emailLoading && styles.submitBtnDisabled]}
+          onPress={handleSendEmails}
+          disabled={loading || emailLoading}
+          activeOpacity={0.85}
+        >
+          {emailLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitText}>Broadcast Deadlines (Email)</Text>
           )}
         </TouchableOpacity>
 
@@ -245,17 +308,6 @@ const DeadlineField = ({
 };
 
 /* =======================
-   SUMMARY ROW COMPONENT
-   ======================= */
-
-const SummaryRow = ({ label, value }: { label: string; value: string }) => (
-  <View style={summaryStyles.row}>
-    <Text style={summaryStyles.label}>{label}</Text>
-    <Text style={summaryStyles.value}>{value}</Text>
-  </View>
-);
-
-/* =======================
    STYLES
    ======================= */
 
@@ -265,7 +317,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   header: {
-    
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -277,11 +328,7 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
   },
-   backIcon: { width: 22, height: 22, resizeMode: 'contain' },
-  backArrow: {
-    fontSize: 22,
-    color: '#FFFFFF',
-  },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
@@ -308,22 +355,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 12,
   },
-  summaryCard: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4F46E5',
-  },
-  summaryTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4F46E5',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   submitBtn: {
     backgroundColor: '#2563EB',
     borderRadius: 12,
@@ -338,6 +369,17 @@ const styles = StyleSheet.create({
   submitBtnDisabled: {
     backgroundColor: '#93C5FD',
     shadowOpacity: 0,
+  },
+  emailBtn: {
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#10B981',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   submitText: {
     color: '#FFFFFF',
@@ -369,10 +411,6 @@ const fieldStyles = StyleSheet.create({
     borderColor: '#DC2626',
     backgroundColor: '#FEF2F2',
   },
-  calendarIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
   input: {
     flex: 1,
     paddingVertical: 11,
@@ -388,27 +426,6 @@ const fieldStyles = StyleSheet.create({
     fontSize: 12,
     color: '#DC2626',
     marginTop: 4,
-  },
-});
-
-const summaryStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#C7D2FE',
-  },
-  label: {
-    fontSize: 13,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  value: {
-    fontSize: 13,
-    color: '#4F46E5',
-    fontWeight: '700',
   },
 });
 

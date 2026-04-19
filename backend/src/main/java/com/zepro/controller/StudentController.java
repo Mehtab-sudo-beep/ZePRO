@@ -536,13 +536,13 @@ public class StudentController {
 
     // ✅ GET ALL INSTITUTES
     @GetMapping("/institutes")
-    public ResponseEntity<?> getAllInstitutes() {
+    public ResponseEntity<?> getAllInstitutes(java.security.Principal principal) {
 
         System.out.println("\n========== GET ALL INSTITUTES ==========");
         System.out.println("[StudentController] 📡 GET /student/institutes");
 
         try {
-            List<InstituteDTO> response = studentService.getAllInstitutes();
+            List<InstituteDTO> response = studentService.getAllInstitutes(principal);
             System.out.println("[StudentController] ✅ Fetched " + response.size() + " institutes");
             return ResponseEntity.ok(response);
         } catch (Exception e) {

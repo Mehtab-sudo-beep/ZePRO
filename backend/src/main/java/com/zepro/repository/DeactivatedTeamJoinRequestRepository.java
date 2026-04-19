@@ -9,4 +9,7 @@ public interface DeactivatedTeamJoinRequestRepository extends JpaRepository<Deac
 
     // ✅ Find all deactivated requests for a specific student
     List<DeactivatedTeamJoinRequest> findByTeamJoinRequestStudentStudentId(Long studentId);
+
+    // ✅ Find all deactivated requests for a specific team
+    List<DeactivatedTeamJoinRequest> findByTeamJoinRequest_Team_TeamId(Long teamId);
 }

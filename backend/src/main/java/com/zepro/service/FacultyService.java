@@ -754,12 +754,32 @@ public class FacultyService {
         System.out.println("[FacultyService] 📊 Max slots updated: " + currentMax + " -> " + newMax);
     }
 
-    public List<InstituteDTO> getAllInstitutes() {
-        System.out.println("\n[FacultyService] 📡 Fetching all institutes...");
+    public List<InstituteDTO> getAllInstitutes(java.security.Principal principal) {
+        System.out.println("\n[FacultyService] 📡 Fetching institutes based on email tail...");
         
         try {
-            List<Institute> institutes = instituteRepository.findAll();
-            System.out.println("[FacultyService] ✅ Found " + institutes.size() + " institutes");
+            List<Institute> institutes = new ArrayList<>();
+            if (principal != null) {
+                String email = principal.getName();
+                if (email != null && email.contains("@")) {
+                    String tail = email.split("@")[1];
+                    institutes = instituteRepository.findByTailIgnoreCase(tail);
+                    if (institutes.isEmpty()) {
+                        institutes = instituteRepository.findByTailIgnoreCase("@" + tail);
+                    }
+                    System.out.println("[FacultyService] 🔍 Filtering institutes by tail: " + tail);
+                }
+            } else {
+                System.out.println("[FacultyService] ⚠️ Principal is null. Returning empty list (strict domain lock).");
+                return new ArrayList<>();
+            }
+
+            if (institutes.isEmpty()) {
+                System.out.println("[FacultyService] 🚫 No institutes matched the tail. Strict domain check failed.");
+                return new ArrayList<>();
+            }
+            
+            System.out.println("[FacultyService] ✅ Found " + institutes.size() + " matched institutes");
             
             List<InstituteDTO> instituteDTOs = new ArrayList<>();
             for (Institute institute : institutes) {

@@ -981,6 +981,17 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
         <TouchableOpacity
           style={styles.tabItem}
+          onPress={() => navigation.navigate('DeadlineManagement')}
+        >
+          <Image 
+            source={isDark ? require('../assets/dd-color.png') : require('../assets/dd.png')} 
+            style={styles.tabIcon} 
+          />
+          <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500', marginTop: 2 }}>Deadlines</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.tabItem}
           onPress={() => navigation.navigate('FacultyCoordinatorMore')}
         >
           <Image source={require('../assets/more.png')} style={styles.tabIcon} />

@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import { AuthContext } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   completeFacultyProfile,
@@ -127,6 +128,7 @@ const pickerStyles = StyleSheet.create({
 const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
+  const { setUser } = useContext(AuthContext);
 
   // ✅ TRACK MOUNTED STATE
   const isMountedRef = useRef(true);
@@ -186,9 +188,23 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
           if (Array.isArray(res.data) && res.data.length > 0) {
             console.log('[CompleteFacultyProfile] ✅ Setting institutes:', res.data);
             setInstitutes(res.data);
+            if (res.data.length === 1) {
+               console.log('[CompleteFacultyProfile] 🎯 Auto-selecting institute');
+               setSelectedInstitute(res.data[0]);
+            }
           } else {
             console.log('[CompleteFacultyProfile] ⚠️  Empty institutes array');
             setInstitutes([]);
+            showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{ 
+               text: 'OK', 
+               onPress: async () => {
+                 try {
+                   await AsyncStorage.clear();
+                 } catch (e) {}
+                 setUser(null);
+                 navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
+               }
+             }]);
           }
         }
       } catch (e: any) {

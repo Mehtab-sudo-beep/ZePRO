@@ -18,6 +18,9 @@ public class DepartmentDeadlines {
     @Column(name = "team_formation_deadline")
     private LocalDateTime teamFormationDeadline;
 
+    @Column(name = "project_request_deadline")
+    private LocalDateTime projectRequestDeadline;
+
     @Column(name = "meeting_scheduling_deadline")
     private LocalDateTime meetingSchedulingDeadline;
 
@@ -45,6 +48,14 @@ public class DepartmentDeadlines {
 
     public void setTeamFormationDeadline(LocalDateTime teamFormationDeadline) {
         this.teamFormationDeadline = teamFormationDeadline;
+    }
+
+    public LocalDateTime getProjectRequestDeadline() {
+        return projectRequestDeadline;
+    }
+
+    public void setProjectRequestDeadline(LocalDateTime projectRequestDeadline) {
+        this.projectRequestDeadline = projectRequestDeadline;
     }
 
     public LocalDateTime getMeetingSchedulingDeadline() {

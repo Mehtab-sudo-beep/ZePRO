@@ -30,7 +30,7 @@ public class Team {
     @JoinColumn(name = "institute_id")
     private Institute institute;
 
-    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "team", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH})
     private List<Student> members;
 
     // ----------- GETTERS -----------

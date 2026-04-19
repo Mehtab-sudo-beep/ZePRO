@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,42 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
+  Linking
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
+import API from '../api/api';
 
 const HelpCenterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
-const isDark = colors.background === '#111827';
+  const isDark = colors.background === '#111827';
+
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    API.get('/api/help-center')
+      .then(res => {
+        setData(res.data);
+      })
+      .catch(err => {
+        console.error('Error fetching help center data:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const handleMail = (email: string) => {
+    if (email && email !== 'N/A') {
+      Linking.openURL(`mailto:${email}`);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
@@ -32,26 +58,34 @@ const isDark = colors.background === '#111827';
           </Text>
         </View>
 
-        <ScrollView
-          style={[styles.list, { backgroundColor: colors.background }]}
-          contentContainerStyle={{ paddingBottom: 32 }}
-        >
-          <Section title="Admin Contact" colors={colors} >
-            <Info label="Name" value="Mr. Rajesh Kumar" colors={colors} />
-            <Info label="Email" value="admin@college.edu" colors={colors} />
-            <Info label="Office" value="Admin Block - Room 204" colors={colors}  />
-            <Info label="Phone" value="+91 9876543210" colors={colors}  isLast />
-          </Section>
+        {loading ? (
+             <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+                 <ActivityIndicator size="large" color={colors.text || '#000'} />
+             </View>
+        ) : (
+            <ScrollView
+              style={[styles.list, { backgroundColor: colors.background }]}
+              contentContainerStyle={{ paddingBottom: 32 }}
+            >
+              <Section title="Admin Contact" colors={colors} >
+                <Info label="Name" value={data?.adminName || "N/A"} colors={colors} />
+                <TouchableOpacity onPress={() => handleMail(data?.adminEmail)}>
+                   <Info label="Email" value={data?.adminEmail || "N/A"} colors={colors} />
+                </TouchableOpacity>
+                <Info label="Office" value={data?.adminOffice || "N/A"} colors={colors}  />
+                <Info label="Phone" value={data?.adminPhone || "N/A"} colors={colors}  isLast />
+              </Section>
 
-          <Section title="Faculty Coordinator" colors={colors} 
-          >
-            <Info label="Name" value="Dr. Anjali Sharma" colors={colors}  />
-            <Info label="Email" value="anjali@college.edu" colors={colors} />
-            <Info label="Office" value="CSE Dept - Room 312" colors={colors} 
-             />
-            <Info label="Phone" value="+91 9123456780" colors={colors}  isLast />
-          </Section>
-        </ScrollView>
+              <Section title="Faculty Coordinator" colors={colors} >
+                <Info label="Name" value={data?.coordinatorName || "N/A"} colors={colors}  />
+                <TouchableOpacity onPress={() => handleMail(data?.coordinatorEmail)}>
+                   <Info label="Email" value={data?.coordinatorEmail || "N/A"} colors={colors} />
+                </TouchableOpacity>
+                <Info label="Office" value={data?.coordinatorOffice || "N/A"} colors={colors} />
+                <Info label="Phone" value={data?.coordinatorPhone || "N/A"} colors={colors}  isLast />
+              </Section>
+            </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );

@@ -173,6 +173,12 @@ public class FacultyDeadlineController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
             }
             
+            if (request.getRoleSpecificity() == UserRole.ADMIN) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Cannot create deadline for ADMIN or FACULTY_COORDINATOR roles");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            }
+
             String coordinatorEmail = getCoordinatorEmail(authentication);
             System.out.println("[FacultyDeadlineController] 👨‍🏫 Creating deadline for coordinator: " + coordinatorEmail);
             
@@ -328,6 +334,12 @@ public class FacultyDeadlineController {
                 Map<String, Object> error = new HashMap<>();
                 error.put("error", "Only Faculty Coordinators can update deadlines");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+            }
+            
+            if (request.getRoleSpecificity() == UserRole.ADMIN) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Cannot update deadline to ADMIN or FACULTY_COORDINATOR roles");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
             
             String coordinatorEmail = getCoordinatorEmail(authentication);

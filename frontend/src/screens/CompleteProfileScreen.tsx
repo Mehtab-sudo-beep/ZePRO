@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import { AuthContext } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import {
@@ -132,6 +133,7 @@ const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
 const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
+  const { setUser } = useContext(AuthContext);
 
   // ✅ ADD THIS REF TO TRACK MOUNTED STATE
   const isMountedRef = useRef(true);
@@ -179,6 +181,22 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         if (isMountedRef.current) {
           setInstitutes(res.data);
           console.log('[CompleteProfile] ✅ Institutes loaded:', res.data.length);
+          
+          if (res.data.length === 1) {
+             console.log('[CompleteProfile] 🎯 Auto-selecting institute');
+             setSelectedInstitute(res.data[0]);
+          } else if (res.data.length === 0) {
+             showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{ 
+               text: 'OK', 
+               onPress: async () => {
+                 try {
+                   await AsyncStorage.clear();
+                 } catch (e) {}
+                 setUser(null);
+                 navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
+               }
+             }]);
+          }
         }
       } catch (e: any) {
         console.log('[CompleteProfile] ❌ ERROR LOADING INSTITUTES:', e);

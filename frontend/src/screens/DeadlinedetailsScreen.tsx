@@ -15,6 +15,7 @@ import { AlertContext } from '../context/AlertContext';
 import {
   deleteDeadline,
   toggleActiveDeadline,
+  sendDeadlineEmailManually,
 } from '../api/deadlineApi';
 
 // ─── Static Image Imports ─────────────────────────────────────────────────────
@@ -199,6 +200,16 @@ const DeadlineDetailScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      if (!user?.token) return;
+      await sendDeadlineEmailManually(deadline.deadlineId, user.token);
+      showAlert('Success', 'Deadline reminder email has been sent to users.');
+    } catch (err: any) {
+      showAlert('Error', err?.response?.data?.error || 'Failed to send email');
+    }
   };
 
   const handleToggle = async () => {
@@ -404,6 +415,37 @@ const DeadlineDetailScreen: React.FC = () => {
                   {deadline.isActive
                     ? 'Hide this deadline from users'
                     : 'Make this deadline visible to users'}
+                </Text>
+              </View>
+              <Text style={[styles.actionChevron, { color: colors.subText }]}>›</Text>
+            </TouchableOpacity>
+
+            {/* Send Email */}
+            <TouchableOpacity
+              style={[
+                styles.actionRow,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={handleSendEmail}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.actionIconWrap,
+                  { backgroundColor: '#3B82F615' },
+                ]}
+              >
+                <Text style={{ fontSize: 18 }}>📧</Text>
+              </View>
+              <View style={styles.actionTextWrap}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>
+                  Send Email Reminder
+                </Text>
+                <Text style={[styles.actionSubtitle, { color: colors.subText }]}>
+                  Broadcast this deadline to all relevant users
                 </Text>
               </View>
               <Text style={[styles.actionChevron, { color: colors.subText }]}>›</Text>

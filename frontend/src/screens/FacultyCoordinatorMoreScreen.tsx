@@ -157,6 +157,17 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.bottomTabItem}
+            onPress={() => navigation.navigate('DeadlineManagement')}
+          >
+            <Image 
+              source={colors.background === '#111827' ? require('../assets/dd-color.png') : require('../assets/dd.png')} 
+              style={styles.bottomTabIcon} 
+            />
+            <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>Deadlines</Text>
+          </TouchableOpacity>
+
           <View style={styles.bottomTabItem}>
             <Image source={require('../assets/more-color.png')} style={styles.bottomTabIcon} />
             <Text style={[styles.bottomTabLabelActive, { color: colors.primary }]}>More</Text>

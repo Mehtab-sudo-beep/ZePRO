@@ -108,6 +108,11 @@ public class StudentService {
                         throw new RuntimeException(
                                 "Project requests can only be sent after the team formation deadline has passed.");
                     }
+                    if (deadlines.getProjectRequestDeadline() != null &&
+                            java.time.LocalDateTime.now().isAfter(deadlines.getProjectRequestDeadline())) {
+                        throw new RuntimeException(
+                                "You cannot send a project request after the project requesting deadline has ended.");
+                    }
                 });
     }
 
@@ -941,6 +946,19 @@ public class StudentService {
                 // Team Lead is the only member
                 team.setTeamLead(null);
                 teamRepository.save(team);
+
+                // CLEAN UP before deleting team
+                List<TeamJoinRequest> teamJoinRequests = joinRequestRepository.findByTeamTeamId(team.getTeamId());
+                List<DeactivatedTeamJoinRequest> deactivatedJoinRequests = deactivatedTeamJoinRequestRepository.findByTeamJoinRequest_Team_TeamId(team.getTeamId());
+                deactivatedTeamJoinRequestRepository.deleteAll(deactivatedJoinRequests);
+                joinRequestRepository.deleteAll(teamJoinRequests);
+
+                List<ProjectRequest> projectRequests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+                for (ProjectRequest pr : projectRequests) {
+                    meetingRepository.findByRequestRequestId(pr.getRequestId()).ifPresent(meetingRepository::delete);
+                }
+                projectRequestRepository.deleteAll(projectRequests);
+
                 teamRepository.delete(team);
             }
         }
@@ -1257,12 +1275,32 @@ public class StudentService {
     }
 
     // ✅ GET ALL INSTITUTES
-    public List<InstituteDTO> getAllInstitutes() {
-        System.out.println("\n[StudentService] 📡 Fetching all institutes...");
+    public List<InstituteDTO> getAllInstitutes(java.security.Principal principal) {
+        System.out.println("\n[StudentService] 📡 Fetching institutes based on email tail...");
 
         try {
-            List<Institute> institutes = instituteRepository.findAll();
-            System.out.println("[StudentService] ✅ Found " + institutes.size() + " institutes");
+            List<Institute> institutes = new ArrayList<>();
+            if (principal != null) {
+                String email = principal.getName();
+                if (email != null && email.contains("@")) {
+                    String tail = email.split("@")[1];
+                    institutes = instituteRepository.findByTailIgnoreCase(tail);
+                    if (institutes.isEmpty()) {
+                        institutes = instituteRepository.findByTailIgnoreCase("@" + tail);
+                    }
+                    System.out.println("[StudentService] 🔍 Filtering institutes by tail: " + tail);
+                }
+            } else {
+                System.out.println("[StudentService] ⚠️ Principal is null. Returning empty list (strict domain lock).");
+                return new ArrayList<>();
+            }
+
+            if (institutes.isEmpty()) {
+                System.out.println("[StudentService] 🚫 No institutes matched the tail. Strict domain check failed.");
+                return new ArrayList<>();
+            }
+
+            System.out.println("[StudentService] ✅ Found " + institutes.size() + " matched institutes");
 
             List<InstituteDTO> instituteDTOs = new ArrayList<>();
             for (Institute institute : institutes) {

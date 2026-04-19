@@ -419,6 +419,33 @@ public class FacultyCoordinatorController {
         }
     }
 
+    @PostMapping("/deadlines/send-email")
+    public ResponseEntity<?> sendDepartmentDeadlineEmail(Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 📧 POST /api/coordinator/deadlines/send-email");
+        try {
+            String email = authentication.getName();
+            
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() 
+                : null;
+
+            if (departmentId == null) {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Coordinator is not assigned to any department"
+                ));
+            }
+
+            coordinatorService.sendDepartmentDeadlineEmailsManually(departmentId);
+            return ResponseEntity.ok(Map.of("message", "Department deadline emails sent successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/student-team-details")
     public ResponseEntity<?> getStudentAndTeamDetails(Authentication authentication) {
         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/student-team-details");

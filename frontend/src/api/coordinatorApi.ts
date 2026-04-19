@@ -1,4 +1,4 @@
-const BASE_URL = 'http://4.186.27.158/api/coordinator';
+const BASE_URL = 'http://10.226.126.133:8080/api/coordinator';
 
 export const coordinatorApi = {
   // ✅ STATS
@@ -85,6 +85,28 @@ export const coordinatorApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(rules),
+    }).then(res => res.json()),
+
+  // ✅ DEPARTMENT DEADLINES
+  getDeadlines: (token: string) =>
+    fetch(`${BASE_URL}/deadlines`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).then(res => res.json()),
+
+  saveDeadlines: (deadlines: any, token: string) =>
+    fetch(`${BASE_URL}/deadlines`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(deadlines),
+    }).then(res => res.json()),
+
+  sendDepartmentDeadlineEmail: (token: string) =>
+    fetch(`${BASE_URL}/deadlines/send-email`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
     }).then(res => res.json()),
 
   // ✅ STUDENTS AND TEAMS

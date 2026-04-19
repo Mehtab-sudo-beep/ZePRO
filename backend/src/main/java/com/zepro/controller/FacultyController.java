@@ -56,10 +56,10 @@ public class FacultyController {
 
     // ✅ GET ALL INSTITUTES
     @GetMapping("/institutes")
-    public ResponseEntity<?> getAllInstitutes() {
+    public ResponseEntity<?> getAllInstitutes(java.security.Principal principal) {
         System.out.println("[FacultyController] 📡 GET /faculty/institutes");
         try {
-            List<InstituteDTO> institutes = facultyService.getAllInstitutes();
+            List<InstituteDTO> institutes = facultyService.getAllInstitutes(principal);
             System.out.println("[FacultyController] ✅ Returning " + institutes.size() + " institutes");
             return ResponseEntity.ok(institutes);
         } catch (Exception e) {

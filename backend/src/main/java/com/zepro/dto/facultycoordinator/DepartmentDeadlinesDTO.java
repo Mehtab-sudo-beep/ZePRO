@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class DepartmentDeadlinesDTO {
     
     private LocalDateTime teamFormationDeadline;
+    private LocalDateTime projectRequestDeadline;
     private LocalDateTime meetingSchedulingDeadline;
 
     public LocalDateTime getTeamFormationDeadline() {
@@ -13,6 +14,14 @@ public class DepartmentDeadlinesDTO {
 
     public void setTeamFormationDeadline(LocalDateTime teamFormationDeadline) {
         this.teamFormationDeadline = teamFormationDeadline;
+    }
+
+    public LocalDateTime getProjectRequestDeadline() {
+        return projectRequestDeadline;
+    }
+
+    public void setProjectRequestDeadline(LocalDateTime projectRequestDeadline) {
+        this.projectRequestDeadline = projectRequestDeadline;
     }
 
     public LocalDateTime getMeetingSchedulingDeadline() {

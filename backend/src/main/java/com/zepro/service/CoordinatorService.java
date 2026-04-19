@@ -695,6 +695,7 @@ public class CoordinatorService {
 
         DepartmentDeadlinesDTO dto = new DepartmentDeadlinesDTO();
         dto.setTeamFormationDeadline(deadlines.getTeamFormationDeadline());
+        dto.setProjectRequestDeadline(deadlines.getProjectRequestDeadline());
         dto.setMeetingSchedulingDeadline(deadlines.getMeetingSchedulingDeadline());
         return dto;
     }
@@ -712,6 +713,7 @@ public class CoordinatorService {
                 });
 
         deadlines.setTeamFormationDeadline(request.getTeamFormationDeadline());
+        deadlines.setProjectRequestDeadline(request.getProjectRequestDeadline());
         deadlines.setMeetingSchedulingDeadline(request.getMeetingSchedulingDeadline());
 
         departmentDeadlinesRepository.save(deadlines);
@@ -733,6 +735,21 @@ public class CoordinatorService {
                     request.getTeamFormationDeadline());
         }
 
+        if (request.getProjectRequestDeadline() != null) {
+            List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+
+            emailService.sendDeadlineNotification(
+                    studentEmails,
+                    "Student",
+                    "Project Request Deadline",
+                    "The Faculty Coordinator has set a strict deadline for sending project requests.",
+                    request.getProjectRequestDeadline());
+        }
+
         if (request.getMeetingSchedulingDeadline() != null) {
             List<String> facultyEmails = facultyRepository.findByDepartment_DepartmentId(departmentId)
                     .stream()
@@ -746,6 +763,65 @@ public class CoordinatorService {
                     "Meeting Scheduling Deadline",
                     "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings.",
                     request.getMeetingSchedulingDeadline());
+        }
+    }
+
+    public void sendDepartmentDeadlineEmailsManually(Long departmentId) {
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+                .orElseThrow(() -> new RuntimeException("No department deadlines found to broadcast"));
+
+        boolean emailSent = false;
+
+        if (deadlines.getTeamFormationDeadline() != null) {
+            List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+
+            emailService.sendDeadlineNotification(
+                    studentEmails,
+                    "Student",
+                    "Team Formation Deadline",
+                    "This is a reminder regarding the deadline for forming your teams.",
+                    deadlines.getTeamFormationDeadline());
+            emailSent = true;
+        }
+
+        if (deadlines.getProjectRequestDeadline() != null) {
+            List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .map(s -> s.getUser().getEmail())
+                    .toList();
+
+            emailService.sendDeadlineNotification(
+                    studentEmails,
+                    "Student",
+                    "Project Request Deadline",
+                    "This is a reminder regarding the strict deadline for sending project requests.",
+                    deadlines.getProjectRequestDeadline());
+            emailSent = true;
+        }
+
+        if (deadlines.getMeetingSchedulingDeadline() != null) {
+            List<String> facultyEmails = facultyRepository.findByDepartment_DepartmentId(departmentId)
+                    .stream()
+                    .filter(f -> f.getUser() != null && f.getUser().getEmail() != null)
+                    .map(f -> f.getUser().getEmail())
+                    .toList();
+
+            emailService.sendDeadlineNotification(
+                    facultyEmails,
+                    "Faculty",
+                    "Meeting Scheduling Deadline",
+                    "This is a reminder regarding the latest allowed date for scheduling student meetings.",
+                    deadlines.getMeetingSchedulingDeadline());
+            emailSent = true;
+        }
+
+        if (!emailSent) {
+            throw new RuntimeException("No valid deadlines set to broadcast.");
         }
     }
 

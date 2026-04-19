@@ -77,7 +77,7 @@ interface Colors {
   primary: string;
 }
 
-const ROLE_OPTIONS: RoleOption[] = ['STUDENT', 'FACULTY', 'FACULTY_COORDINATOR', 'ADMIN'];
+const ROLE_OPTIONS: RoleOption[] = ['STUDENT', 'FACULTY'];
 
 const EMPTY_FORM: FormState = {
   title: '',
