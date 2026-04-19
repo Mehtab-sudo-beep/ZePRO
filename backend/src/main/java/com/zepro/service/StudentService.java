@@ -46,6 +46,7 @@ public class StudentService {
     private final UserRepository userRepository;
     private final DeactivatedTeamJoinRequestRepository deactivatedTeamJoinRequestRepository;
     private final com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository;
+    private final FileUploadService fileUploadService;
 
     public StudentService(StudentRepository studentRepository,
             TeamRepository teamRepository,
@@ -60,7 +61,8 @@ public class StudentService {
             DepartmentRepository departmentRepository,
             UserRepository userRepository,
             DeactivatedTeamJoinRequestRepository deactivatedTeamJoinRequestRepository,
-            com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository) {
+            com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository,
+            FileUploadService fileUploadService) {
         this.studentRepository = studentRepository;
         this.teamRepository = teamRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -75,6 +77,7 @@ public class StudentService {
         this.userRepository = userRepository;
         this.deactivatedTeamJoinRequestRepository = deactivatedTeamJoinRequestRepository;
         this.departmentDeadlinesRepository = departmentDeadlinesRepository;
+        this.fileUploadService = fileUploadService;
     }
 
     // ------------------------------------------------
@@ -102,7 +105,8 @@ public class StudentService {
                 .ifPresent(deadlines -> {
                     if (deadlines.getTeamFormationDeadline() != null &&
                             java.time.LocalDateTime.now().isBefore(deadlines.getTeamFormationDeadline())) {
-                        throw new RuntimeException("Project requests can only be sent after the team formation deadline has passed.");
+                        throw new RuntimeException(
+                                "Project requests can only be sent after the team formation deadline has passed.");
                     }
                 });
     }
@@ -386,7 +390,8 @@ public class StudentService {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        // ✅ CHECK PROJECT REQUEST DEADLINE (Reverse check: only after team formation deadline)
+        // ✅ CHECK PROJECT REQUEST DEADLINE (Reverse check: only after team formation
+        // deadline)
         checkProjectRequestDeadline(student.getDepartment().getDepartmentId());
 
         if (!student.isTeamLead()) {
@@ -568,7 +573,8 @@ public class StudentService {
         AssignedProjectResponse response = new AssignedProjectResponse();
         response.setTeamName(team.getTeamName());
 
-        Project project = projectRepository.findByTeam(team);
+        Project project = projectRepository.findById(student.getAllocatedProject().getProjectId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
         if (project != null) {
             response.setProjectId(project.getProjectId());
@@ -749,10 +755,10 @@ public class StudentService {
         response.setTeamName(team.getTeamName());
         response.setTeamLead(team.getTeamLead().getName());
         response.setTeamLeadId(team.getTeamLead().getStudentId());
-        List<String> members = new ArrayList<>();
+        List<com.zepro.dto.student.TeamMemberDTO> members = new ArrayList<>();
 
         for (Student s : team.getMembers()) {
-            members.add(s.getName());
+            members.add(new com.zepro.dto.student.TeamMemberDTO(s.getStudentId(), s.getName()));
         }
 
         response.setMembers(members);
@@ -1130,11 +1136,21 @@ public class StudentService {
         student.setYear(request.getYear());
         System.out.println("[StudentService] 📅 Year set: " + student.getYear());
 
-        student.setResumeLink(request.getResumeLink().trim());
-        System.out.println("[StudentService] 📄 Resume Link set");
+        try {
+            if (request.getResumeFile() != null && !request.getResumeFile().isEmpty()) {
+                String resumePath = fileUploadService.saveFile("resumes", request.getResumeFile());
+                student.setResumeLink(resumePath);
+                System.out.println("[StudentService] 📄 Resume File uploaded and linked: " + resumePath);
+            }
 
-        student.setMarksheetLink(request.getMarksheetLink().trim());
-        System.out.println("[StudentService] 📋 Marksheet Link set");
+            if (request.getMarksheetFile() != null && !request.getMarksheetFile().isEmpty()) {
+                String marksheetPath = fileUploadService.saveFile("marksheets", request.getMarksheetFile());
+                student.setMarksheetLink(marksheetPath);
+                System.out.println("[StudentService] 📋 Marksheet File uploaded and linked: " + marksheetPath);
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload files: " + e.getMessage());
+        }
 
         // ✅ SET PHONE IN USERS TABLE
         Users user = student.getUser();
@@ -1210,10 +1226,11 @@ public class StudentService {
             throw new RuntimeException("Year is required");
         if (request.getPhone() == null || request.getPhone().trim().isEmpty())
             throw new RuntimeException("Phone is required");
-        if (request.getResumeLink() == null || request.getResumeLink().trim().isEmpty())
-            throw new RuntimeException("Resume link is required");
-        if (request.getMarksheetLink() == null || request.getMarksheetLink().trim().isEmpty())
-            throw new RuntimeException("Marksheet link is required");
+
+        if (request.getResumeFile() == null || request.getResumeFile().isEmpty())
+            throw new RuntimeException("Resume file is required");
+        if (request.getMarksheetFile() == null || request.getMarksheetFile().isEmpty())
+            throw new RuntimeException("Marksheet file is required");
     }
 
     // ✅ GET PROFILE STATUS (for login verification)
@@ -1288,6 +1305,48 @@ public class StudentService {
             System.out.println("[StudentService] ❌ Error fetching departments: " + e.getMessage());
             throw new RuntimeException("Failed to fetch departments");
         }
+    }
+
+    @Transactional
+    public com.zepro.model.DepartmentDeadlines getDepartmentDeadlines(Long studentId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        if (student.getDepartment() == null) {
+            return null;
+        }
+        return departmentDeadlinesRepository.findByDepartment_DepartmentId(student.getDepartment().getDepartmentId())
+                .orElse(null);
+    }
+
+    @Transactional
+    public void assignTeamLeader(Long currentLeadId, Long newLeadId) {
+        Student currentLead = studentRepository.findById(currentLeadId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        Student newLead = studentRepository.findById(newLeadId)
+                .orElseThrow(() -> new RuntimeException("New leader not found"));
+
+        Team team = currentLead.getTeam();
+        if (team == null) {
+            throw new RuntimeException("You are not in a team.");
+        }
+
+        if (!team.getTeamLead().getStudentId().equals(currentLeadId)) {
+            throw new RuntimeException("Only the current Team Leader can assign a new leader.");
+        }
+
+        if (!team.getTeamId().equals(newLead.getTeam().getTeamId())) {
+            throw new RuntimeException("The new leader must be in the same team.");
+        }
+
+        // Transfer Power
+        currentLead.setTeamLead(false);
+        newLead.setTeamLead(true);
+        team.setTeamLead(newLead);
+
+        studentRepository.save(currentLead);
+        studentRepository.save(newLead);
+        teamRepository.save(team);
     }
 
 } // ✅ CLOSING BRACE FOR CLASS

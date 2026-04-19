@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zepro.model.*;
 import com.zepro.repository.*;
 import com.zepro.dto.facultycoordinator.*;
+
 @Service
 public class CoordinatorService {
 
@@ -55,7 +56,8 @@ public class CoordinatorService {
         System.out.println("[CoordinatorService] 📋 Fetching allocation rules for department: " + departmentId);
         return allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
                 .orElseGet(() -> {
-                    System.out.println("[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
+                    System.out.println(
+                            "[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
                     AllocationRules defaults = new AllocationRules();
                     defaults.setMaxTeamSize(4);
                     defaults.setMaxStudentsPerFaculty(10);
@@ -67,27 +69,27 @@ public class CoordinatorService {
     // ✅ ADD THIS METHOD - GET RULES BY DEPARTMENT
     public AllocationRulesResponse getRulesByDepartment(Long departmentId) {
         System.out.println("[CoordinatorService] 📋 Fetching rules for department: " + departmentId);
-        
+
         AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
                 .orElseGet(() -> {
-                    System.out.println("[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
+                    System.out.println(
+                            "[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
                     AllocationRules defaults = new AllocationRules();
                     defaults.setMaxTeamSize(4);
                     defaults.setMaxStudentsPerFaculty(10);
                     defaults.setMaxProjectsPerFaculty(3);
                     return defaults;
                 });
-        
+
         System.out.println("[CoordinatorService] ✅ Rules for dept " + departmentId + ":");
         System.out.println("[CoordinatorService]    - maxTeamSize: " + rules.getMaxTeamSize());
         System.out.println("[CoordinatorService]    - maxStudentsPerFaculty: " + rules.getMaxStudentsPerFaculty());
         System.out.println("[CoordinatorService]    - maxProjectsPerFaculty: " + rules.getMaxProjectsPerFaculty());
-        
+
         return new AllocationRulesResponse(
-            rules.getMaxTeamSize(), 
-            rules.getMaxStudentsPerFaculty(),
-            rules.getMaxProjectsPerFaculty()
-        );
+                rules.getMaxTeamSize(),
+                rules.getMaxStudentsPerFaculty(),
+                rules.getMaxProjectsPerFaculty());
     }
 
     // =========================================================================
@@ -103,26 +105,27 @@ public class CoordinatorService {
         long totalFaculty = facultyRepository.countByDepartment_DepartmentId(departmentId);
 
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
-        System.out.println("[CoordinatorService] 📌 Fetching active projects for " + departmentFaculties.size() + " faculties");
+        System.out.println(
+                "[CoordinatorService] 📌 Fetching active projects for " + departmentFaculties.size() + " faculties");
 
         int totalCreatedActiveSlots = 0;
         for (Faculty faculty : departmentFaculties) {
             List<Project> activeProjects = projectRepository.findByFacultyFacultyId(faculty.getFacultyId())
                     .stream()
-                    .filter(project -> project.getIsActive() && 
-                           ("OPEN".equals(project.getStatus()) || 
-                            "ASSIGNED".equals(project.getStatus()) || 
-                            "IN_PROGRESS".equals(project.getStatus())))
+                    .filter(project -> project.getIsActive() &&
+                            ("OPEN".equals(project.getStatus()) ||
+                                    "ASSIGNED".equals(project.getStatus()) ||
+                                    "IN_PROGRESS".equals(project.getStatus())))
                     .collect(Collectors.toList());
 
             int facultySlots = activeProjects.stream()
                     .mapToInt(Project::getStudentSlots)
                     .sum();
-            
+
             totalCreatedActiveSlots += facultySlots;
-            
-            System.out.println("[CoordinatorService]    - Faculty " + faculty.getUser().getName() + 
-                             ": " + facultySlots + " active slots from " + activeProjects.size() + " projects");
+
+            System.out.println("[CoordinatorService]    - Faculty " + faculty.getUser().getName() +
+                    ": " + facultySlots + " active slots from " + activeProjects.size() + " projects");
         }
 
         System.out.println("[CoordinatorService] 🎯 Total Active Slots Created: " + totalCreatedActiveSlots);
@@ -148,19 +151,17 @@ public class CoordinatorService {
     public List<CoordinatorFacultyResponse> searchFaculties(String query, long departmentId) {
         System.out.println("[CoordinatorService] 🔍 Searching faculties in department: " + departmentId);
         System.out.println("[CoordinatorService] Query: " + query);
-        
+
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
         System.out.println("[CoordinatorService] Total faculties in department: " + departmentFaculties.size());
-        
+
         List<CoordinatorFacultyResponse> results = departmentFaculties.stream()
-                .filter(faculty -> 
-                    faculty.getUser().getName().toLowerCase().contains(query.toLowerCase()) ||
-                    faculty.getUser().getEmail().toLowerCase().contains(query.toLowerCase()) ||
-                    faculty.getEmployeeId().toLowerCase().contains(query.toLowerCase())
-                )
+                .filter(faculty -> faculty.getUser().getName().toLowerCase().contains(query.toLowerCase()) ||
+                        faculty.getUser().getEmail().toLowerCase().contains(query.toLowerCase()) ||
+                        faculty.getEmployeeId().toLowerCase().contains(query.toLowerCase()))
                 .map(this::mapToFacultyResponse)
                 .collect(Collectors.toList());
-        
+
         System.out.println("[CoordinatorService] ✅ Found " + results.size() + " matching faculties");
         return results;
     }
@@ -207,13 +208,14 @@ public class CoordinatorService {
 
         Long departmentId = faculty.getDepartment() != null ? faculty.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
-        
-        System.out.println("[CoordinatorService] 📊 Allocation rules for dept " + departmentId + ": maxStudents=" + rules.getMaxStudentsPerFaculty());
+
+        System.out.println("[CoordinatorService] 📊 Allocation rules for dept " + departmentId + ": maxStudents="
+                + rules.getMaxStudentsPerFaculty());
 
         if (faculty.getAllocatedStudents() >= rules.getMaxStudentsPerFaculty()) {
             throw new RuntimeException(
                     "No slots available for faculty: " + faculty.getUser().getName() +
-                    " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
+                            " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
         }
 
         student.setAllocated(true);
@@ -257,13 +259,14 @@ public class CoordinatorService {
 
         Long departmentId = newFaculty.getDepartment() != null ? newFaculty.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
-        
-        System.out.println("[CoordinatorService] 📊 Override allocation rules for dept " + departmentId + ": maxStudents=" + rules.getMaxStudentsPerFaculty());
+
+        System.out.println("[CoordinatorService] 📊 Override allocation rules for dept " + departmentId
+                + ": maxStudents=" + rules.getMaxStudentsPerFaculty());
 
         if (newFaculty.getAllocatedStudents() >= rules.getMaxStudentsPerFaculty()) {
             throw new RuntimeException(
                     "No slots available for faculty: " + newFaculty.getUser().getName() +
-                    " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
+                            " (Limit: " + rules.getMaxStudentsPerFaculty() + ")");
         }
 
         updateFacultyAllocationCount(oldFaculty);
@@ -349,190 +352,142 @@ public class CoordinatorService {
     public byte[] generateAllTeamsReportPdf(long departmentId) {
         try {
             System.out.println("[CoordinatorService] 📄 Generating PDF report for department: " + departmentId);
-            
             Department department = departmentrepository.findById(departmentId)
                     .orElseThrow(() -> new RuntimeException("Department not found"));
-            
-            System.out.println("[CoordinatorService]   Department: " + department.getDepartmentName());
-            
-            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
-            System.out.println("[CoordinatorService]  Total teams in department: " + allTeams.size());
 
-            PDDocument document = new PDDocument();
-            PDPage page = new PDPage(PDRectangle.A4);
+            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+            
+            org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument();
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
             document.addPage(page);
-            
-            PDPageContentStream contentStream = new PDPageContentStream(document, page);
-            
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-            String generatedDate = LocalDate.now().format(dateFormatter);
-            
-            float margin = 50;
+
+            org.apache.pdfbox.pdmodel.PDPageContentStream contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page);
+
+            float margin = 20;
             float yStart = page.getMediaBox().getHeight() - margin;
             float yPosition = yStart;
+            float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+
+            // Header Background
+            contentStream.setNonStrokingColor(new java.awt.Color(217, 225, 242));
+            contentStream.addRect(margin, yPosition - 40, tableWidth, 40);
+            contentStream.fill();
             
-            // Title
-            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 24);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Teams Report");
-            contentStream.endText();
-            yPosition -= 40;
+            contentStream.setNonStrokingColor(java.awt.Color.BLACK);
+            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 12);
             
-            // Department Info
-            contentStream.setFont(PDType1Font.HELVETICA, 12);
+            String title1 = department.getDepartmentName() + " - Teams Report";
+            String title2 = "Group, Mentor, Title of the project";
+            
             contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Department: " + department.getDepartmentName());
+            contentStream.newLineAtOffset(margin + 5, yPosition - 15);
+            contentStream.showText(title1);
             contentStream.endText();
+            
+            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 10);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(margin + 5, yPosition - 30);
+            contentStream.showText(title2);
+            contentStream.endText();
+
+            yPosition -= 55;
+
+            // Table Header Background
+            contentStream.setNonStrokingColor(new java.awt.Color(217, 225, 242));
+            contentStream.addRect(margin, yPosition - 20, tableWidth, 20);
+            contentStream.fill();
+
+            // Table Header Borders & Text
+            float[] colWidths = { 30, 50, 65, 50, 65, 50, 65, 100, 80 }; 
+            String[] headers = { "Grp", "Roll 1", "Name 1", "Roll 2", "Name 2", "Roll 3", "Name 3", "Topic", "Guide" };
+            
+            float xPos = margin;
+            contentStream.setNonStrokingColor(java.awt.Color.BLACK);
+            contentStream.setStrokingColor(java.awt.Color.BLACK);
+            contentStream.setLineWidth(1f);
+            
+            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 7);
+            
+            for (int i = 0; i < headers.length; i++) {
+                contentStream.addRect(xPos, yPosition - 20, colWidths[i], 20);
+                contentStream.stroke();
+                contentStream.beginText();
+                contentStream.newLineAtOffset(xPos + 2, yPosition - 13);
+                contentStream.showText(headers[i]);
+                contentStream.endText();
+                xPos += colWidths[i];
+            }
             yPosition -= 20;
-            
-            // Generated Date
-            contentStream.setFont(PDType1Font.HELVETICA, 10);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Generated on: " + generatedDate);
-            contentStream.endText();
-            yPosition -= 30;
-            
-            // Summary Stats
-            int totalMembers = (int) allTeams.stream()
-                    .mapToLong(team -> team.getMembers() != null ? team.getMembers().size() : 0)
-                    .sum();
-            long allocatedTeams = allTeams.stream()
-                    .filter(team -> team.getFaculty() != null)
-                    .count();
-            long unallocatedTeams = allTeams.size() - allocatedTeams;
-            
-            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Summary:");
-            contentStream.endText();
-            yPosition -= 20;
-            
-            contentStream.setFont(PDType1Font.HELVETICA, 11);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin + 10, yPosition);
-            contentStream.showText("Total Teams: " + allTeams.size() + " | Total Members: " + totalMembers);
-            contentStream.endText();
-            yPosition -= 15;
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin + 10, yPosition);
-            contentStream.showText("Allocated: " + allocatedTeams + " | Unallocated: " + unallocatedTeams);
-            contentStream.endText();
-            yPosition -= 30;
-            
-            // Table Header
-            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 11);
-            float[] columnWidths = {50, 100, 100, 80, 80};
-            float tableWidth = 410;
-            float tableX = margin;
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(tableX, yPosition);
-            contentStream.showText("Team ID");
-            contentStream.endText();
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(tableX + columnWidths[0], yPosition);
-            contentStream.showText("Team Name");
-            contentStream.endText();
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1], yPosition);
-            contentStream.showText("Guide");
-            contentStream.endText();
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2], yPosition);
-            contentStream.showText("Members");
-            contentStream.endText();
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], yPosition);
-            contentStream.showText("Status");
-            contentStream.endText();
-            
-            yPosition -= 20;
-            
-            // Draw line under header
-            contentStream.setLineWidth(1);
-            contentStream.moveTo(tableX, yPosition);
-            contentStream.lineTo(tableX + tableWidth, yPosition);
-            contentStream.stroke();
-            yPosition -= 15;
-            
+
             // Table Rows
-            contentStream.setFont(PDType1Font.HELVETICA, 10);
-            for (Team team : allTeams) {
-                if (yPosition < margin + 50) {
-                    contentStream.endText();
+            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 6);
+            
+            for (int i = 0; i < allTeams.size(); i++) {
+                if (yPosition < 40) {
                     contentStream.close();
-                    
-                    page = new PDPage(PDRectangle.A4);
+                    page = new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
                     document.addPage(page);
-                    contentStream = new PDPageContentStream(document, page);
+                    contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page);
                     yPosition = yStart;
+                    contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 6);
                 }
                 
-                String guideName = (team.getFaculty() != null) 
-                        ? team.getFaculty().getUser().getName() 
-                        : "Not Assigned";
-                int memberCount = (team.getMembers() != null) ? team.getMembers().size() : 0;
-                String status = team.getStatus() != null ? team.getStatus() : "UNKNOWN";
+                Team team = allTeams.get(i);
+                List<com.zepro.model.Student> members = team.getMembers();
+                if (members == null) members = new java.util.ArrayList<>();
                 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(tableX, yPosition);
-                contentStream.showText(String.valueOf(team.getTeamId()));
-                contentStream.endText();
+                String r1="", n1="", r2="", n2="", r3="", n3="";
+                if (members.size() > 0 && members.get(0).getUser() != null) { r1 = extractRoll(members.get(0).getUser().getEmail()); n1 = members.get(0).getUser().getName(); }
+                if (members.size() > 1 && members.get(1).getUser() != null) { r2 = extractRoll(members.get(1).getUser().getEmail()); n2 = members.get(1).getUser().getName(); }
+                if (members.size() > 2 && members.get(2).getUser() != null) { r3 = extractRoll(members.get(2).getUser().getEmail()); n3 = members.get(2).getUser().getName(); }
                 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(tableX + columnWidths[0], yPosition);
-                contentStream.showText(team.getTeamName() != null ? team.getTeamName() : "N/A");
-                contentStream.endText();
+                String topic = team.getTeamName() != null ? team.getTeamName() : "";
+                String guide = team.getFaculty() != null && team.getFaculty().getUser() != null ? team.getFaculty().getUser().getName() : "";
                 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1], yPosition);
-                contentStream.showText(guideName);
-                contentStream.endText();
+                String[] rowData = { String.valueOf(team.getTeamId()), limitText(r1, 50), limitText(n1, 65), limitText(r2, 50), limitText(n2, 65), limitText(r3, 50), limitText(n3, 65), limitText(topic, 100), limitText(guide, 80) };
                 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2], yPosition);
-                contentStream.showText(String.valueOf(memberCount));
-                contentStream.endText();
-                
-                contentStream.beginText();
-                contentStream.newLineAtOffset(tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3], yPosition);
-                contentStream.showText(status);
-                contentStream.endText();
-                
+                xPos = margin;
+                for (int j = 0; j < rowData.length; j++) {
+                    contentStream.setStrokingColor(java.awt.Color.BLACK);
+                    contentStream.addRect(xPos, yPosition - 20, colWidths[j], 20);
+                    contentStream.stroke();
+                    contentStream.setNonStrokingColor(new java.awt.Color(192, 0, 0));
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(xPos + 2, yPosition - 13);
+                    contentStream.showText(rowData[j]);
+                    contentStream.endText();
+                    xPos += colWidths[j];
+                }
                 yPosition -= 20;
             }
-            
-            // Footer
-            yPosition -= 20;
-            contentStream.setFont(PDType1Font.HELVETICA, 8);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("This is an auto-generated report from ZePRO System");
-            contentStream.endText();
-            
+
             contentStream.close();
-            
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             document.save(baos);
             document.close();
-            
-            System.out.println("[CoordinatorService] ✅ PDF generated successfully");
             return baos.toByteArray();
-
         } catch (Exception e) {
-            System.out.println("[CoordinatorService]  Error generating PDF: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Failed to generate PDF report: " + e.getMessage(), e);
+            throw new RuntimeException("Generated PDF Error: " + e.getMessage());
         }
+    }
+
+    private String limitText(String text, float widthConstraint) {
+        if (text == null || text.trim().isEmpty()) return "";
+        try {
+            int maxChars = (int) (widthConstraint / 3.0);
+            if (text.length() > maxChars) {
+                return text.substring(0, Math.max(0, maxChars - 2)) + "..";
+            }
+            return text.replace("\n", " ").replace("\r", "");
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private String extractRoll(String email) {
+        if(email == null) return "";
+        return email.split("@")[0].toUpperCase();
     }
 
     // =========================================================================
@@ -551,7 +506,7 @@ public class CoordinatorService {
         Long departmentId = request.getDepartmentId();
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
-        
+
         System.out.println("[CoordinatorService] 💾 Saving rules for department: " + departmentId);
         System.out.println("[CoordinatorService] maxTeamSize: " + request.getMaxTeamSize());
         System.out.println("[CoordinatorService] maxStudentsPerFaculty: " + request.getMaxStudentsPerFaculty());
@@ -559,31 +514,35 @@ public class CoordinatorService {
 
         AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
                 .orElseGet(() -> {
-                    System.out.println("[CoordinatorService] ⚠️  No existing rules found for department: " + departmentId + ", creating new...");
+                    System.out.println("[CoordinatorService] ⚠️  No existing rules found for department: "
+                            + departmentId + ", creating new...");
                     AllocationRules newRules = new AllocationRules();
                     newRules.setMaxTeamSize(request.getMaxTeamSize());
                     newRules.setMaxStudentsPerFaculty(request.getMaxStudentsPerFaculty());
                     newRules.setMaxProjectsPerFaculty(request.getMaxProjectsPerFaculty());
                     return newRules;
-                });        
+                });
         rules.setMaxTeamSize(request.getMaxTeamSize());
         rules.setMaxStudentsPerFaculty(request.getMaxStudentsPerFaculty());
         rules.setMaxProjectsPerFaculty(request.getMaxProjectsPerFaculty());
         rules.setDepartment(dept);
+        rules.setMaxSlotsPerProject(request.getMaxTeamSize());
         allocationRulesRepository.save(rules);
-        
+
         System.out.println("[CoordinatorService] ✅ Rules saved for department: " + departmentId);
 
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
-        System.out.println("[CoordinatorService] 🔄 Updating " + departmentFaculties.size() + " faculties in department " + departmentId);
-        
+        System.out.println("[CoordinatorService] 🔄 Updating " + departmentFaculties.size()
+                + " faculties in department " + departmentId);
+
         departmentFaculties.forEach(f -> {
             f.setMaxStudents(request.getMaxStudentsPerFaculty());
             facultyRepository.save(f);
         });
-        
-        System.out.println("[CoordinatorService] ✅ Updated " + departmentFaculties.size() + " faculties with maxStudents = "
-                + request.getMaxStudentsPerFaculty());
+
+        System.out.println(
+                "[CoordinatorService] ✅ Updated " + departmentFaculties.size() + " faculties with maxStudents = "
+                        + request.getMaxStudentsPerFaculty());
     }
 
     // =========================================================================
@@ -625,14 +584,13 @@ public class CoordinatorService {
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
                     .map(s -> s.getUser().getEmail())
                     .toList();
-            
+
             emailService.sendDeadlineNotification(
-                studentEmails,
-                "Student",
-                "Team Formation Deadline",
-                "The Faculty Coordinator has set a strict deadline for forming your teams.",
-                request.getTeamFormationDeadline()
-            );
+                    studentEmails,
+                    "Student",
+                    "Team Formation Deadline",
+                    "The Faculty Coordinator has set a strict deadline for forming your teams.",
+                    request.getTeamFormationDeadline());
         }
 
         if (request.getMeetingSchedulingDeadline() != null) {
@@ -641,14 +599,13 @@ public class CoordinatorService {
                     .filter(f -> f.getUser() != null && f.getUser().getEmail() != null)
                     .map(f -> f.getUser().getEmail())
                     .toList();
-            
+
             emailService.sendDeadlineNotification(
-                facultyEmails,
-                "Faculty",
-                "Meeting Scheduling Deadline",
-                "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings.",
-                request.getMeetingSchedulingDeadline()
-            );
+                    facultyEmails,
+                    "Faculty",
+                    "Meeting Scheduling Deadline",
+                    "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings.",
+                    request.getMeetingSchedulingDeadline());
         }
     }
 
@@ -659,10 +616,10 @@ public class CoordinatorService {
     private CoordinatorFacultyResponse mapToFacultyResponse(Faculty f) {
         String deptName = (f.getDepartment() != null) ? f.getDepartment().getDepartmentName() : "N/A";
         int allocatedCount = (int) studentRepository.countByAllocatedFaculty(f);
-        
+
         Long departmentId = f.getDepartment() != null ? f.getDepartment().getDepartmentId() : 1L;
         AllocationRules rules = getAllocationRulesByDepartment(departmentId);
-        
+
         int totalCreatedSlots = projectRepository.findByFacultyFacultyId(f.getFacultyId()).size()
                 * rules.getMaxTeamSize();
 
@@ -710,9 +667,9 @@ public class CoordinatorService {
                             .collect(Collectors.toList())
                     : new java.util.ArrayList<>();
 
-            Long departmentId = faculty != null && faculty.getDepartment() != null 
-                ? faculty.getDepartment().getDepartmentId() 
-                : 1L;
+            Long departmentId = faculty != null && faculty.getDepartment() != null
+                    ? faculty.getDepartment().getDepartmentId()
+                    : 1L;
             AllocationRules rules = getAllocationRulesByDepartment(departmentId);
             int teamSlots = rules.getMaxTeamSize();
 
@@ -745,26 +702,27 @@ public class CoordinatorService {
     @Transactional(readOnly = true)
     public StudentTeamDetailsDTO getStudentAndTeamDetails(Long departmentId) {
         System.out.println("[CoordinatorService] 📋 Fetching student and team details for department: " + departmentId);
-        
+
         // Get all teams in department
         List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
         List<CoordinatorTeamDetailDTO> teamDetails = allTeams.stream()
                 .map(team -> {
                     Project project = projectRepository.findByTeam(team);
                     String projectTitle = (project != null) ? project.getTitle() : "N/A";
-                    
+
                     Faculty faculty = team.getFaculty();
                     Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
                     String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
-                    
+
                     List<String> memberNames = (team.getMembers() != null)
                             ? team.getMembers().stream().map(s -> s.getUser().getName()).toList()
                             : List.of();
-                    
-                    Long deptId = faculty != null && faculty.getDepartment() != null 
-                        ? faculty.getDepartment().getDepartmentId() : 1L;
+
+                    Long deptId = faculty != null && faculty.getDepartment() != null
+                            ? faculty.getDepartment().getDepartmentId()
+                            : 1L;
                     AllocationRules rules = getAllocationRulesByDepartment(deptId);
-                    
+
                     return new CoordinatorTeamDetailDTO(
                             team.getTeamId(),
                             team.getTeamName(),
@@ -774,10 +732,9 @@ public class CoordinatorService {
                             team.getStatus(),
                             memberNames,
                             team.getMembers() != null ? team.getMembers().size() : 0,
-                            rules.getMaxTeamSize()
-                    );
+                            rules.getMaxTeamSize());
                 }).collect(Collectors.toList());
-        
+
         // Get all unallocated students in department (not in any team)
         List<CoordinatorStudentResponse> unallocatedStudents = studentRepository
                 .findByDepartment_DepartmentId(departmentId)
@@ -785,10 +742,10 @@ public class CoordinatorService {
                 .filter(student -> student.getTeam() == null)
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
-        
-        System.out.println("[CoordinatorService] ✅ Found " + teamDetails.size() + " teams and " 
+
+        System.out.println("[CoordinatorService] ✅ Found " + teamDetails.size() + " teams and "
                 + unallocatedStudents.size() + " unallocated students");
-        
+
         return new StudentTeamDetailsDTO(teamDetails, unallocatedStudents);
     }
 
@@ -796,32 +753,33 @@ public class CoordinatorService {
     @Transactional(readOnly = true)
     public List<CoordinatorTeamDetailDTO> getAvailableTeamsToJoin(Long departmentId) {
         System.out.println("[CoordinatorService] 📋 Fetching available teams to join for department: " + departmentId);
-        
+
         List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
-        
+
         List<CoordinatorTeamDetailDTO> availableTeams = allTeams.stream()
                 .filter(team -> team.getMembers() != null && !team.getMembers().isEmpty())
                 .map(team -> {
-                    Long deptId = team.getFaculty() != null && team.getFaculty().getDepartment() != null 
-                        ? team.getFaculty().getDepartment().getDepartmentId() : 1L;
+                    Long deptId = team.getFaculty() != null && team.getFaculty().getDepartment() != null
+                            ? team.getFaculty().getDepartment().getDepartmentId()
+                            : 1L;
                     AllocationRules rules = getAllocationRulesByDepartment(deptId);
-                    
+
                     int memberCount = team.getMembers().size();
                     int maxSlots = rules.getMaxTeamSize();
-                    
+
                     // Only map teams that are not full
                     if (memberCount < maxSlots) {
                         Project project = projectRepository.findByTeam(team);
                         String projectTitle = (project != null) ? project.getTitle() : "N/A";
-                        
+
                         Faculty faculty = team.getFaculty();
                         Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
                         String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
-                        
+
                         List<String> memberNames = team.getMembers().stream()
                                 .map(s -> s.getUser().getName())
                                 .toList();
-                        
+
                         return new CoordinatorTeamDetailDTO(
                                 team.getTeamId(),
                                 team.getTeamName(),
@@ -831,14 +789,13 @@ public class CoordinatorService {
                                 team.getStatus(),
                                 memberNames,
                                 memberCount,
-                                maxSlots
-                        );
+                                maxSlots);
                     }
                     return null;
                 })
                 .filter(dto -> dto != null)
                 .collect(Collectors.toList());
-        
+
         System.out.println("[CoordinatorService] ✅ Found " + availableTeams.size() + " available teams to join");
         return availableTeams;
     }
@@ -847,22 +804,21 @@ public class CoordinatorService {
     @Transactional(readOnly = true)
     public List<FacultyProjectDTO> getFacultyProjects(Long facultyId) {
         System.out.println("[CoordinatorService] 📋 Fetching projects for faculty: " + facultyId);
-        
+
         List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId)
                 .stream()
-                .filter(p -> p.getIsActive() && 
-                       ("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus())))
+                .filter(p -> p.getIsActive() &&
+                        ("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus())))
                 .collect(Collectors.toList());
-        
+
         List<FacultyProjectDTO> projectDTOs = projects.stream()
                 .map(p -> new FacultyProjectDTO(
                         p.getProjectId(),
                         p.getTitle(),
                         p.getStatus(),
-                        p.getStudentSlots()
-                ))
+                        p.getStudentSlots()))
                 .collect(Collectors.toList());
-        
+
         System.out.println("[CoordinatorService] ✅ Found " + projectDTOs.size() + " projects");
         return projectDTOs;
     }
@@ -870,85 +826,91 @@ public class CoordinatorService {
     // ✅ NEW: ALLOCATE TEAM TO FACULTY AND PROJECT
     @Transactional
     public void allocateTeamToFacultyProject(AllocateTeamRequest request) {
-        System.out.println("[CoordinatorService] 📌 Allocating team: " + request.getTeamId() 
+        System.out.println("[CoordinatorService] 📌 Allocating team: " + request.getTeamId()
                 + " to faculty: " + request.getFacultyId() + " and project: " + request.getProjectId());
-        
+
         Team team = teamRepository.findById(request.getTeamId())
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-        
+
         Faculty faculty = facultyRepository.findById(request.getFacultyId())
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
-        
+
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
-        
+
         // Set team faculty and status
         team.setFaculty(faculty);
         team.setStatus("ASSIGNED");
         teamRepository.save(team);
-        
+
         // ✅ If project is IN_PROGRESS, cancel all pending requests for team members
         if ("IN_PROGRESS".equals(project.getStatus())) {
-            System.out.println("[CoordinatorService] ⚠️  Project is IN_PROGRESS. Cancelling all pending team join requests for team members...");
-            
+            System.out.println(
+                    "[CoordinatorService] ⚠️  Project is IN_PROGRESS. Cancelling all pending team join requests for team members...");
+
             String rejectionReason = "Allocated to other team by FC";
             int rejectedCount = 0;
-            
+
             // Get all team members
             if (team.getMembers() != null && !team.getMembers().isEmpty()) {
                 for (Student teamMember : team.getMembers()) {
-                    System.out.println("[CoordinatorService] 🧑 Processing team member: " + teamMember.getUser().getName());
-                    
+                    System.out.println(
+                            "[CoordinatorService] 🧑 Processing team member: " + teamMember.getUser().getName());
+
                     // Find all PENDING requests for this student
                     List<TeamJoinRequest> pendingRequests = teamJoinRequestRepository
                             .findByStudentStudentIdAndStatus(teamMember.getStudentId(), "PENDING");
-                    
-                    System.out.println("[CoordinatorService] 📋 Found " + pendingRequests.size() 
+
+                    System.out.println("[CoordinatorService] 📋 Found " + pendingRequests.size()
                             + " pending requests for student: " + teamMember.getUser().getName());
-                    
+
                     for (TeamJoinRequest joinRequest : pendingRequests) {
                         joinRequest.setStatus("REJECTED");
                         joinRequest.setRejectionReason(rejectionReason);
                         teamJoinRequestRepository.save(joinRequest);
-                        
-                        System.out.println("[CoordinatorService] ❌ Rejected request ID: " + joinRequest.getRequestId() 
+
+                        System.out.println("[CoordinatorService] ❌ Rejected request ID: " + joinRequest.getRequestId()
                                 + " for team: " + joinRequest.getTeam().getTeamName()
                                 + " | Reason: " + rejectionReason);
-                        
+
                         rejectedCount++;
                     }
                 }
             }
-            
+
             System.out.println("[CoordinatorService] ✅ Total rejected: " + rejectedCount + " pending requests");
-            
+
             // Keep project status as IN_PROGRESS
             project.setStatus("IN_PROGRESS");
             projectRepository.save(project);
-            
+
         } else if ("OPEN".equals(project.getStatus())) {
             System.out.println("[CoordinatorService] 🟢 Project is OPEN. Setting status to ASSIGNED");
             project.setStatus("ASSIGNED");
             projectRepository.save(project);
-            
+
         } else {
-            System.out.println("[CoordinatorService] ℹ️  Project status is: " + project.getStatus() + ". Keeping it unchanged");
+            System.out.println(
+                    "[CoordinatorService] ℹ️  Project status is: " + project.getStatus() + ". Keeping it unchanged");
             projectRepository.save(project);
         }
 
         // Mark all team members as allocated
         if (team.getMembers() != null && !team.getMembers().isEmpty()) {
-            System.out.println("[CoordinatorService] 📊 Marking " + team.getMembers().size() + " team members as allocated");
-            
+            System.out.println(
+                    "[CoordinatorService] 📊 Marking " + team.getMembers().size() + " team members as allocated");
+
             for (Student student : team.getMembers()) {
                 student.setAllocated(true);
                 student.setAllocatedFaculty(faculty);
+                student.setAllocatedProject(project);
                 studentRepository.save(student);
-                
-                System.out.println("[CoordinatorService] ✅ Student " + student.getUser().getName() + " marked as allocated");
+
+                System.out.println(
+                        "[CoordinatorService] ✅ Student " + student.getUser().getName() + " marked as allocated");
             }
         }
-        
+
         System.out.println("[CoordinatorService] ✅ Team allocated successfully to project: " + project.getTitle());
     }
 
@@ -956,14 +918,14 @@ public class CoordinatorService {
     @Transactional
     public CoordinatorTeamDetailDTO createTeamForStudent(CreateTeamRequest request, Long departmentId) {
         System.out.println("[CoordinatorService] 🆕 Creating new team: " + request.getTeamName());
-        
+
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
-        
+
         if (student.getTeam() != null) {
             throw new RuntimeException("Student is already in a team");
         }
-        
+
         // Create new team
         Team newTeam = new Team();
         newTeam.setTeamName(request.getTeamName());
@@ -975,20 +937,20 @@ public class CoordinatorService {
                 .orElseThrow(() -> new RuntimeException("Department not found"));
         newTeam.setDepartment(dept);
         Team savedTeam = teamRepository.save(newTeam);
-        
+
         // Add student to team
         student.setTeam(savedTeam);
         studentRepository.save(student);
-        
+
         System.out.println("[CoordinatorService] ✅ Team created: " + savedTeam.getTeamId());
-        
+
         // Return team details
         Project project = projectRepository.findByTeam(savedTeam);
         String projectTitle = (project != null) ? project.getTitle() : "N/A";
-        
+
         Long deptId = departmentId;
         AllocationRules rules = getAllocationRulesByDepartment(deptId);
-        
+
         return new CoordinatorTeamDetailDTO(
                 savedTeam.getTeamId(),
                 savedTeam.getTeamName(),
@@ -998,59 +960,58 @@ public class CoordinatorService {
                 savedTeam.getStatus(),
                 java.util.List.of(student.getUser().getName()),
                 1,
-                rules.getMaxTeamSize()
-        );
+                rules.getMaxTeamSize());
     }
 
     // ✅ NEW: JOIN EXISTING TEAM
     @Transactional
     public CoordinatorTeamDetailDTO joinTeam(JoinTeamRequest request, Long departmentId) {
-        System.out.println("[CoordinatorService] 👥 Student " + request.getStudentId() 
+        System.out.println("[CoordinatorService] 👥 Student " + request.getStudentId()
                 + " joining team " + request.getTeamId());
-        
+
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
-        
+
         if (student.getTeam() != null) {
             throw new RuntimeException("Student is already in a team");
         }
-        
+
         Team team = teamRepository.findById(request.getTeamId())
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-        
+
         // Check if team is full
         Long deptId = departmentId;
         AllocationRules rules = getAllocationRulesByDepartment(deptId);
-        
+
         int currentMembers = team.getMembers() != null ? team.getMembers().size() : 0;
         if (currentMembers >= rules.getMaxTeamSize()) {
             throw new RuntimeException("Team is full. Cannot add more members. (Max: " + rules.getMaxTeamSize() + ")");
         }
-        
+
         // Add student to team
         if (team.getMembers() == null) {
             team.setMembers(new java.util.ArrayList<>());
         }
         team.getMembers().add(student);
         Team updatedTeam = teamRepository.save(team);
-        
+
         student.setTeam(updatedTeam);
         studentRepository.save(student);
-        
+
         System.out.println("[CoordinatorService] ✅ Student joined team: " + team.getTeamName());
-        
+
         // Return updated team details
         Project project = projectRepository.findByTeam(updatedTeam);
         String projectTitle = (project != null) ? project.getTitle() : "N/A";
-        
+
         Faculty faculty = updatedTeam.getFaculty();
         Long facultyId = (faculty != null) ? faculty.getFacultyId() : null;
         String facultyName = (faculty != null) ? faculty.getUser().getName() : "Not Assigned";
-        
+
         List<String> memberNames = updatedTeam.getMembers().stream()
                 .map(s -> s.getUser().getName())
                 .toList();
-        
+
         return new CoordinatorTeamDetailDTO(
                 updatedTeam.getTeamId(),
                 updatedTeam.getTeamName(),
@@ -1060,7 +1021,6 @@ public class CoordinatorService {
                 updatedTeam.getStatus(),
                 memberNames,
                 updatedTeam.getMembers().size(),
-                rules.getMaxTeamSize()
-        );
+                rules.getMaxTeamSize());
     }
 }

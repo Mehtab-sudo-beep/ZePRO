@@ -6,179 +6,340 @@ import {
   Text,
   StyleSheet,
   Alert,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  Animated,
+  Modal,
+  Dimensions,
 } from 'react-native';
 
 import { createDomain, getDomains } from '../api/facultyApi';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+type NavProp = NativeStackNavigationProp<RootStackParamList, 'CreateDomain'>;
+
+// ── Success Sheet ──────────────────────────────────────────────────────────
+const SuccessSheet = ({ visible, onClose, colors }: any) => {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 50,
+          friction: 8,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      const timer = setTimeout(onClose, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, onClose]);
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <View style={styles.successBackdrop}>
+        <Animated.View
+          style={[
+            styles.successContent,
+            {
+              transform: [{ scale: scaleAnim }],
+              opacity: opacityAnim,
+            },
+          ]}
+        >
+          <View style={styles.successIconBig}>
+            <Text style={styles.successCheckmarkBig}>✓</Text>
+          </View>
+          <Text style={[styles.successTitleBig, { color: colors.text }]}>Domain Created</Text>
+          <Text style={[styles.successMessageBig, { color: colors.subText }]}>Successfully added</Text>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 const CreateDomainScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const navigation = useNavigation<NavProp>();
 
   const [name, setName] = useState('');
   const [domains, setDomains] = useState<any[]>([]);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  /* ================= SCREEN LOAD ================= */
+  const isDark = colors.background === '#111827';
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = isDark ? '#374151' : '#E5E7EB';
 
   useEffect(() => {
-    console.log('===== CreateDomainScreen Loaded =====');
-    console.log('User token:', user?.token);
-
     if (user?.token) {
       loadDomains();
     }
   }, [user]);
 
-  /* ================= LOAD DOMAINS ================= */
-
   const loadDomains = async () => {
     try {
-      console.log('Calling getDomains API...');
-
       const data = await getDomains(user!.token);
-
-      console.log('Domains received:', data);
-
       setDomains(data || []);
     } catch (err) {
-      console.log('Error loading domains:', err);
+      console.log('[CreateDomainScreen] Error:', err);
     }
   };
-
-  /* ================= CREATE DOMAIN ================= */
 
   const handleCreate = async () => {
     const domainName = name.trim();
 
-    console.log('===== Create Domain Clicked =====');
-    console.log('Entered domain name:', domainName);
-
     if (!domainName) {
-      console.log('Domain name empty');
-      Alert.alert('Validation Error', 'Domain name cannot be empty');
+      Alert.alert('Required', 'Domain name cannot be empty');
       return;
     }
-
-    console.log('Checking duplicate domains...');
 
     const exists = domains.find(
       d => d.name?.toLowerCase() === domainName.toLowerCase(),
     );
 
-    console.log('Duplicate check result:', exists);
-
     if (exists) {
-      console.log('Domain already exists');
-      Alert.alert('Domain Exists', 'This domain already exists');
+      Alert.alert('Exists', 'This domain already exists');
       return;
     }
 
     try {
-      console.log('Calling createDomain API...');
-
+      setLoading(true);
       await createDomain(domainName, user!.token);
-
-      console.log('Domain created successfully');
-
       setSuccess(true);
       setName('');
-
-      loadDomains();
+      setTimeout(() => {
+        setSuccess(false);
+        navigation.goBack();
+      }, 2000);
     } catch (err) {
-      console.log('Error creating domain:', err);
+      console.log('[CreateDomainScreen] Error:', err);
       Alert.alert('Error', 'Failed to create domain');
+      setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Create New Domain
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle="dark-content" />
 
-        <TextInput
+      <View style={styles.container}>
+        {/* Header - Matching FacultyHomeScreen */}
+        <View
           style={[
-            styles.input,
-            { borderColor: colors.border, color: colors.text },
+            styles.header,
+            { backgroundColor: colors.card, borderBottomColor: divider },
           ]}
-          placeholder="Enter domain name"
-          placeholderTextColor={colors.subText}
-          value={name}
-          onChangeText={text => {
-            console.log('User typing:', text);
-            setName(text);
-            setSuccess(false);
-          }}
-        />
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            {
-              backgroundColor: name.trim() ? colors.primary : '#cccccc',
-            },
-          ]}
-          onPress={handleCreate}
-          disabled={!name.trim()}
         >
-          <Text style={styles.buttonText}>Create Domain</Text>
-        </TouchableOpacity>
+          <View>
+            <Text style={[styles.headerGreeting, { color: colors.subText }]}>
+              Create
+            </Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              New Domain
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.closeBtn, { backgroundColor: accentSoft }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[styles.closeBtnText, { color: colors.primary }]}>✕</Text>
+          </TouchableOpacity>
+        </View>
 
-        {success && (
-          <Text style={styles.successText}>✓ Domain created successfully</Text>
-        )}
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={false}
+        >
+          {/* Form Card */}
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Domain Name</Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  borderColor: colors.border,
+                  color: colors.text,
+                  backgroundColor: colors.background,
+                },
+              ]}
+              placeholder="e.g., Artificial Intelligence"
+              placeholderTextColor={colors.subText}
+              value={name}
+              onChangeText={setName}
+              editable={!loading}
+              maxLength={50}
+            />
+
+            <Text style={[styles.charCount, { color: colors.subText }]}>
+              {name.length}/50
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: name.trim() && !loading ? colors.primary : '#ccc',
+                  opacity: name.trim() && !loading ? 1 : 0.6,
+                },
+              ]}
+              onPress={handleCreate}
+              disabled={!name.trim() || loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnText}>
+                {loading ? 'Creating...' : 'Create Domain'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ height: 16 }} />
+        </ScrollView>
       </View>
-    </View>
+
+      <SuccessSheet visible={success} onClose={() => setSuccess(false)} colors={colors} />
+    </SafeAreaView>
   );
 };
 
 export default CreateDomainScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
+  container: { flex: 1 },
+
+  header: {
+    height: 72,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    elevation: 2,
   },
+  headerGreeting: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  content: { padding: 16, paddingBottom: 8 },
 
   card: {
-    padding: 24,
-    borderRadius: 12,
-    elevation: 3,
+    borderRadius: 14,
+    marginBottom: 12,
+    overflow: 'hidden',
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
 
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
   },
 
   input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 15,
-    marginBottom: 20,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 6,
   },
 
-  button: {
-    padding: 14,
-    borderRadius: 8,
+  charCount: {
+    fontSize: 10,
+    textAlign: 'right',
+    marginBottom: 12,
+  },
+
+  primaryBtn: {
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
+    marginTop: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
-
-  buttonText: {
+  btnText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 14,
   },
 
-  successText: {
-    marginTop: 16,
-    color: 'green',
-    fontWeight: '600',
+  successBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successContent: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  successIconBig: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#10b981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  successCheckmarkBig: {
+    fontSize: 48,
+    color: '#fff',
+    fontWeight: '800',
+  },
+  successTitleBig: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  successMessageBig: {
+    fontSize: 14,
     textAlign: 'center',
   },
 });

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://172.31.57.133:8080/api/deadlines';
+const API = 'http://10.226.126.133:8080/api/deadlines';
 
 // ✅ GET DEADLINES (Works for all users)
 // - Faculty Coordinator gets all deadlines for their department

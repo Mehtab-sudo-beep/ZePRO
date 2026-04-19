@@ -305,6 +305,7 @@ public class MeetingService {
             for (Student student : request.getTeam().getMembers()) {
                 student.setAllocated(true);
                 student.setAllocatedFaculty(request.getFaculty());
+                student.setAllocatedProject(project);
                 studentRepository.save(student);
             }
         }
@@ -529,6 +530,7 @@ public class MeetingService {
             for (Student student : members) {
                 student.setAllocated(true);
                 student.setAllocatedFaculty(faculty);
+                student.setAllocatedProject(project);
                 studentRepository.save(student);
             }
             // 4. Update Faculty slot counter

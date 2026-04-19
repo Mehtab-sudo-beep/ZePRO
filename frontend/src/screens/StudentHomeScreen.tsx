@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { getProjectRequestsStatus, getAssignedProject, getTeamInfo } from '../api/studentApi';
+import { getProjectRequestsStatus, getAssignedProject, getTeamInfo, getDepartmentDeadlines, leaveTeam, assignTeamLeader } from '../api/studentApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -188,12 +188,26 @@ const StudentHomeScreen: React.FC = () => {
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [teamLoaded, setTeamLoaded] = useState(false);
+  const [deadlines, setDeadlines] = useState<any>(null);
+  const [isTeamFormationLocked, setIsTeamFormationLocked] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (teamLoaded) return; // ✅ prevents repeated API calls
-
       let isActive = true;
+
+      const fetchDeadlines = async (id: number) => {
+        try {
+          const res = await getDepartmentDeadlines(id);
+          if (res.data && res.data.teamFormationDeadline) {
+            setDeadlines(res.data);
+            const deadlineDate = new Date(res.data.teamFormationDeadline);
+            const now = new Date();
+            setIsTeamFormationLocked(now > deadlineDate);
+          }
+        } catch (e) {
+          console.log('[StudentHomeScreen] Could not parse deadlines');
+        }
+      };
 
       const loadTeam = async () => {
         try {
@@ -201,6 +215,8 @@ const StudentHomeScreen: React.FC = () => {
 
           const studentId = await AsyncStorage.getItem('studentId');
           if (!studentId) return;
+
+          await fetchDeadlines(Number(studentId));
 
           const res = await getTeamInfo(Number(studentId));
           console.log("TEAM API:", res.data);
@@ -238,7 +254,7 @@ const StudentHomeScreen: React.FC = () => {
       return () => {
         isActive = false;
       };
-    }, [teamLoaded]) // ❗ removed setStudentUser
+    }, []) // Re-run on focus safely to keep deadlines fresh
   );
 
 
@@ -289,61 +305,116 @@ const StudentHomeScreen: React.FC = () => {
   const refreshTeam = () => {
     setTeamLoaded(false);
   };
-  // Handlers
-  // ✅ FIXED: handleViewAllocatedProject
-const handleViewAllocatedProject = async () => {
-  setLoadingAllocated(true);
-  setAllocatedMessage(null);
-  try {
-    if (!studentUser?.studentId) {
-      setAllocatedMessage('Student ID not found');
-      return;
-    }
 
-    console.log('[StudentHomeScreen] 📡 Fetching allocated project for student:', studentUser.studentId);
-    
-    const res = await getAssignedProject(Number(studentUser.studentId));
-    
-    console.log('[StudentHomeScreen] Response:', res);
-    console.log('[StudentHomeScreen] Response data:', res.data);
+  const handleLeaveTeam = () => {
+    Alert.alert(
+      "Leave Team?",
+      "Are you sure you want to leave this team? If you are the only member, the team will be deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Leave",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!studentUser?.studentId) return;
+              await leaveTeam(Number(studentUser.studentId));
+              Alert.alert("Success", "You have left the team.");
 
-    // ✅ FIXED: Better condition checking
-    if (res.data) {
-      const { projectTitle, status, projectId } = res.data;
-      
-      console.log('[StudentHomeScreen] Project Title:', projectTitle);
-      console.log('[StudentHomeScreen] Status:', status);
-      console.log('[StudentHomeScreen] Project ID:', projectId);
-
-      // Check if project is actually assigned (don't compare to specific string)
-      if (
-        projectTitle && 
-        projectTitle !== 'Project not assigned yet' && 
-        projectTitle !== null &&
-        projectTitle.trim() !== ''
-      ) {
-        console.log('[StudentHomeScreen] ✅ Navigating to AllocatedProject');
-        navigation.navigate('AllocatedProject' as any);
-      } else {
-        console.log('[StudentHomeScreen] ❌ Project not allocated');
-        setAllocatedMessage('Your project has not been allocated yet. Please wait for Faculty Coordinator assignment.');
-      }
-    } else {
-      setAllocatedMessage('Unable to fetch project information. Please try again.');
-    }
-  } catch (err: any) {
-    console.log('[StudentHomeScreen] ❌ Error fetching allocated project:', err);
-    console.log('[StudentHomeScreen] Error response:', err?.response?.data);
-    
-    setAllocatedMessage(
-      err?.response?.data?.message || 
-      err?.message ||
-      'Your project has not been allocated yet.'
+              const updatedUser = { ...studentUser, isInTeam: false, isTeamLead: false };
+              setStudentUser(updatedUser);
+              setUser(updatedUser as any);
+              setTeamInfo(null);
+            } catch (err: any) {
+              Alert.alert("Error", err?.response?.data?.error || "Could not leave team.");
+            }
+          }
+        }
+      ]
     );
-  } finally {
-    setLoadingAllocated(false);
-  }
-};
+  };
+
+  const handleAssignLeader = (newLeadId: number, memberName: string) => {
+    Alert.alert(
+      "Transfer Leadership",
+      `Are you sure you want to make ${memberName} the new Team Leader? You will become a regular member.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Transfer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (!studentUser?.studentId) return;
+              await assignTeamLeader(Number(studentUser.studentId), newLeadId);
+              Alert.alert("Success", "Leadership transferred successfully.");
+
+              const res = await getTeamInfo(Number(studentUser.studentId));
+              setTeamInfo(res.data);
+
+              const updatedUser = { ...studentUser, isTeamLead: false };
+              setStudentUser(updatedUser);
+              setUser(updatedUser as any);
+            } catch (err: any) {
+              Alert.alert("Error", err?.response?.data?.error || "Could not assign new leader.");
+            }
+          }
+        }
+      ]
+    );
+  };
+  // ✅ FIXED: handleViewAllocatedProject
+  const handleViewAllocatedProject = async () => {
+    setLoadingAllocated(true);
+    setAllocatedMessage(null);
+    try {
+      if (!studentUser?.studentId) {
+        setAllocatedMessage('Student ID not found');
+        return;
+      }
+
+      console.log('[StudentHomeScreen] 📡 Fetching allocated project for student:', studentUser.studentId);
+
+      const res = await getAssignedProject(Number(studentUser.studentId));
+
+      console.log('[StudentHomeScreen] Response:', res);
+
+      if (res) {
+        const { projectTitle, status, projectId } = res;
+
+        console.log('[StudentHomeScreen] Project Title:', projectTitle);
+        console.log('[StudentHomeScreen] Status:', status);
+        console.log('[StudentHomeScreen] Project ID:', projectId);
+
+        // Check if project is actually assigned (don't compare to specific string)
+        if (
+          projectTitle &&
+          projectTitle !== 'Project not assigned yet' &&
+          projectTitle !== null &&
+          projectTitle.trim() !== ''
+        ) {
+          console.log('[StudentHomeScreen] ✅ Navigating to AllocatedProject');
+          navigation.navigate('AllocatedProject' as any);
+        } else {
+          console.log('[StudentHomeScreen] ❌ Project not allocated');
+          setAllocatedMessage('Your project has not been allocated yet. Please wait for Faculty Coordinator assignment.');
+        }
+      } else {
+        setAllocatedMessage('Unable to fetch project information. Please try again.');
+      }
+    } catch (err: any) {
+      console.log('[StudentHomeScreen] ❌ Error fetching allocated project:', err);
+      console.log('[StudentHomeScreen] Error response:', err?.response?.data);
+
+      setAllocatedMessage(
+        err?.response?.data?.message ||
+        err?.message ||
+        'Your project has not been allocated yet.'
+      );
+    } finally {
+      setLoadingAllocated(false);
+    }
+  };
   const handleViewProjectStatus = async () => {
     setLoadingStatus(true);
     setShowProjectStatusModal(true);
@@ -429,24 +500,30 @@ const handleViewAllocatedProject = async () => {
               <View style={[styles.card, { backgroundColor: colors.card }]}>
                 <ActionRow
                   label="Create Team"
-                  sublabel="Start a new project team"
+                  sublabel={isTeamFormationLocked ? "Deadline has passed" : "Start a new project team"}
                   icon="create"
                   colors={colors}
-                  accentSoft={accentSoft}
+                  accentSoft={isTeamFormationLocked ? 'transparent' : accentSoft}
                   onPress={() => {
-                    refreshTeam(); // ✅ reset cache
+                    if (isTeamFormationLocked) {
+                      Alert.alert("Locked", "The deadline for forming a team has passed.");
+                      return;
+                    }
                     navigation.navigate('CreateTeam');
                   }}
                 />
                 <View style={[styles.rowDivider, { backgroundColor: divider }]} />
                 <ActionRow
                   label="Join Team"
-                  sublabel="Send a request to join a team"
+                  sublabel={isTeamFormationLocked ? "Deadline has passed" : "Send a request to join a team"}
                   icon="join"
                   colors={colors}
-                  accentSoft={accentSoft}
+                  accentSoft={isTeamFormationLocked ? 'transparent' : accentSoft}
                   onPress={() => {
-                    refreshTeam(); // ✅ reset cache
+                    if (isTeamFormationLocked) {
+                      Alert.alert("Locked", "The deadline for joining a team has passed.");
+                      return;
+                    }
                     navigation.navigate('JoinTeam');
                   }}
                 />
@@ -477,9 +554,19 @@ const handleViewAllocatedProject = async () => {
                         <Icon name="team" size={22} />
                       </View>
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={[styles.teamName, { color: colors.text }]}>
-                          {teamInfo.teamName}
-                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={[styles.teamName, { color: colors.text }]}>
+                            {teamInfo.teamName}
+                          </Text>
+                          {!isTeamFormationLocked && (
+                            <TouchableOpacity onPress={handleLeaveTeam} style={{ padding: 4 }}>
+                              <Image
+                                source={isDark ? require('../assets/leave-white.png') : require('../assets/leave.png')}
+                                style={{ width: 22, height: 22, resizeMode: 'contain', opacity: 0.8 }}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
                           <Icon name="lead" size={12} />
                           <Text style={[styles.teamLead, { color: colors.subText, marginLeft: 4 }]}>
@@ -492,16 +579,26 @@ const handleViewAllocatedProject = async () => {
                     <View style={[styles.membersContainer, { borderTopColor: divider }]}>
                       <Text style={[styles.membersLabel, { color: colors.subText }]}>MEMBERS</Text>
                       <View style={styles.membersList}>
-                        {teamInfo.members?.map((m: string, idx: number) => (
-                          <View
-                            key={idx}
-                            style={[styles.memberChip, { backgroundColor: accentSoft }]}
-                          >
-                            <Text style={[styles.memberChipText, { color: colors.primary }]}>
-                              {m}
-                            </Text>
-                          </View>
-                        ))}
+                        {teamInfo.members?.map((m: any, idx: number) => {
+                          const mName = m.name || m;
+                          const mId = m.id;
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              activeOpacity={isTeamLead && !isTeamFormationLocked && mId && mId !== Number(studentUser?.studentId) ? 0.6 : 1}
+                              style={[styles.memberChip, { backgroundColor: accentSoft }]}
+                              onPress={() => {
+                                if (isTeamLead && !isTeamFormationLocked && mId && mId !== Number(studentUser?.studentId)) {
+                                  handleAssignLeader(mId, mName);
+                                }
+                              }}
+                            >
+                              <Text style={[styles.memberChipText, { color: colors.primary }]}>
+                                {mName}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     </View>
                   </>

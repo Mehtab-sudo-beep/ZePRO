@@ -90,7 +90,7 @@ public class AuthService {
                 user = new Users();
                 user.setName(name != null ? name : "Unknown Google User");
                 user.setEmail(email);
-                user.setRole(request.getRole() != null ? UserRole.valueOf(request.getRole()) : UserRole.STUDENT);
+                user.setRole(UserRole.STUDENT); // Force STUDENT role for new Google signups
                 user.setOauthProvider("google");
                 user.setOauthId(googleId);
                 user.setProfilePictureUrl(pictureUrl);

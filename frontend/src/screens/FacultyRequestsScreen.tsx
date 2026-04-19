@@ -7,8 +7,13 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Linking,
+  Platform,
 } from 'react-native';
+
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { BASE_URL } from '../api/api';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -138,9 +143,49 @@ const FacultyRequestsScreen = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const openLink = (url: string) => {
-    if (url && url !== 'N/A') {
-      Linking.openURL(url).catch(() => showAlert('Error', 'Could not open link'));
+  const openLink = async (url: string) => {
+    if (!url || url === 'N/A') return;
+
+    try {
+      const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+      const filename = encodeURIComponent(url.split('/').pop() || 'document.pdf');
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+      
+      console.log('[FacultyRequestsScreen] Downloading:', fullUrl);
+
+      const downloadedFile = await FileSystem.downloadAsync(fullUrl, fileUri, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+
+      if (downloadedFile.status === 200) {
+        if (Platform.OS === 'android') {
+          try {
+            const contentUri = await FileSystem.getContentUriAsync(downloadedFile.uri);
+            await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+              data: contentUri,
+              flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+              type: 'application/pdf',
+            });
+          } catch (err) {
+            // Fallback to sharing if native viewing fails
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(downloadedFile.uri, { mimeType: 'application/pdf' });
+            }
+          }
+        } else {
+          // iOS native QuickLook inside Share Sheet
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
+          } else {
+            showAlert('Error', 'No application available to open this document.');
+          }
+        }
+      } else {
+        showAlert('Error', `Server returned status: ${downloadedFile.status}`);
+      }
+    } catch (err: any) {
+      console.log('[FacultyRequestsScreen] Download error:', err);
+      showAlert('Error', `Unable to fetch document.`);
     }
   };
 

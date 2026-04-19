@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import com.zepro.repository.ProjectRepository;
 import com.zepro.repository.ProjectRequestRepository;
 import com.zepro.repository.MeetingRepository;
-import org.springframework.http.ResponseEntity; 
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import com.zepro.model.Student;
 import com.zepro.model.Team;
@@ -37,10 +37,10 @@ public class StudentController {
     private final DepartmentRepository departmentRepository;
     private final MeetingRepository meetingRepository;
 
-    public StudentController(StudentService studentService, 
+    public StudentController(StudentService studentService,
             ProjectRepository projectRepository,
             ProjectRequestRepository projectRequestRepository,
-            StudentRepository studentRepository, 
+            StudentRepository studentRepository,
             DepartmentRepository departmentRepository,
             MeetingRepository meetingRepository) {
         this.studentService = studentService;
@@ -62,10 +62,6 @@ public class StudentController {
     }
 
     // LEAVE TEAM
-    @PostMapping("/leave-team/{studentId}")
-    public String leaveTeam(@PathVariable("studentId") Long studentId) {
-        return studentService.leaveTeam(studentId);
-    }
 
     // TRANSFER TEAM LEAD
     @PostMapping("/transfer-lead")
@@ -86,31 +82,49 @@ public class StudentController {
         System.out.println("║   GET ASSIGNED PROJECT ENDPOINT        ║");
         System.out.println("╚════════════════════════════════════════╝");
         System.out.println("[StudentController] 📡 GET /assigned-project/" + studentId);
-        
+
         try {
             Student student = studentRepository.findById(studentId)
                     .orElseThrow(() -> new RuntimeException("Student not found"));
-            
+
             System.out.println("[StudentController] 👤 Student Found: " + student.getUser().getName());
             System.out.println("[StudentController] 📌 Student ID: " + studentId);
-            System.out.println("[StudentController] 📍 Allocated Faculty: " + 
+            System.out.println("[StudentController] 📍 Allocated Faculty: " +
                     (student.getAllocatedFaculty() != null ? student.getAllocatedFaculty().getFacultyId() : "null"));
-            
+
             Team team = student.getTeam();
-            
+
+            // ✅ METHOD 0: Check direct new allocatedProject relation
+            if (student.getAllocatedProject() != null) {
+                System.out.println("[StudentController] ✅ METHOD 0: Found project directly on student model");
+                Project project = student.getAllocatedProject();
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("projectId", project.getProjectId());
+                response.put("projectTitle", project.getTitle());
+                response.put("description", project.getDescription());
+                response.put("status", "ASSIGNED");
+                response.put("projectStatus", project.getStatus());
+                response.put("facultyName", project.getFaculty() != null && project.getFaculty().getUser() != null ? project.getFaculty().getUser().getName() : "");
+                response.put("teamId", team != null ? team.getTeamId() : null);
+                response.put("teamName", team != null ? team.getTeamName() : null);
+
+                return ResponseEntity.ok(response);
+            }
+
             // ✅ METHOD 1: Check if student has directly allocated faculty
             if (student.getAllocatedFaculty() != null && student.getAllocatedFaculty().getFacultyId() != null) {
                 System.out.println("[StudentController] ✅ METHOD 1: Student has allocated faculty");
-                
+
                 List<Project> allocatedProjects = projectRepository.findByFacultyFacultyIdAndStatusAndTeam(
-                        student.getAllocatedFaculty().getFacultyId(), 
-                        "ASSIGNED", 
+                        student.getAllocatedFaculty().getFacultyId(),
+                        "ASSIGNED",
                         team);
-                        
+
                 if (!allocatedProjects.isEmpty()) {
                     Project project = allocatedProjects.get(0);
                     System.out.println("[StudentController] ✅ Found assigned project: " + project.getTitle());
-                    
+
                     Map<String, Object> response = new HashMap<>();
                     response.put("projectId", project.getProjectId());
                     response.put("projectTitle", project.getTitle());
@@ -120,30 +134,30 @@ public class StudentController {
                     response.put("facultyName", project.getFaculty().getUser().getName());
                     response.put("teamId", team != null ? team.getTeamId() : null);
                     response.put("teamName", team != null ? team.getTeamName() : null);
-                    
+
                     return ResponseEntity.ok(response);
                 }
             }
-            
+
             // ✅ METHOD 2: Check via team and ACCEPTED request
             if (team != null) {
                 System.out.println("[StudentController] 📋 METHOD 2: Checking via team");
                 System.out.println("[StudentController] 🔍 Team ID: " + team.getTeamId());
-                
+
                 List<ProjectRequest> teamRequests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
                 System.out.println("[StudentController] 📊 Team has " + teamRequests.size() + " project requests");
-                
+
                 for (ProjectRequest pr : teamRequests) {
-                    System.out.println("[StudentController] 🔎 Request ID: " + pr.getRequestId() 
+                    System.out.println("[StudentController] 🔎 Request ID: " + pr.getRequestId()
                             + " | Status: " + pr.getStatus()
                             + " | Project: " + pr.getProject().getTitle()
                             + " | Project Status: " + pr.getProject().getStatus());
-                    
+
                     // ✅ If request is ACCEPTED and project is ASSIGNED → this is our project
-                    if (pr.getStatus() == RequestStatus.ACCEPTED && 
-                        "ASSIGNED".equals(pr.getProject().getStatus())) {
+                    if (pr.getStatus() == RequestStatus.ACCEPTED &&
+                            "ASSIGNED".equals(pr.getProject().getStatus())) {
                         System.out.println("[StudentController] ✅ Found ACCEPTED & ASSIGNED project!");
-                        
+
                         Project project = pr.getProject();
                         Map<String, Object> response = new HashMap<>();
                         response.put("projectId", project.getProjectId());
@@ -154,21 +168,21 @@ public class StudentController {
                         response.put("facultyName", project.getFaculty().getUser().getName());
                         response.put("teamId", team.getTeamId());
                         response.put("teamName", team.getTeamName());
-                        
+
                         return ResponseEntity.ok(response);
                     }
                 }
             }
-            
+
             // ✅ METHOD 3: Direct team-project link
             if (team != null) {
                 System.out.println("[StudentController] 🔄 METHOD 3: Checking direct team-project link");
-                
+
                 Project project = projectRepository.findByTeamAndStatus(team, "ASSIGNED");
-                
+
                 if (project != null) {
                     System.out.println("[StudentController] ✅ Found project via team link!");
-                    
+
                     Map<String, Object> response = new HashMap<>();
                     response.put("projectId", project.getProjectId());
                     response.put("projectTitle", project.getTitle());
@@ -178,185 +192,192 @@ public class StudentController {
                     response.put("facultyName", project.getFaculty().getUser().getName());
                     response.put("teamId", team.getTeamId());
                     response.put("teamName", team.getTeamName());
-                    
+
                     return ResponseEntity.ok(response);
                 }
             }
-            
+
             // ✅ If no project found
             System.out.println("[StudentController] ❌ No assigned project found");
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("projectTitle", "Project not assigned yet");
             response.put("status", "NOT_ASSIGNED");
             response.put("projectId", null);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ ERROR: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> error = new HashMap<>();
             error.put("projectTitle", "Project not assigned yet");
             error.put("status", "ERROR");
             error.put("error", e.getMessage());
-            
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    // View all project requests sent by the team lead (status: UPCOMING & COMPLETED)
+    // View all project requests sent by the team lead (status: UPCOMING &
+    // COMPLETED)
     @GetMapping("/project-requests/{studentId}")
-public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("studentId") Long studentId) {
-    System.out.println("[StudentController] 📡 GET /project-requests/" + studentId);
-    
-    Student student = studentRepository.findById(studentId)
-            .orElseThrow(() -> new RuntimeException("Student not found"));
+    public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("studentId") Long studentId) {
+        System.out.println("[StudentController] 📡 GET /project-requests/" + studentId);
 
-    Team team = student.getTeam();
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-    if (team == null) {
-        throw new RuntimeException("Student is not in a team");
-    }
+        Team team = student.getTeam();
 
-    List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
-
-    List<UpcomingRequestResponse> upcoming = new ArrayList<>();
-    List<CompletedRequestResponse> completed = new ArrayList<>();
-
-    for (ProjectRequest req : requests) {
-        Project project = req.getProject();
-        String status = req.getStatus() != null ? req.getStatus().name() : "";
-
-        System.out.println("[StudentController] 📋 Processing request: " + req.getRequestId() 
-                + " | Project: " + project.getTitle() 
-                + " | Request Status: " + status);
-
-        // ✅ CHECK 1: If request is REJECTED → goes to completed
-        if (status.equals("REJECTED")) {
-            System.out.println("[StudentController] ❌ Request REJECTED");
-            CompletedRequestResponse completedResp = new CompletedRequestResponse();
-            completedResp.setRequestId(req.getRequestId());
-            completedResp.setProjectTitle(project.getTitle());
-            completedResp.setFacultyName(project.getFaculty().getUser().getName());
-            completedResp.setStatus("REJECTED");
-            completedResp.setRejectionReason(req.getRejectionReason());
-            completed.add(completedResp);
-            continue;
+        if (team == null) {
+            throw new RuntimeException("Student is not in a team");
         }
 
-        // ✅ CHECK 2: If request is CANCELLED → goes to completed
-        if (status.equals("CANCELLED")) {
-            System.out.println("[StudentController] ❌ Request CANCELLED");
-            CompletedRequestResponse completedResp = new CompletedRequestResponse();
-            completedResp.setRequestId(req.getRequestId());
-            completedResp.setProjectTitle(project.getTitle());
-            completedResp.setFacultyName(project.getFaculty().getUser().getName());
-            completedResp.setStatus("CANCELLED");
-            completedResp.setRejectionReason(req.getRejectionReason());
-            completed.add(completedResp);
-            continue;
-        }
+        List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
 
-        // ✅ CHECK 3: If project is CLOSE/DEACTIVATED → goes to completed with rejection reason
-        if ("CLOSE".equals(project.getStatus())) {
-            System.out.println("[StudentController] ❌ Project CLOSED");
-            CompletedRequestResponse completedResp = new CompletedRequestResponse();
-            completedResp.setRequestId(req.getRequestId());
-            completedResp.setProjectTitle(project.getTitle());
-            completedResp.setFacultyName(project.getFaculty().getUser().getName());
-            completedResp.setStatus("PROJECT_CLOSED");
-            completedResp.setRejectionReason("Project closed by faculty");
-            completed.add(completedResp);
-            continue;
-        }
+        List<UpcomingRequestResponse> upcoming = new ArrayList<>();
+        List<CompletedRequestResponse> completed = new ArrayList<>();
 
-        // ✅ CHECK 4: If request is ACCEPTED → goes to completed
-        if (status.equals("ACCEPTED")) {
-            System.out.println("[StudentController] ✅ Request ACCEPTED");
-            CompletedRequestResponse completedResp = new CompletedRequestResponse();
-            completedResp.setRequestId(req.getRequestId());
-            completedResp.setProjectTitle(project.getTitle());
-            completedResp.setFacultyName(project.getFaculty().getUser().getName());
-            completedResp.setStatus("ACCEPTED");
-            completed.add(completedResp);
-            continue;
-        }
+        for (ProjectRequest req : requests) {
+            Project project = req.getProject();
+            String status = req.getStatus() != null ? req.getStatus().name() : "";
 
-        // ✅ CHECK 5: Check if meeting exists for this request
-        java.util.Optional<Meeting> meetingOpt = meetingRepository.findByRequestRequestId(req.getRequestId());
+            System.out.println("[StudentController] 📋 Processing request: " + req.getRequestId()
+                    + " | Project: " + project.getTitle()
+                    + " | Request Status: " + status);
 
-        if (meetingOpt.isPresent()) {
-            Meeting meeting = meetingOpt.get();
-            System.out.println("[StudentController] 📞 Meeting found: " + meeting.getMeetingId() 
-                    + " | Meeting Status: " + meeting.getStatus());
-
-            // ✅ If meeting is CANCELLED → goes to completed
-            if (meeting.getStatus() == MeetingStatus.CANCELLED) {
-                System.out.println("[StudentController] ❌ Meeting CANCELLED");
+            // ✅ CHECK 1: If request is REJECTED → goes to completed
+            if (status.equals("REJECTED")) {
+                System.out.println("[StudentController] ❌ Request REJECTED");
                 CompletedRequestResponse completedResp = new CompletedRequestResponse();
                 completedResp.setRequestId(req.getRequestId());
                 completedResp.setProjectTitle(project.getTitle());
                 completedResp.setFacultyName(project.getFaculty().getUser().getName());
-                completedResp.setStatus("MEETING_CANCELLED");
-                completedResp.setRejectionReason("Meeting cancelled by faculty");
+                completedResp.setStatus("REJECTED");
+                completedResp.setRejectionReason(req.getRejectionReason());
                 completed.add(completedResp);
                 continue;
             }
 
-            // ✅ If meeting is DONE but request is SCHEDULED → goes to completed (awaiting decision)
-            if (meeting.getStatus() == MeetingStatus.DONE && status.equals("SCHEDULED")) {
-                System.out.println("[StudentController] ⏳ Meeting DONE, awaiting decision");
+            // ✅ CHECK 2: If request is CANCELLED → goes to completed
+            if (status.equals("CANCELLED")) {
+                System.out.println("[StudentController] ❌ Request CANCELLED");
                 CompletedRequestResponse completedResp = new CompletedRequestResponse();
                 completedResp.setRequestId(req.getRequestId());
                 completedResp.setProjectTitle(project.getTitle());
                 completedResp.setFacultyName(project.getFaculty().getUser().getName());
-                completedResp.setStatus("MEETING_COMPLETED");
+                completedResp.setStatus("CANCELLED");
+                completedResp.setRejectionReason(req.getRejectionReason());
                 completed.add(completedResp);
                 continue;
             }
 
-            // ✅ If meeting is SCHEDULED → goes to upcoming
-            if (meeting.getStatus() == MeetingStatus.SCHEDULED) {
-                System.out.println("[StudentController] 📅 Meeting SCHEDULED → Upcoming");
+            // ✅ CHECK 3: If project is CLOSE/DEACTIVATED → goes to completed with rejection
+            // reason
+            if ("CLOSE".equals(project.getStatus())) {
+                System.out.println("[StudentController] ❌ Project CLOSED");
+                CompletedRequestResponse completedResp = new CompletedRequestResponse();
+                completedResp.setRequestId(req.getRequestId());
+                completedResp.setProjectTitle(project.getTitle());
+                completedResp.setFacultyName(project.getFaculty().getUser().getName());
+                completedResp.setStatus("PROJECT_CLOSED");
+                completedResp.setRejectionReason("Project closed by faculty");
+                completed.add(completedResp);
+                continue;
+            }
+
+            // ✅ CHECK 4: If request is ACCEPTED → goes to completed
+            if (status.equals("ACCEPTED")) {
+                System.out.println("[StudentController] ✅ Request ACCEPTED");
+                CompletedRequestResponse completedResp = new CompletedRequestResponse();
+                completedResp.setRequestId(req.getRequestId());
+                completedResp.setProjectTitle(project.getTitle());
+                completedResp.setFacultyName(project.getFaculty().getUser().getName());
+                completedResp.setStatus("ACCEPTED");
+                completed.add(completedResp);
+                continue;
+            }
+
+            // ✅ CHECK 5: Check if meeting exists for this request
+            java.util.Optional<Meeting> meetingOpt = meetingRepository.findByRequestRequestId(req.getRequestId());
+
+            if (meetingOpt.isPresent()) {
+                Meeting meeting = meetingOpt.get();
+                System.out.println("[StudentController] 📞 Meeting found: " + meeting.getMeetingId()
+                        + " | Meeting Status: " + meeting.getStatus());
+
+                // ✅ If meeting is CANCELLED → goes to completed
+                if (meeting.getStatus() == MeetingStatus.CANCELLED) {
+                    System.out.println("[StudentController] ❌ Meeting CANCELLED");
+                    CompletedRequestResponse completedResp = new CompletedRequestResponse();
+                    completedResp.setRequestId(req.getRequestId());
+                    completedResp.setProjectTitle(project.getTitle());
+                    completedResp.setFacultyName(project.getFaculty().getUser().getName());
+                    completedResp.setStatus("MEETING_CANCELLED");
+                    completedResp.setRejectionReason("Meeting cancelled by faculty");
+                    completed.add(completedResp);
+                    continue;
+                }
+
+                // ✅ If meeting is DONE but request is SCHEDULED → goes to completed (awaiting
+                // decision)
+                if (meeting.getStatus() == MeetingStatus.DONE && status.equals("SCHEDULED")) {
+                    System.out.println("[StudentController] ⏳ Meeting DONE, awaiting decision");
+                    CompletedRequestResponse completedResp = new CompletedRequestResponse();
+                    completedResp.setRequestId(req.getRequestId());
+                    completedResp.setProjectTitle(project.getTitle());
+                    completedResp.setFacultyName(project.getFaculty().getUser().getName());
+                    completedResp.setStatus("MEETING_COMPLETED");
+                    completed.add(completedResp);
+                    continue;
+                }
+
+                // ✅ If meeting is SCHEDULED → goes to upcoming
+                if (meeting.getStatus() == MeetingStatus.SCHEDULED) {
+                    System.out.println("[StudentController] 📅 Meeting SCHEDULED → Upcoming");
+                    UpcomingRequestResponse upcomingResp = new UpcomingRequestResponse();
+                    upcomingResp.setRequestId(req.getRequestId());
+                    upcomingResp.setProjectTitle(project.getTitle());
+                    upcomingResp.setFacultyName(project.getFaculty().getUser().getName());
+                    upcomingResp.setMeetingTime(meeting.getMeetingTime());
+                    upcomingResp.setLocation(meeting.getLocation());
+                    upcomingResp.setMeetingLink(meeting.getMeetingLink());
+                    upcoming.add(upcomingResp);
+                    continue;
+                }
+            }
+
+            // ✅ CHECK 6: If no meeting and status is PENDING → upcoming (waiting for
+            // faculty to schedule)
+            if (status.equals("PENDING")) {
+                System.out.println("[StudentController] ⏳ PENDING - waiting for faculty");
                 UpcomingRequestResponse upcomingResp = new UpcomingRequestResponse();
                 upcomingResp.setRequestId(req.getRequestId());
                 upcomingResp.setProjectTitle(project.getTitle());
                 upcomingResp.setFacultyName(project.getFaculty().getUser().getName());
-                upcomingResp.setMeetingTime(meeting.getMeetingTime());
-                upcomingResp.setLocation(meeting.getLocation());
-                upcomingResp.setMeetingLink(meeting.getMeetingLink());
                 upcoming.add(upcomingResp);
-                continue;
             }
         }
 
-        // ✅ CHECK 6: If no meeting and status is PENDING → upcoming (waiting for faculty to schedule)
-        if (status.equals("PENDING")) {
-            System.out.println("[StudentController] ⏳ PENDING - waiting for faculty");
-            UpcomingRequestResponse upcomingResp = new UpcomingRequestResponse();
-            upcomingResp.setRequestId(req.getRequestId());
-            upcomingResp.setProjectTitle(project.getTitle());
-            upcomingResp.setFacultyName(project.getFaculty().getUser().getName());
-            upcoming.add(upcomingResp);
-        }
+        // ✅ Sort upcoming by meetingTime ascending
+        upcoming.sort((a, b) -> {
+            if (a.getMeetingTime() == null || b.getMeetingTime() == null)
+                return 0;
+            return a.getMeetingTime().compareTo(b.getMeetingTime());
+        });
+
+        System.out.println(
+                "[StudentController] 📊 Summary - Upcoming: " + upcoming.size() + " | Completed: " + completed.size());
+
+        ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
+        response.setUpcomingRequests(upcoming);
+        response.setCompletedRequests(completed);
+
+        return response;
     }
 
-    // ✅ Sort upcoming by meetingTime ascending
-    upcoming.sort((a, b) -> {
-        if (a.getMeetingTime() == null || b.getMeetingTime() == null) return 0;
-        return a.getMeetingTime().compareTo(b.getMeetingTime());
-    });
-
-    System.out.println("[StudentController] 📊 Summary - Upcoming: " + upcoming.size() + " | Completed: " + completed.size());
-
-    ProjectRequestStatusResponse response = new ProjectRequestStatusResponse();
-    response.setUpcomingRequests(upcoming);
-    response.setCompletedRequests(completed);
-
-    return response;
-}
     // Get team info for a student
     @GetMapping("/team-info/{studentId}")
     public TeamInfoResponse getTeamInfo(@PathVariable("studentId") Long studentId) {
@@ -425,16 +446,17 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
     }
 
     // ✅ COMPLETE STUDENT PROFILE (Mandatory after login)
-    @PostMapping("/complete-profile/{studentId}")
+    @PostMapping(value = "/complete-profile/{studentId}", consumes = {
+            org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<?> completeProfile(
             @PathVariable Long studentId,
-            @RequestBody CompleteStudentProfileRequest request) {
-        
+            @ModelAttribute CompleteStudentProfileRequest request) {
+
         System.out.println("\n╔════════════════════════════════════════╗");
         System.out.println("║   COMPLETE PROFILE API ENDPOINT        ║");
         System.out.println("╚════════════════════════════════════════╝");
         System.out.println("[StudentController] POST /student/complete-profile/" + studentId);
-        
+
         try {
             System.out.println("[StudentController] 📥 Request body:");
             System.out.println("  - Roll Number: " + request.getRollNumber());
@@ -443,11 +465,13 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
             System.out.println("  - Phone: " + request.getPhone());
             System.out.println("  - Institute ID: " + request.getInstituteId());
             System.out.println("  - Department ID: " + request.getDepartmentId());
-            System.out.println("  - Resume Link: " + request.getResumeLink());
-            System.out.println("  - Marksheet Link: " + request.getMarksheetLink());
-            
+            System.out.println("  - Resume File (Present?): "
+                    + (request.getResumeFile() != null && !request.getResumeFile().isEmpty()));
+            System.out.println("  - Marksheet File (Present?): "
+                    + (request.getMarksheetFile() != null && !request.getMarksheetFile().isEmpty()));
+
             StudentProfileResponse response = studentService.completeStudentProfile(studentId, request);
-            
+
             System.out.println("\n[StudentController] ✅ RESPONSE:");
             System.out.println("  - Student ID: " + response.getStudentId());
             System.out.println("  - Name: " + response.getName());
@@ -457,16 +481,16 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
             System.out.println("  - Year: " + response.getYear());
             System.out.println("  - Is Profile Complete: " + response.isProfileComplete());
             System.out.println();
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ ERROR: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             error.put("timestamp", new java.util.Date());
-            
+
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
@@ -474,15 +498,15 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
     // ✅ GET PROFILE COMPLETION STATUS
     @GetMapping("/profile-status/{studentId}")
     public ResponseEntity<?> getProfileStatus(@PathVariable Long studentId) {
-        
+
         System.out.println("\n╔════════════════════════════════════════╗");
         System.out.println("║      GET PROFILE STATUS ENDPOINT       ║");
         System.out.println("╚════════════════════════════════════════╝");
         System.out.println("[StudentController] 📡 GET /student/profile-status/" + studentId);
-        
+
         try {
             StudentProfileResponse response = studentService.getProfileStatus(studentId);
-            
+
             System.out.println("[StudentController] ✅ Profile Status Response:");
             System.out.println("  - Student ID: " + response.getStudentId());
             System.out.println("  - Name: " + response.getName());
@@ -496,16 +520,16 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
             System.out.println("  - Marksheet Link: " + response.getMarksheetLink());
             System.out.println("  - Is Profile Complete: " + response.isProfileComplete());
             System.out.println();
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
-            
+
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
             error.put("timestamp", new java.util.Date());
-            
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
@@ -513,20 +537,20 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
     // ✅ GET ALL INSTITUTES
     @GetMapping("/institutes")
     public ResponseEntity<?> getAllInstitutes() {
-        
+
         System.out.println("\n========== GET ALL INSTITUTES ==========");
         System.out.println("[StudentController] 📡 GET /student/institutes");
-        
+
         try {
             List<InstituteDTO> response = studentService.getAllInstitutes();
             System.out.println("[StudentController] ✅ Fetched " + response.size() + " institutes");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ Error: " + e.getMessage());
-            
+
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
-            
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
@@ -534,21 +558,63 @@ public ProjectRequestStatusResponse getProjectRequestsStatus(@PathVariable("stud
     // ✅ GET DEPARTMENTS BY INSTITUTE
     @GetMapping("/departments/{instituteId}")
     public ResponseEntity<?> getDepartmentsByInstitute(@PathVariable Long instituteId) {
-        
+
         System.out.println("\n========== GET DEPARTMENTS ==========");
         System.out.println("[StudentController] 📡 GET /student/departments/" + instituteId);
-        
+
         try {
             List<DepartmentDTO> response = studentService.getDepartmentsByInstitute(instituteId);
             System.out.println("[StudentController] ✅ Fetched " + response.size() + " departments");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             System.out.println("[StudentController] ❌ Error: " + e.getMessage());
-            
+
             Map<String, Object> error = new HashMap<>();
             error.put("error", e.getMessage());
-            
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/department-deadlines/{studentId}")
+    public ResponseEntity<?> getDepartmentDeadlines(@PathVariable Long studentId) {
+        try {
+            com.zepro.model.DepartmentDeadlines deadlines = studentService.getDepartmentDeadlines(studentId);
+            return ResponseEntity.ok(deadlines);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @PostMapping("/team/leave/{studentId}")
+    public ResponseEntity<?> leaveTeam(@PathVariable Long studentId) {
+        try {
+            studentService.leaveTeam(studentId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Successfully left the team.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+    }
+
+    @PutMapping("/team/assign-leader/{currentLeadId}/{newLeadId}")
+    public ResponseEntity<?> assignTeamLeader(
+            @PathVariable Long currentLeadId,
+            @PathVariable Long newLeadId) {
+        try {
+            studentService.assignTeamLeader(currentLeadId, newLeadId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Team leader assigned successfully.");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 }

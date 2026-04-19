@@ -36,7 +36,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: '799118111005-4h1bgpjjurapg7jsv0euoq1i3png41j4.apps.googleusercontent.com',
+    androidClientId: '799118111005-jdulbv6r8iltb670kt2m63skujr16rnf.apps.googleusercontent.com',
   });
   useEffect(() => {
     if (response?.type === 'success') {

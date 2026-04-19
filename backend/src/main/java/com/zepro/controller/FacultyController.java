@@ -129,6 +129,24 @@ public class FacultyController {
 
     // ✅ EXISTING ENDPOINTS BELOW (KEEP ALL)
 
+    @GetMapping("/allocation-rules")
+    public ResponseEntity<?> getAllocationRules(Authentication authentication) {
+        System.out.println("[FacultyController] 📡 GET /faculty/allocation-rules");
+        try {
+            String email = authentication.getName();
+            com.zepro.model.AllocationRules rules = facultyService.getAllocationRulesByEmail(email);
+            return ResponseEntity.ok(Map.of(
+                "maxTeamSize", rules.getMaxTeamSize(),
+                "maxStudentsPerFaculty", rules.getMaxStudentsPerFaculty(),
+                "maxProjectsPerFaculty", rules.getMaxProjectsPerFaculty(),
+                "maxSlotsPerProject", rules.getMaxSlotsPerProject()
+            ));
+        } catch (Exception e) {
+            System.out.println("[FacultyController] ❌ Error fetching rules: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/project")
     public ProjectResponse createProject(
             @RequestBody CreateProjectRequest request,

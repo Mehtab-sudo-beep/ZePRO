@@ -12,6 +12,9 @@ public class StudentProfileService {
     @Autowired
     private StudentRepository studentRepository;
 
+    @Autowired
+    private FileUploadService fileUploadService;
+
     // ✅ GET PROFILE
     public StudentProfile getProfile(String email) {
 
@@ -41,17 +44,32 @@ public class StudentProfileService {
     }
 
     // ✅ UPDATE PROFILE
-    public StudentProfile updateProfile(String email, StudentProfile dto) {
+    public StudentProfile updateProfile(String email, com.zepro.dto.student.UpdateStudentProfileRequest dto) {
 
         Student student = studentRepository.findByUser_Email(email)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
         // update user fields
-        student.getUser().setName(dto.getName());
-        student.getUser().setEmail(dto.getEmail());
+        if (dto.getName() != null && !dto.getName().isEmpty()) {
+            student.getUser().setName(dto.getName());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isEmpty()) {
+            student.getUser().setEmail(dto.getEmail());
+        }
 
-        student.setResumeLink(dto.getResumeLink());
-        student.setMarksheetLink(dto.getMarksheetLink());
+        try {
+            if (dto.getResumeFile() != null && !dto.getResumeFile().isEmpty()) {
+                String resumePath = fileUploadService.saveFile("resumes", dto.getResumeFile());
+                student.setResumeLink(resumePath);
+            }
+
+            if (dto.getMarksheetFile() != null && !dto.getMarksheetFile().isEmpty()) {
+                String marksheetPath = fileUploadService.saveFile("marksheets", dto.getMarksheetFile());
+                student.setMarksheetLink(marksheetPath);
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload updated files: " + e.getMessage());
+        }
 
         studentRepository.save(student);
 

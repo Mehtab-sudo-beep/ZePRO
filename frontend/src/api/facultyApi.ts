@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://172.31.57.133:8080';
+const API = 'http://10.226.126.133:8080';
 
 // ✅ GET ALL INSTITUTES
 export const getAllInstitutes = () => {
@@ -53,6 +53,13 @@ export const getPendingRequests = async (token: string) => {
 
 export const getFacultyProjects = async (token: string) => {
   const res = await axios.get(`${API}/faculty/my-projects`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const getAllocationRules = async (token: string) => {
+  const res = await axios.get(`${API}/faculty/allocation-rules`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

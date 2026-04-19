@@ -33,6 +33,10 @@ public class Student {
     @ManyToOne
     @JoinColumn(name = "allocated_faculty_id")
     private Faculty allocatedFaculty;
+
+    @ManyToOne
+    @JoinColumn(name = "allocated_project_id")
+    private Project allocatedProject;
     
     private boolean isInTeam = false;
 
@@ -111,6 +115,10 @@ public class Student {
         return allocatedFaculty;
     }
 
+    public Project getAllocatedProject() {
+        return allocatedProject;
+    }
+
     public String getResumeLink() {
         return resumeLink;
     }
@@ -168,6 +176,10 @@ public class Student {
 
     public void setAllocatedFaculty(Faculty faculty) {
         this.allocatedFaculty = faculty;
+    }
+
+    public void setAllocatedProject(Project allocatedProject) {
+        this.allocatedProject = allocatedProject;
     }
 
     public void setResumeLink(String resumeLink) {

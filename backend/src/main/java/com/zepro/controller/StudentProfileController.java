@@ -23,10 +23,10 @@ public class StudentProfileController {
     }
 
     // ✅ UPDATE
-    @PutMapping
+    @PutMapping(consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudentProfile> updateProfile(
             Authentication auth,
-            @RequestBody StudentProfile dto) {
+            @ModelAttribute com.zepro.dto.student.UpdateStudentProfileRequest dto) {
 
         String email = auth.getName();
         return ResponseEntity.ok(service.updateProfile(email, dto));

@@ -9,4 +9,5 @@ public interface AllocationRulesRepository extends JpaRepository<AllocationRules
     Optional<AllocationRules> findByDepartment_DepartmentIdAndInstitute_InstituteId(
             Long departmentId, Long instituteId);
     Optional<AllocationRules> findByDepartment_DepartmentId(Long departmentId);
+    Optional<AllocationRules> findByDepartmentIsNull();
 }

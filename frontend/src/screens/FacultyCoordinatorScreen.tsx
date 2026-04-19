@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Image,
-  StyleSheet, StatusBar, TextInput, ActivityIndicator,
+  StyleSheet, StatusBar, TextInput, ActivityIndicator, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
@@ -9,9 +9,10 @@ import { AuthContext } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { coordinatorApi } from '../api/coordinatorApi';
+import { BASE_URL } from '../api/api';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -265,7 +266,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const fileUri = FileSystem.documentDirectory + fileName;
 
       const { uri } = await FileSystem.downloadAsync(
-        'http://localhost:8080/api/coordinator/teams/report/pdf',
+        `${BASE_URL}/api/coordinator/teams/report/pdf`,
         fileUri,
         {
           headers: {
@@ -279,15 +280,31 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
       console.log('[FacultyCoordinatorDashboard] ✅ Report downloaded to:', uri);
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Share Team Report',
-          UTI: 'com.adobe.pdf'
-        });
-        showLocalMsg("Report downloaded and sharing opened!", "success");
+      if (Platform.OS === 'android') {
+        const { StorageAccessFramework } = FileSystem;
+        const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync();
+        
+        if (permissions.granted) {
+          try {
+            const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+            const savedUri = await StorageAccessFramework.createFileAsync(permissions.directoryUri, fileName, 'application/pdf');
+            await FileSystem.writeAsStringAsync(savedUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+            showLocalMsg("Report successfully saved to your chosen folder!", "success");
+          } catch (e: any) {
+             showLocalMsg("Failed to write file to folder.", "error");
+          }
+        } else {
+          showLocalMsg("Folder permission was denied.", "error");
+        }
       } else {
-        showLocalMsg("Report downloaded to app storage!", "success");
+        // Fallback for iOS natively opens Save To Files from Share Sheet
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Save Team Report',
+            UTI: 'com.adobe.pdf'
+          });
+        }
       }
     } catch (err: any) {
       showLocalMsg("Download failed: " + err.message, "error");

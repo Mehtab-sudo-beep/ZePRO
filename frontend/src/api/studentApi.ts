@@ -93,7 +93,32 @@ export const getStudentProfile = async () => {
 };
 
 export const updateStudentProfile = async (data: any) => {
-  const res = await API.put('/student/profile', data);
+  const formData = new FormData();
+  
+  if (data.name) formData.append('name', data.name);
+  if (data.email) formData.append('email', data.email);
+  
+  if (data.resumeFile && data.resumeFile.uri) {
+    formData.append('resumeFile', {
+      uri: data.resumeFile.uri,
+      name: data.resumeFile.name,
+      type: data.resumeFile.mimeType || 'application/pdf',
+    } as any);
+  }
+
+  if (data.marksheetFile && data.marksheetFile.uri) {
+    formData.append('marksheetFile', {
+      uri: data.marksheetFile.uri,
+      name: data.marksheetFile.name,
+      type: data.marksheetFile.mimeType || 'application/pdf',
+    } as any);
+  }
+
+  const res = await API.put('/student/profile', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return res.data; // ✅ IMPORTANT
 };
 
@@ -110,13 +135,42 @@ export const completeStudentProfile = (studentId: number, data: {
   year: string;
   instituteId: number;
   departmentId: number;
-  resumeLink: string;
-  marksheetLink: string;
+  resumeFile: any;     // File object from DocumentPicker
+  marksheetFile: any;  // File object from DocumentPicker
   phone: string;
 }) => {
   console.log('[studentApi] 📤 Calling completeStudentProfile for studentId:', studentId);
-  console.log('[studentApi] Payload:', data);
-  return API.post(`/student/complete-profile/${studentId}`, data);
+  console.log('[studentApi] Payload mapped to FormData:', data);
+
+  const formData = new FormData();
+  formData.append('rollNumber', data.rollNumber);
+  formData.append('cgpa', data.cgpa.toString());
+  formData.append('year', data.year);
+  formData.append('instituteId', data.instituteId.toString());
+  formData.append('departmentId', data.departmentId.toString());
+  formData.append('phone', data.phone);
+
+  if (data.resumeFile) {
+    formData.append('resumeFile', {
+      uri: data.resumeFile.uri,
+      name: data.resumeFile.name,
+      type: data.resumeFile.mimeType || 'application/pdf',
+    } as any);
+  }
+
+  if (data.marksheetFile) {
+    formData.append('marksheetFile', {
+      uri: data.marksheetFile.uri,
+      name: data.marksheetFile.name,
+      type: data.marksheetFile.mimeType || 'application/pdf',
+    } as any);
+  }
+
+  return API.post(`/student/complete-profile/${studentId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
 };
 
 export const getAllInstitutes = () => {
@@ -127,4 +181,19 @@ export const getAllInstitutes = () => {
 export const getDepartmentsByInstitute = (instituteId: number) => {
   console.log('[studentApi] 📡 Calling getDepartmentsByInstitute for instituteId:', instituteId);
   return API.get(`/student/departments/${instituteId}`);
+};
+
+export const getDepartmentDeadlines = (studentId: number) => {
+  console.log('[studentApi] 📡 Fetching department deadlines for:', studentId);
+  return API.get(`/student/department-deadlines/${studentId}`);
+};
+
+export const leaveTeam = (studentId: number) => {
+  console.log('[studentApi] 📤 Leaving team for student:', studentId);
+  return API.post(`/student/team/leave/${studentId}`);
+};
+
+export const assignTeamLeader = (currentLeadId: number, newLeadId: number) => {
+  console.log('[studentApi] 📤 Assigning new team leader. Current:', currentLeadId, 'New:', newLeadId);
+  return API.put(`/student/team/assign-leader/${currentLeadId}/${newLeadId}`);
 };

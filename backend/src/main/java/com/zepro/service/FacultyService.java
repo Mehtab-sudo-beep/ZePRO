@@ -72,10 +72,34 @@ public class FacultyService {
         this.deactivatedMeetingRepository = deactivatedMeetingRepository;
     }
 
+    public AllocationRules getAllocationRulesForFaculty(Faculty faculty) {
+        if (faculty.getDepartment() != null) {
+            Optional<AllocationRules> rulesOpt = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId());
+            if (rulesOpt.isPresent()) {
+                return rulesOpt.get();
+            }
+        }
+        return allocationRulesRepository.findByDepartmentIsNull()
+                .stream().findFirst().orElseGet(() -> {
+                    AllocationRules defaultRules = new AllocationRules();
+                    defaultRules.setMaxTeamSize(4);
+                    defaultRules.setMaxSlotsPerProject(4);
+                    defaultRules.setMaxStudentsPerFaculty(20);
+                    defaultRules.setMaxProjectsPerFaculty(5);
+                    return defaultRules;
+                });
+    }
+
+    public AllocationRules getAllocationRulesByEmail(String email) {
+        Faculty faculty = facultyRepository.findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        return getAllocationRulesForFaculty(faculty);
+    }
+
     public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
         // ✅ GET RULES
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId()).orElse(new AllocationRules());
+        AllocationRules rules = getAllocationRulesForFaculty(faculty);
 
         // ✅ VALIDATE SLOTS
         int slots = request.getStudentSlots() != null ? request.getStudentSlots() : 0;
@@ -168,8 +192,7 @@ public class FacultyService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId())
-                .orElse(new AllocationRules());
+        AllocationRules rules = getAllocationRulesForFaculty(faculty);
         
         if (request.getStudentSlots() != null) {
             int slots = request.getStudentSlots();
@@ -238,8 +261,7 @@ public class FacultyService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId())
-                .orElse(new AllocationRules());
+        AllocationRules rules = getAllocationRulesForFaculty(faculty);
 
         List<Project> activeProjects = projectRepository
                 .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "OPEN");
@@ -410,7 +432,7 @@ public class FacultyService {
         if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null)
             subdomainStr = pSubDomains.get(0).getSubDomain().getName();
             
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId()).orElse(new AllocationRules());
+        AllocationRules rules = getAllocationRulesForFaculty(faculty);
         int maxTeamSize = rules.getMaxTeamSize();
 
         int projectAssigned = (p.getTeam() != null && p.getTeam().getMembers() != null) ? p.getTeam().getMembers().size() : 0;

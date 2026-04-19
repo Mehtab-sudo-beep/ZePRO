@@ -67,6 +67,7 @@ public class SecurityConfig {
 
                 // ✅ PUBLIC APIs
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
 
                 // ✅ PUBLIC INSTITUTE & DEPARTMENT ENDPOINTS
                 .requestMatchers("/student/institutes").permitAll()

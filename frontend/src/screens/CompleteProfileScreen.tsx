@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
 import {
   getProfileStatus,
   getAllInstitutes,
@@ -140,8 +141,8 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [rollNumber, setRollNumber] = useState('');
   const [cgpa, setCgpa] = useState('');
   const [year, setYear] = useState('');
-  const [resumeLink, setResumeLink] = useState('');
-  const [marksheetLink, setMarksheetLink] = useState('');
+  const [resumeFile, setResumeFile] = useState<any>(null);
+  const [marksheetFile, setMarksheetFile] = useState<any>(null);
 
   // Institute / Department
   const [institutes, setInstitutes] = useState<any[]>([]);
@@ -236,9 +237,25 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
     if (!year) return 'Please select your year of study.';
     if (!selectedInstitute) return 'Please select your institute.';
     if (!selectedDepartment) return 'Please select your department.';
-    if (!resumeLink.trim()) return 'Resume link is required.';
-    if (!marksheetLink.trim()) return 'Marksheet link is required.';
+    if (!resumeFile) return 'Resume file is required.';
+    if (!marksheetFile) return 'Marksheet file is required.';
     return null;
+  };
+
+  const pickDocument = async (setFile: (file: any) => void) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setFile(result.assets[0]);
+      }
+    } catch (err) {
+      console.log('Error picking document', err);
+      showAlert('Error', 'Failed to pick document', [{ text: 'OK' }]);
+    }
   };
 
   const handleSubmit = async () => {
@@ -264,8 +281,8 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         year,
         instituteId: selectedInstitute.instituteId,
         departmentId: selectedDepartment.departmentId,
-        resumeLink: resumeLink.trim(),
-        marksheetLink: marksheetLink.trim(),
+        resumeFile: resumeFile,
+        marksheetFile: marksheetFile,
         phone: phone.trim(),
       };
 
@@ -472,43 +489,37 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* ── Section: Documents ── */}
-        <Text style={[styles.sectionLabel, { color: colors.subText }]}>DOCUMENT LINKS</Text>
+        <Text style={[styles.sectionLabel, { color: colors.subText }]}>DOCUMENTS</Text>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Resume */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Resume Link *</Text>
-            <TextInput
-              value={resumeLink}
-              onChangeText={setResumeLink}
-              placeholder="https://drive.google.com/..."
-              placeholderTextColor={colors.subText}
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-            <Text style={[styles.hint, { color: colors.subText }]}>
-              Paste a publicly accessible link (Google Drive, Dropbox, etc.)
-            </Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Resume (PDF/Image) *</Text>
+            <TouchableOpacity 
+              style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={() => pickDocument(setResumeFile)}
+            >
+              <Text style={[styles.selectorText, { color: resumeFile ? colors.text : colors.subText }]} numberOfLines={1}>
+                {resumeFile ? resumeFile.name : 'Upload Resume Document'}
+              </Text>
+              <Text style={{ color: colors.subText, fontSize: 18 }}>📂</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           {/* Marksheet */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Marksheet Link *</Text>
-            <TextInput
-              value={marksheetLink}
-              onChangeText={setMarksheetLink}
-              placeholder="https://drive.google.com/..."
-              placeholderTextColor={colors.subText}
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-            <Text style={[styles.hint, { color: colors.subText }]}>
-              Share your latest semester marksheet
-            </Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Marksheet (PDF/Image) *</Text>
+            <TouchableOpacity 
+              style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={() => pickDocument(setMarksheetFile)}
+            >
+              <Text style={[styles.selectorText, { color: marksheetFile ? colors.text : colors.subText }]} numberOfLines={1}>
+                {marksheetFile ? marksheetFile.name : 'Upload Marksheet Document'}
+              </Text>
+              <Text style={{ color: colors.subText, fontSize: 18 }}>📂</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

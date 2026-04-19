@@ -43,11 +43,11 @@ const AllocatedProjectScreen: React.FC = () => {
         const res = await getAssignedProject(Number(user!.studentId));
         
         if (
-          res.data &&
-          res.data.projectTitle !== 'Project not assigned yet' &&
-          res.data.status === 'ASSIGNED'
+          res &&
+          res.projectTitle !== 'Project not assigned yet' &&
+          res.status === 'ASSIGNED'
         ) {
-          setProject(res.data);
+          setProject(res);
         } else {
           setError('No active project is currently allocated to your team.');
         }
@@ -119,7 +119,7 @@ const AllocatedProjectScreen: React.FC = () => {
               style={{ width: 48, height: 48, tintColor: 'rgba(255,255,255,0.2)', position: 'absolute', right: -10, top: -10 }} 
             />
             <Text style={styles.bannerSubtitle}>OFFICIALLY ALLOCATED</Text>
-            <Text style={styles.bannerTitle}>{project.title}</Text>
+            <Text style={styles.bannerTitle}>{project.projectTitle}</Text>
           </View>
 
           <Text style={[styles.sectionLabel, { color: colors.subText }]}>OVERVIEW</Text>

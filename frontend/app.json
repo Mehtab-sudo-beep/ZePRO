@@ -22,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.frontend"
+      "package": "com.mehtab.zepro"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"

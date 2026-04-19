@@ -6,7 +6,7 @@ public class TeamInfoResponse {
     private Long teamId;
     private String teamName;
     private String teamLead;
-    private List<String> members;
+    private List<TeamMemberDTO> members;
 private Long teamLeadId;
     // getters and setters
     public Long getTeamId() { return teamId; }
@@ -15,8 +15,8 @@ private Long teamLeadId;
     public void setTeamName(String teamName) { this.teamName = teamName; }
     public String getTeamLead() { return teamLead; }
     public void setTeamLead(String teamLead) { this.teamLead = teamLead; }
-    public List<String> getMembers() { return members; }
-    public void setMembers(List<String> members) { this.members = members; }
+    public List<TeamMemberDTO> getMembers() { return members; }
+    public void setMembers(List<TeamMemberDTO> members) { this.members = members; }
 public Long getTeamLeadId() { return teamLeadId; }
 public void setTeamLeadId(Long teamLeadId) { this.teamLeadId = teamLeadId; }
 }

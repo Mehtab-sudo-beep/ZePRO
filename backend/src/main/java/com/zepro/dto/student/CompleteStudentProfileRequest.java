@@ -1,13 +1,15 @@
 package com.zepro.dto.student;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public class CompleteStudentProfileRequest {
     private String rollNumber;
     private Double cgpa;
     private String year;
     private Long instituteId;
     private Long departmentId;
-    private String resumeLink;
-    private String marksheetLink;
+    private MultipartFile resumeFile;
+    private MultipartFile marksheetFile;
     
     // ✅ ADD PHONE FIELD
     private String phone;
@@ -20,16 +22,16 @@ public class CompleteStudentProfileRequest {
             String year,
             Long instituteId,
             Long departmentId,
-            String resumeLink,
-            String marksheetLink,
+            MultipartFile resumeFile,
+            MultipartFile marksheetFile,
             String phone) {
         this.rollNumber = rollNumber;
         this.cgpa = cgpa;
         this.year = year;
         this.instituteId = instituteId;
         this.departmentId = departmentId;
-        this.resumeLink = resumeLink;
-        this.marksheetLink = marksheetLink;
+        this.resumeFile = resumeFile;
+        this.marksheetFile = marksheetFile;
         this.phone = phone;
     }
 
@@ -49,11 +51,11 @@ public class CompleteStudentProfileRequest {
     public Long getDepartmentId() { return departmentId; }
     public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
 
-    public String getResumeLink() { return resumeLink; }
-    public void setResumeLink(String resumeLink) { this.resumeLink = resumeLink; }
+    public MultipartFile getResumeFile() { return resumeFile; }
+    public void setResumeFile(MultipartFile resumeFile) { this.resumeFile = resumeFile; }
 
-    public String getMarksheetLink() { return marksheetLink; }
-    public void setMarksheetLink(String marksheetLink) { this.marksheetLink = marksheetLink; }
+    public MultipartFile getMarksheetFile() { return marksheetFile; }
+    public void setMarksheetFile(MultipartFile marksheetFile) { this.marksheetFile = marksheetFile; }
 
     // ✅ PHONE GETTERS & SETTERS
     public String getPhone() { return phone; }
