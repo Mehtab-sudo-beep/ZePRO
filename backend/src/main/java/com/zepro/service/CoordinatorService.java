@@ -351,118 +351,214 @@ public class CoordinatorService {
     @Transactional(readOnly = true)
     public byte[] generateAllTeamsReportPdf(long departmentId) {
         try {
-            System.out.println("[CoordinatorService] 📄 Generating PDF report for department: " + departmentId);
             Department department = departmentrepository.findById(departmentId)
                     .orElseThrow(() -> new RuntimeException("Department not found"));
-
             List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
             
+            long allocated = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentId(departmentId);
+            long unallocated = studentRepository.countByIsAllocatedFalseAndDepartment_DepartmentId(departmentId);
+            
+            int totalMembersInTeams = allTeams.stream().mapToInt(t -> t.getMembers() == null ? 0 : t.getMembers().size()).sum();
+
             org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument();
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
             document.addPage(page);
-
             org.apache.pdfbox.pdmodel.PDPageContentStream contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page);
 
-            float margin = 20;
-            float yStart = page.getMediaBox().getHeight() - margin;
-            float yPosition = yStart;
-            float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+            // COLORS
+            java.awt.Color darkBlue = new java.awt.Color(26, 47, 76);
+            java.awt.Color orange = new java.awt.Color(242, 169, 0);
+            java.awt.Color lightBlue = new java.awt.Color(221, 230, 245);
+            java.awt.Color borderColor = new java.awt.Color(200, 210, 230);
+            
+            float margin = 40;
+            float pageWidth = page.getMediaBox().getWidth();
+            float yPosition = page.getMediaBox().getHeight();
 
-            // Header Background
-            contentStream.setNonStrokingColor(new java.awt.Color(217, 225, 242));
-            contentStream.addRect(margin, yPosition - 40, tableWidth, 40);
+            // --- HEADER BLOCK ---
+            contentStream.setNonStrokingColor(darkBlue);
+            contentStream.addRect(0, yPosition - 100, pageWidth, 100);
             contentStream.fill();
             
-            contentStream.setNonStrokingColor(java.awt.Color.BLACK);
-            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 12);
-            
-            String title1 = department.getDepartmentName() + " - Teams Report";
-            String title2 = "Group, Mentor, Title of the project";
-            
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin + 5, yPosition - 15);
-            contentStream.showText(title1);
-            contentStream.endText();
-            
-            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 10);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin + 5, yPosition - 30);
-            contentStream.showText(title2);
-            contentStream.endText();
-
-            yPosition -= 55;
-
-            // Table Header Background
-            contentStream.setNonStrokingColor(new java.awt.Color(217, 225, 242));
-            contentStream.addRect(margin, yPosition - 20, tableWidth, 20);
+            contentStream.setNonStrokingColor(orange);
+            contentStream.addRect(0, yPosition - 105, pageWidth, 5);
             contentStream.fill();
+            
+            contentStream.setNonStrokingColor(java.awt.Color.WHITE);
+            drawCenteredText(contentStream, "ZePRO", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 28, pageWidth, yPosition - 40);
+            drawCenteredText(contentStream, "Project Registration & Oversight System", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN, 12, pageWidth, yPosition - 60);
+            drawCenteredText(contentStream, "Teams Report", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 18, pageWidth, yPosition - 85);
+            
+            yPosition -= 140;
 
-            // Table Header Borders & Text
-            float[] colWidths = { 30, 50, 65, 50, 65, 50, 65, 100, 80 }; 
-            String[] headers = { "Grp", "Roll 1", "Name 1", "Roll 2", "Name 2", "Roll 3", "Name 3", "Topic", "Guide" };
+            // --- SUMMARY BOX ---
+            float summaryHeight = 65;
+            float summaryWidth = pageWidth - (2 * margin);
+            contentStream.setNonStrokingColor(lightBlue);
+            contentStream.addRect(margin, yPosition - summaryHeight, summaryWidth, summaryHeight);
+            contentStream.fill();
             
-            float xPos = margin;
-            contentStream.setNonStrokingColor(java.awt.Color.BLACK);
-            contentStream.setStrokingColor(java.awt.Color.BLACK);
-            contentStream.setLineWidth(1f);
+            // Summary Text
+            contentStream.setNonStrokingColor(darkBlue);
+            org.apache.pdfbox.pdmodel.font.PDType1Font boldFont = org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD;
+            org.apache.pdfbox.pdmodel.font.PDType1Font regFont = org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN;
+            int fontSize = 10;
             
-            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 7);
+            String dateStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy"));
             
-            for (int i = 0; i < headers.length; i++) {
-                contentStream.addRect(xPos, yPosition - 20, colWidths[i], 20);
-                contentStream.stroke();
-                contentStream.beginText();
-                contentStream.newLineAtOffset(xPos + 2, yPosition - 13);
-                contentStream.showText(headers[i]);
-                contentStream.endText();
-                xPos += colWidths[i];
-            }
+            float col1X = margin + 20;
+            float col1ValX = margin + 95;
+            float col2X = margin + 240;
+            float col2ValX = margin + 335;
+            
+            float row1Y = yPosition - 20;
+            float row2Y = yPosition - 38;
+            float row3Y = yPosition - 56;
+            
+            drawTextWithFont(contentStream, "Department:", boldFont, fontSize, col1X, row1Y);
+            drawTextWithFont(contentStream, department.getDepartmentName(), regFont, fontSize, col1ValX, row1Y);
+            
+            drawTextWithFont(contentStream, "Generated on:", boldFont, fontSize, col2X, row1Y);
+            drawTextWithFont(contentStream, dateStr, regFont, fontSize, col2ValX, row1Y);
+            
+            drawTextWithFont(contentStream, "Total Teams:", boldFont, fontSize, col1X, row2Y);
+            drawTextWithFont(contentStream, String.valueOf(allTeams.size()), regFont, fontSize, col1ValX, row2Y);
+            
+            drawTextWithFont(contentStream, "Total Members:", boldFont, fontSize, col2X, row2Y);
+            drawTextWithFont(contentStream, String.valueOf(totalMembersInTeams), regFont, fontSize, col2ValX, row2Y);
+            
+            drawTextWithFont(contentStream, "Allocated:", boldFont, fontSize, col1X, row3Y);
+            drawTextWithFont(contentStream, String.valueOf(allocated), regFont, fontSize, col1ValX, row3Y);
+            
+            drawTextWithFont(contentStream, "Unallocated:", boldFont, fontSize, col2X, row3Y);
+            drawTextWithFont(contentStream, String.valueOf(unallocated), regFont, fontSize, col2ValX, row3Y);
+
+            yPosition -= (summaryHeight + 40);
+
+            // --- TABLE TITLE ---
+            drawTextWithFont(contentStream, "Team Members", boldFont, 12, margin, yPosition);
+            yPosition -= 10;
+            contentStream.setNonStrokingColor(orange);
+            contentStream.addRect(margin, yPosition, summaryWidth, 2);
+            contentStream.fill();
             yPosition -= 20;
 
-            // Table Rows
-            contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 6);
+            // --- TABLE ---
+            // S.No, Team Members, Roll No, Team Name, Project, Guide
+            float[] colWidths = { 35, 125, 75, 90, 100, 90 };
+            String[] headers = { "S.No", "Team Members", "Roll No", "Team Name", "Project", "Guide" };
             
-            for (int i = 0; i < allTeams.size(); i++) {
-                if (yPosition < 40) {
+            contentStream.setNonStrokingColor(darkBlue);
+            contentStream.addRect(margin, yPosition - 20, summaryWidth, 20);
+            contentStream.fill();
+            
+            contentStream.setNonStrokingColor(java.awt.Color.WHITE);
+            float curX = margin;
+            for (int i = 0; i < headers.length; i++) {
+                drawTextWithFont(contentStream, headers[i], boldFont, 9, curX + 5, yPosition - 14);
+                curX += colWidths[i];
+            }
+            yPosition -= 20;
+            
+            contentStream.setStrokingColor(borderColor);
+            contentStream.setLineWidth(0.5f);
+            
+            int teamNo = 1;
+            for (Team team : allTeams) {
+                List<Student> members = team.getMembers();
+                if (members == null) members = new java.util.ArrayList<>();
+                int rowSpan = Math.max(1, members.size());
+                float rowHeight = rowSpan * 20f;
+                
+                if (yPosition - rowHeight < 50) {
+                    contentStream.moveTo(margin, yPosition);
+                    contentStream.lineTo(margin + summaryWidth, yPosition);
+                    contentStream.stroke();
+                    
                     contentStream.close();
                     page = new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
                     document.addPage(page);
                     contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page);
-                    yPosition = yStart;
-                    contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 6);
+                    yPosition = page.getMediaBox().getHeight() - 50;
+                    
+                    contentStream.setNonStrokingColor(darkBlue);
+                    contentStream.addRect(margin, yPosition - 20, summaryWidth, 20);
+                    contentStream.fill();
+                    contentStream.setNonStrokingColor(java.awt.Color.WHITE);
+                    curX = margin;
+                    for (int i = 0; i < headers.length; i++) {
+                        drawTextWithFont(contentStream, headers[i], boldFont, 9, curX + 5, yPosition - 14);
+                        curX += colWidths[i];
+                    }
+                    yPosition -= 20;
+                    contentStream.setStrokingColor(borderColor);
+                    contentStream.setLineWidth(0.5f);
                 }
                 
-                Team team = allTeams.get(i);
-                List<com.zepro.model.Student> members = team.getMembers();
-                if (members == null) members = new java.util.ArrayList<>();
+                contentStream.addRect(margin, yPosition - rowHeight, summaryWidth, rowHeight);
+                contentStream.stroke();
                 
-                String r1="", n1="", r2="", n2="", r3="", n3="";
-                if (members.size() > 0 && members.get(0).getUser() != null) { r1 = extractRoll(members.get(0).getUser().getEmail()); n1 = members.get(0).getUser().getName(); }
-                if (members.size() > 1 && members.get(1).getUser() != null) { r2 = extractRoll(members.get(1).getUser().getEmail()); n2 = members.get(1).getUser().getName(); }
-                if (members.size() > 2 && members.get(2).getUser() != null) { r3 = extractRoll(members.get(2).getUser().getEmail()); n3 = members.get(2).getUser().getName(); }
+                curX = margin;
+                for (int i = 0; i < colWidths.length - 1; i++) {
+                    curX += colWidths[i];
+                    contentStream.moveTo(curX, yPosition);
+                    contentStream.lineTo(curX, yPosition - rowHeight);
+                    contentStream.stroke();
+                }
+                
+                contentStream.setNonStrokingColor(darkBlue); 
                 
                 String topic = team.getTeamName() != null ? team.getTeamName() : "";
-                String guide = team.getFaculty() != null && team.getFaculty().getUser() != null ? team.getFaculty().getUser().getName() : "";
+                Project project = projectRepository.findByTeam(team);
+                String projectTitle = (project != null && project.getTitle() != null) ? project.getTitle() : "-";
+                String guide = team.getFaculty() != null && team.getFaculty().getUser() != null ? team.getFaculty().getUser().getName() : "-";
                 
-                String[] rowData = { String.valueOf(team.getTeamId()), limitText(r1, 50), limitText(n1, 65), limitText(r2, 50), limitText(n2, 65), limitText(r3, 50), limitText(n3, 65), limitText(topic, 100), limitText(guide, 80) };
+                float centerY = yPosition - (rowHeight / 2) - 3;
                 
-                xPos = margin;
-                for (int j = 0; j < rowData.length; j++) {
-                    contentStream.setStrokingColor(java.awt.Color.BLACK);
-                    contentStream.addRect(xPos, yPosition - 20, colWidths[j], 20);
-                    contentStream.stroke();
-                    contentStream.setNonStrokingColor(new java.awt.Color(192, 0, 0));
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(xPos + 2, yPosition - 13);
-                    contentStream.showText(rowData[j]);
-                    contentStream.endText();
-                    xPos += colWidths[j];
+                drawCenteredTextWithin(contentStream, String.valueOf(teamNo++), boldFont, 9, margin, margin + colWidths[0], centerY);
+                
+                float tNameStartX = margin + colWidths[0] + colWidths[1] + colWidths[2];
+                writeWrappedText(contentStream, topic, regFont, 9, tNameStartX + 5, centerY, colWidths[3] - 10);
+                
+                float pNameStartX = tNameStartX + colWidths[3];
+                writeWrappedText(contentStream, projectTitle, regFont, 9, pNameStartX + 5, centerY, colWidths[4] - 10);
+                
+                float guideStartX = pNameStartX + colWidths[4];
+                writeWrappedText(contentStream, guide, regFont, 9, guideStartX + 5, centerY, colWidths[5] - 10);
+                
+                float memY = yPosition;
+                for (int m = 0; m < rowSpan; m++) {
+                    if (m > 0) {
+                        contentStream.moveTo(margin + colWidths[0], memY);
+                        contentStream.lineTo(margin + colWidths[0] + colWidths[1] + colWidths[2], memY);
+                        contentStream.stroke();
+                    }
+                    if (m < members.size()) {
+                        Student s = members.get(m);
+                        String sName = limitText(s.getUser().getName(), 120);
+                        String sRoll = s.getRollNumber() != null ? s.getRollNumber() : extractRoll(s.getUser().getEmail());
+                        drawTextWithFont(contentStream, sName, regFont, 9, margin + colWidths[0] + 5, memY - 14);
+                        drawTextWithFont(contentStream, sRoll, regFont, 9, margin + colWidths[0] + colWidths[1] + 5, memY - 14);
+                    }
+                    memY -= 20;
                 }
-                yPosition -= 20;
+                yPosition -= rowHeight;
             }
-
+            
+            yPosition -= 50;
+            contentStream.setStrokingColor(borderColor);
+            contentStream.moveTo(pageWidth / 2 - 100, yPosition);
+            contentStream.lineTo(pageWidth / 2 + 100, yPosition);
+            contentStream.stroke();
+            
+            yPosition -= 15;
+            contentStream.setNonStrokingColor(new java.awt.Color(120, 130, 150));
+            drawCenteredText(contentStream, "This is an auto-generated report from the ZePRO System.", regFont, 8, pageWidth, yPosition);
+            drawCenteredText(contentStream, "Do not alter the contents manually.", regFont, 8, pageWidth, yPosition - 10);
+            
             contentStream.close();
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
             document.close();
             return baos.toByteArray();
@@ -470,6 +566,50 @@ public class CoordinatorService {
             e.printStackTrace();
             throw new RuntimeException("Generated PDF Error: " + e.getMessage());
         }
+    }
+
+    private void drawTextWithFont(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream, String text, org.apache.pdfbox.pdmodel.font.PDType1Font font, int fontSize, float x, float y) throws Exception {
+        if(text == null) text = "";
+        text = text.replace("\n", " ").replace("\r", " ");
+        contentStream.beginText();
+        contentStream.setFont(font, fontSize);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(text);
+        contentStream.endText();
+    }
+    
+    private void drawCenteredText(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream, String text, org.apache.pdfbox.pdmodel.font.PDType1Font font, int fontSize, float pageWidth, float y) throws Exception {
+        if(text == null) text = "";
+        text = text.replace("\n", " ").replace("\r", " ");
+        float titleWidth = font.getStringWidth(text) / 1000 * fontSize;
+        contentStream.beginText();
+        contentStream.setFont(font, fontSize);
+        contentStream.newLineAtOffset((pageWidth - titleWidth) / 2, y);
+        contentStream.showText(text);
+        contentStream.endText();
+    }
+    
+    private void drawCenteredTextWithin(org.apache.pdfbox.pdmodel.PDPageContentStream contentStream, String text, org.apache.pdfbox.pdmodel.font.PDType1Font font, int fontSize, float startX, float endX, float y) throws Exception {
+        if(text == null) text = "";
+        text = text.replace("\n", " ").replace("\r", " ");
+        float textWidth = font.getStringWidth(text) / 1000 * fontSize;
+        float x = startX + ((endX - startX) - textWidth) / 2;
+        contentStream.beginText();
+        contentStream.setFont(font, fontSize);
+        contentStream.newLineAtOffset(x, y);
+        contentStream.showText(text);
+        contentStream.endText();
+    }
+    
+    private void writeWrappedText(org.apache.pdfbox.pdmodel.PDPageContentStream cs, String text, org.apache.pdfbox.pdmodel.font.PDType1Font font, int fontSize, float x, float y, float maxWidth) throws Exception {
+        if(text == null) text = "";
+        text = text.replace("\n", " ").replace("\r", " ");
+        float txtW = font.getStringWidth(text) / 1000 * fontSize;
+        if(txtW > maxWidth) {
+            int chars = (int)(text.length() * (maxWidth / txtW)) - 2;
+            if(chars > 0) text = text.substring(0, chars) + "..";
+        }
+        drawTextWithFont(cs, text, font, fontSize, x, y);
     }
 
     private String limitText(String text, float widthConstraint) {

@@ -17,11 +17,12 @@ import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getProfileStatus } from '../api/studentApi';
 import { getFacultyProfileStatus } from '../api/facultyApi';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
 import { useEffect } from 'react';
 
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId: '799118111005-enlr4flip3roa6u3qn366aac0ao5gmbb.apps.googleusercontent.com',
+});
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -35,18 +36,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [secure, setSecure] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: '799118111005-jdulbv6r8iltb670kt2m63skujr16rnf.apps.googleusercontent.com',
-    webClientId: '799118111005-enlr4flip3roa6u3qn366aac0ao5gmbb.apps.googleusercontent.com',
-    redirectUri: 'https://auth.expo.io/@anonymous/frontend'
-  });
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      if (authentication?.accessToken)
-        handleGoogleBackend(authentication.accessToken);
-    }
-  }, [response]);
   // --- HELPER: SAVE SESSION & NAVIGATE ---
   const processLoginSession = async (data: any) => {
     const {
@@ -132,40 +121,44 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       setErrorMsg(null);
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Force account picker by clearing any silently-remembered session
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        // Ignore if not previously signed in
+      }
+      
+      const userInfo = await GoogleSignin.signIn();
 
-      await promptAsync(); // opens Google login
-    } catch (error) {
-      console.log('[Google Login Error]', error);
-      setErrorMsg('Google login failed');
-      setLoading(false);
-    }
-  };
-  const handleGoogleBackend = async (accessToken: string) => {
-    try {
-      const res = await fetch(
-        'https://www.googleapis.com/userinfo/v2/me',
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      let idToken = null;
+      if (userInfo && userInfo.data && userInfo.data.idToken) {
+        idToken = userInfo.data.idToken;
+      } else if (userInfo && (userInfo as any).idToken) {
+        // Compatibility with older module versions
+        idToken = (userInfo as any).idToken;
+      }
 
-      const user = await res.json();
+      if (!idToken) throw new Error("No ID Token received.");
 
-      const googleRequest = {
-        email: user.email,
-        name: user.name,
-        googleId: user.id,
-        role: 'STUDENT',
-      };
-
-      const backendRes = await googleLogin(googleRequest);
-
+      const backendRes = await googleLogin({ idToken, role: 'STUDENT' });
       await processLoginSession(backendRes.data);
-    } catch (error) {
-      console.log('[Backend Google Error]', error);
-      setErrorMsg('Google login failed');
+    } catch (error: any) {
+      console.log('[Google Login Error]', error);
+      if (isErrorWithCode(error)) {
+        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+          setErrorMsg('Sign in cancelled');
+        } else if (error.code === statusCodes.IN_PROGRESS) {
+          setErrorMsg('Sign in is in progress already');
+        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          setErrorMsg('Play services not available or out of date');
+        } else {
+          setErrorMsg('Google login failed: ' + error.message);
+        }
+      } else {
+        setErrorMsg('Google login failed: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

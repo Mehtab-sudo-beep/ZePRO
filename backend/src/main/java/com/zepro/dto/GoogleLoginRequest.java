@@ -1,22 +1,22 @@
 package com.zepro.dto;
 
 public class GoogleLoginRequest {
-    private String accessToken;
+    private String idToken;
     private String role;
 
     public GoogleLoginRequest() {}
 
-    public GoogleLoginRequest(String accessToken, String role) {
-        this.accessToken = accessToken;
+    public GoogleLoginRequest(String idToken, String role) {
+        this.idToken = idToken;
         this.role = role;
     }
 
-    public String getAccessToken() {
-        return accessToken;
+    public String getIdToken() {
+        return idToken;
     }
 
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
+    public void setIdToken(String idToken) {
+        this.idToken = idToken;
     }
 
     public String getRole() {

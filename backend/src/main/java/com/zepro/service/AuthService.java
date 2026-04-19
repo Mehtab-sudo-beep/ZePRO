@@ -51,35 +51,35 @@ public class AuthService {
 
     // ✅ Google Login Endpoint
     public LoginResponse googleLogin(GoogleLoginRequest request) {
-        if (request.getAccessToken() == null || request.getAccessToken().isEmpty()) {
-            throw new RuntimeException("Access Token is required");
+        if (request.getIdToken() == null || request.getIdToken().isEmpty()) {
+            throw new RuntimeException("ID Token is required");
         }
 
         try {
-            String url = "https://www.googleapis.com/oauth2/v2/userinfo";
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(request.getAccessToken());
-
-            HttpEntity<String> entity = new HttpEntity<>(headers);
+            String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + request.getIdToken();
 
             RestTemplate restTemplate = new RestTemplate();
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    Map.class
-            );
-
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             Map body = response.getBody();
+
+            if (body == null) {
+                throw new RuntimeException("Invalid token response from Google");
+            }
 
             String email = (String) body.get("email");
             String name = (String) body.get("name");
-            String googleId = (String) body.get("id");
+            String googleId = (String) body.get("sub");
             String pictureUrl = (String) body.get("picture");
-            Boolean emailVerified = (Boolean) body.get("verified_email");
+            
+            Object emailVerifiedObj = body.get("email_verified");
+            boolean emailVerified = false;
+            if (emailVerifiedObj instanceof Boolean) {
+                emailVerified = (Boolean) emailVerifiedObj;
+            } else if (emailVerifiedObj instanceof String) {
+                emailVerified = Boolean.parseBoolean((String) emailVerifiedObj);
+            }
 
-            if (emailVerified == null || !emailVerified) {
+            if (!emailVerified) {
                 throw new RuntimeException("Google email not verified.");
             }
 
