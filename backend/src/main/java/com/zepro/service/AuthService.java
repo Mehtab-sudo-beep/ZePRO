@@ -190,6 +190,9 @@ public class AuthService {
     // ------------------------------------------------
 
     public String signup(SignupRequest request){
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already registered. Please login.");
+        }
         Users user = new Users();
         user.setName(request.getName());
         user.setEmail(request.getEmail());

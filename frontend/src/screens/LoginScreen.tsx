@@ -37,12 +37,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId: '799118111005-jdulbv6r8iltb670kt2m63skujr16rnf.apps.googleusercontent.com',
+    webClientId: '799118111005-enlr4flip3roa6u3qn366aac0ao5gmbb.apps.googleusercontent.com',
+    redirectUri: 'https://auth.expo.io/@anonymous/frontend'
   });
   useEffect(() => {
     if (response?.type === 'success') {
       const { authentication } = response;
       if (authentication?.accessToken)
-      handleGoogleBackend(authentication.accessToken);
+        handleGoogleBackend(authentication.accessToken);
     }
   }, [response]);
   // --- HELPER: SAVE SESSION & NAVIGATE ---
