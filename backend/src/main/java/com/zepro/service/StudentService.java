@@ -285,7 +285,7 @@ public class StudentService {
         return projects.stream()
                 .filter(p -> {
                     // ✅ FILTER: only OPEN projects
-                    if (!"OPEN".equals(p.getStatus())) {
+                    if (!("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus()))) {
                         return false;
                     }
                     // ✅ FILTER: only active projects
