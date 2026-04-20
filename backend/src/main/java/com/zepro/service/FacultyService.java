@@ -114,8 +114,8 @@ public class FacultyService {
         }
 
         // ✅ CHECK PROJECT LIMIT
-        List<Project> openProjects = projectRepository.findByFacultyFacultyIdAndStatus(
-                faculty.getFacultyId(), "OPEN");
+        List<Project> openProjects = projectRepository.findByFacultyFacultyIdAndStatusAndDegree(
+                faculty.getFacultyId(), "OPEN", request.getDegree());
         Project project = new Project();
         if (openProjects.size() >= rules.getMaxProjectsPerFaculty()) {
 
@@ -275,18 +275,15 @@ public class FacultyService {
 
         AllocationRules rules = getAllocationRulesForFaculty(faculty, project.getDegree());
 
-        List<Project> activeProjects = projectRepository
-                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "OPEN");
-        List<Project> assignedProjects = projectRepository
-                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "ASSIGNED");
-        List<Project> inprogressProjects = projectRepository
-                .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "IN_PROGRESS");
-
-        if (activeProjects.size() + assignedProjects.size() + inprogressProjects.size() >= rules
-                .getMaxProjectsPerFaculty()) {
+        List<Project> activeProjects = projectRepository.findByFacultyFacultyIdAndStatusInAndDegree(
+                project.getFaculty().getFacultyId(),
+                List.of("OPEN", "ASSIGNED", "IN_PROGRESS"),
+                project.getDegree());
+        
+        if (activeProjects.size() >= rules.getMaxProjectsPerFaculty()) {
             throw new RuntimeException(
                     "Cannot activate this project. You have reached the maximum limit of " +
-                            rules.getMaxProjectsPerFaculty() + " active projects. " +
+                            rules.getMaxProjectsPerFaculty() + " active projects for " + project.getDegree() + ". " +
                             "Please deactivate one project before activating another.");
         }
 

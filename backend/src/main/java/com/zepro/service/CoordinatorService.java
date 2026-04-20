@@ -1184,6 +1184,7 @@ public class CoordinatorService {
         newTeam.setMembers(new java.util.ArrayList<>());
         newTeam.getMembers().add(student);
         newTeam.setTeamLead(student);
+        newTeam.setDegree(student.getDegree()); // ✅ SET DEGREE
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found"));
         newTeam.setDepartment(dept);
