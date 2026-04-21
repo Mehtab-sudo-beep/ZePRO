@@ -26,6 +26,9 @@ import com.zepro.service.FacultyService;
 import com.zepro.service.RequestService;
 import com.zepro.service.StudentService;
 import com.zepro.service.MeetingService;
+import com.zepro.service.FileUploadService;
+import org.springframework.web.multipart.MultipartFile;
+import com.zepro.repository.ProjectRepository;
 
 @RestController
 @RequestMapping("/faculty")
@@ -38,13 +41,17 @@ public class FacultyController {
     private final RequestService requestService;
     private final StudentService studentService;
     private final MeetingService meetingService;
+    private final FileUploadService fileUploadService;
+    private final ProjectRepository projectRepository;
 
     public FacultyController(FacultyService facultyService,
                              DomainService domainService,
                              FacultyRepository facultyRepository,
                              RequestService requestService,
                              StudentService studentService,
-                             MeetingService meetingService) {
+                             MeetingService meetingService,
+                             FileUploadService fileUploadService,
+                             ProjectRepository projectRepository) {
 
         this.facultyService = facultyService;
         this.domainService = domainService;
@@ -52,6 +59,36 @@ public class FacultyController {
         this.requestService = requestService;
         this.studentService = studentService;
         this.meetingService = meetingService;
+        this.fileUploadService = fileUploadService;
+        this.projectRepository = projectRepository;
+    }
+
+    // ✅ UPLOAD PROJECT DOCUMENTS
+    @PostMapping(value = "/project/{projectId}/documents", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadProjectDocuments(
+            @PathVariable Long projectId,
+            @RequestPart("files") List<MultipartFile> files) {
+        
+        System.out.println("[FacultyController] 📂 POST /project/" + projectId + "/documents");
+        
+        try {
+            com.zepro.model.Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new RuntimeException("Project not found"));
+                    
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (!file.isEmpty()) {
+                        String fileUrl = fileUploadService.saveFile("project_documents", file);
+                        project.getDocuments().add(fileUrl);
+                    }
+                }
+                projectRepository.save(project);
+            }
+            return ResponseEntity.ok(Map.of("message", "Documents uploaded successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Error uploading files: " + e.getMessage()));
+        }
     }
 
     // ✅ GET ALL INSTITUTES

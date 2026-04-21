@@ -16,3 +16,9 @@ export const googleLogin = (data: any) => {
 export const forgotPassword = (data: any) => {
   return API.post('/auth/forgot-password', data);
 };
+
+export const uploadProfilePicture = (data: FormData) => {
+  return API.post('/auth/profile-picture', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};

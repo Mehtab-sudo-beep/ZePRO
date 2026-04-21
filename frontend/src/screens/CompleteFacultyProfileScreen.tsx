@@ -176,7 +176,12 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
     const fetchInstitutes = async () => {
       try {
         console.log('[CompleteFacultyProfile] 📡 Fetching institutes...');
-        const res = await getAllInstitutes();
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+          console.log('[CompleteFacultyProfile] ❌ No token found');
+          return;
+        }
+        const res = await getAllInstitutes(token);
         
         if (isMountedRef.current) {
           console.log('[CompleteFacultyProfile] ✅ Institutes response:', res);

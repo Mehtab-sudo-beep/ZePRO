@@ -43,8 +43,8 @@ const SettingsScreen: React.FC = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [notifEnabled, setNotifEnabled] = useState(true);
-  const [emailNotif, setEmailNotif] = useState(true);
+  const [notifEnabled, setNotifEnabled] = useState(user?.pushNotifications ?? true);
+  const [emailNotif, setEmailNotif] = useState(user?.emailNotifications ?? true);
 
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -182,12 +182,38 @@ const SettingsScreen: React.FC = () => {
 
           <View style={card}>
             <Text style={txt}>Push Notifications</Text>
-            <Switch value={notifEnabled} onValueChange={setNotifEnabled} />
+            <Switch 
+              value={notifEnabled} 
+              onValueChange={async (val) => {
+                setNotifEnabled(val);
+                if (user) {
+                  setUser({ ...user, pushNotifications: val });
+                  try {
+                    await API.put('/auth/notifications', { email: user.email, emailNotifications: emailNotif, pushNotifications: val });
+                  } catch (e) {
+                    console.error('Failed to update push notifications', e);
+                  }
+                }
+              }} 
+            />
           </View>
 
           <View style={card}>
             <Text style={txt}>Email Notifications</Text>
-            <Switch value={emailNotif} onValueChange={setEmailNotif} />
+            <Switch 
+              value={emailNotif} 
+              onValueChange={async (val) => {
+                setEmailNotif(val);
+                if (user) {
+                  setUser({ ...user, emailNotifications: val });
+                  try {
+                    await API.put('/auth/notifications', { email: user.email, emailNotifications: val, pushNotifications: notifEnabled });
+                  } catch (e) {
+                    console.error('Failed to update email notifications', e);
+                  }
+                }
+              }} 
+            />
           </View>
 
           {/* ── APPEARANCE ── */}

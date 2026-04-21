@@ -14,13 +14,15 @@ import { ThemeContext } from '../theme/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getAllProjects,
-  sendProjectRequest,
   getRequestedProjects,
 } from "../api/studentApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { StudentAuthContext } from '../context/StudentAuthContext';
 import { AlertContext } from '../context/AlertContext';
+import { Picker } from '@react-native-picker/picker';
+import { Modal } from 'react-native';
+
 
 const Icon = ({ name, size = 16, colors }: any) => {
   const isDark = colors.background === '#111827';
@@ -62,9 +64,17 @@ const ProjectListScreen: React.FC = () => {
   const [search, setSearch] = useState('');
   const [requestedProjects, setRequestedProjects] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sendingRequestId, setSendingRequestId] = useState<number | null>(null);
 
-  const isTeamLead = studentUser?.isTeamLead === true;
+  // 🔥 Sort states
+  const [filterModal, setFilterModal] = useState(false);
+  const [facultyFilter, setFacultyFilter] = useState('');
+  const [domainFilter, setDomainFilter] = useState('');
+  const [subDomainFilter, setSubDomainFilter] = useState('');
+
+  // Extract unique lists
+  const uniqueFaculties = Array.from(new Set(projects.map(p => p.facultyName))).filter(Boolean);
+  const uniqueDomains = Array.from(new Set(projects.map(p => p.domain))).filter(Boolean);
+  const uniqueSubDomains = Array.from(new Set(projects.map(p => p.subdomain))).filter(Boolean);
 
   // ✅ LOAD PROJECTS WITH ERROR HANDLING
   const loadProjects = async () => {
@@ -117,88 +127,41 @@ const ProjectListScreen: React.FC = () => {
 
   const filteredProjects = projects.filter(project => {
     const query = search.toLowerCase();
-    
-    return (
-      project.title?.toLowerCase().includes(query) ||
+
+    const matchesSearch = project.title?.toLowerCase().includes(query) ||
       project.domain?.toLowerCase().includes(query) ||
-      project.facultyName?.toLowerCase().includes(query)
-    );
+      project.subdomain?.toLowerCase().includes(query) ||
+      project.facultyName?.toLowerCase().includes(query);
+
+    const matchesFaculty = facultyFilter ? project.facultyName === facultyFilter : true;
+    const matchesDomain = domainFilter ? project.domain === domainFilter : true;
+    const matchesSubDomain = subDomainFilter ? project.subdomain === subDomainFilter : true;
+
+    return matchesSearch && matchesFaculty && matchesDomain && matchesSubDomain;
   });
-
-  // ✅ SEND PROJECT REQUEST WITH ERROR HANDLING
-  const sendRequest = async (projectId: number, projectTitle: string) => {
-    try {
-      setSendingRequestId(projectId);
-      const studentId = await AsyncStorage.getItem("studentId");
-
-      console.log('[ViewProjects] 📨 Requesting project:', projectId);
-
-      await sendProjectRequest({
-        studentId: Number(studentId),
-        projectId,
-      });
-
-      console.log('[ViewProjects] ✅ Request sent successfully');
-      setRequestedProjects(prev => [...prev, projectId]);
-
-      showAlert("Request Sent", `Request sent for "${projectTitle}"`, [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Reload to update UI
-            loadProjects();
-          },
-        },
-      ]);
-
-    } catch (err: any) {
-      console.log('[ViewProjects] ❌ Error:', err.response?.data?.error || err.message);
-
-      const errorMsg = err.response?.data?.error || 'Failed to send request';
-
-      // ✅ SPECIFIC ERROR MESSAGES
-      if (errorMsg.includes('different department')) {
-        showAlert(
-          '❌ Department Mismatch',
-          'Faculty is from a different department. Cannot request this project.',
-          [{ text: 'OK' }]
-        );
-      } else if (errorMsg.includes('different institute')) {
-        showAlert(
-          '❌ Institute Mismatch',
-          'Faculty is from a different institute. Cannot request this project.',
-          [{ text: 'OK' }]
-        );
-      } else if (errorMsg.includes('team lead')) {
-        showAlert(
-          '👥 Team Lead Only',
-          'Only the team lead can send project requests.',
-          [{ text: 'OK' }]
-        );
-      } else if (errorMsg.includes('already')) {
-        showAlert('⚠️ Already Requested', errorMsg, [{ text: 'OK' }]);
-      } else if (errorMsg.includes('No slots available')) {
-        showAlert('👥 No Slots', 'This project is full. No more slots available.', [{ text: 'OK' }]);
-      } else {
-        showAlert('Error', errorMsg, [{ text: 'OK' }]);
-      }
-    } finally {
-      setSendingRequestId(null);
-    }
-  };
 
   /* ================= CARD ================= */
   const renderItem = ({ item }: any) => {
 
     const isRequested = requestedProjects.includes(item.projectId);
-    const isSending = sendingRequestId === item.projectId;
 
     return (
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.card, opacity: isRequested ? 0.7 : 1 }]}
+        onPress={() => navigation.navigate('ProjectDetails', { project: item, isRequested })}
+        activeOpacity={0.8}
+      >
 
-        <Text style={[styles.title, { color: colors.text }]}>
-          {item.title}
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Text style={[styles.title, { color: colors.text, flex: 1 }]}>
+            {item.title}
+          </Text>
+          {isRequested && (
+            <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+              <Text style={{ fontSize: 10, color: '#1E40AF', fontWeight: '700' }}>REQUESTED</Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.row}>
           <Icon name="user" colors={colors} />
@@ -210,7 +173,14 @@ const ProjectListScreen: React.FC = () => {
         <View style={styles.row}>
           <Icon name="tag" colors={colors} />
           <Text style={[styles.meta, { color: colors.subText }]}>
-            {item.domain || 'N/A'}
+            Domain: {item.domain || 'N/A'}
+          </Text>
+        </View>
+
+        <View style={styles.row}>
+          <Icon name="tag" colors={colors} />
+          <Text style={[styles.meta, { color: colors.subText }]}>
+            Subdomain: {item.subdomain || 'N/A'}
           </Text>
         </View>
 
@@ -229,53 +199,7 @@ const ProjectListScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* 🔥 IMPROVED BUTTON */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          style={[
-            styles.primaryBtn,
-            {
-              backgroundColor: isRequested
-                ? '#6B7280'
-                : !isTeamLead
-                  ? '#9CA3AF'
-                  : colors.primary,
-            },
-          ]}
-          onPress={() => {
-            if (!isTeamLead) {
-              showAlert('⚠️ Not Team Lead', 'Only the team lead can send requests');
-              return;
-            }
-
-            if (isRequested) {
-              showAlert("⚠️ Already Requested", "You already requested this project");
-              return;
-            }
-
-            sendRequest(item.projectId, item.title);
-          }}
-          disabled={!isTeamLead || isRequested || isSending}
-        >
-          <View style={styles.btnContent}>
-            {isSending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                {!isRequested && <Icon name="tag" size={14} colors={colors} />}
-                <Text style={styles.btnText}>
-                  {isRequested
-                    ? "✓ Requested"
-                    : !isTeamLead
-                      ? "Team Lead Only"
-                      : "Send Request"}
-                </Text>
-              </>
-            )}
-          </View>
-        </TouchableOpacity>
-
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -297,16 +221,29 @@ const ProjectListScreen: React.FC = () => {
       <View style={styles.container}>
 
         {/* SEARCH */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Icon name="search" colors={colors} />
+        {/* SEARCH AND FILTER */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, flex: 1, marginBottom: 0 }]}>
+            <Icon name="search" colors={colors} />
 
-          <TextInput
-            placeholder="Search projects..."
-            placeholderTextColor={colors.subText}
-            value={search}
-            onChangeText={setSearch}
-            style={[styles.searchInput, { color: colors.text }]}
-          />
+            <TextInput
+              placeholder="Search projects..."
+              placeholderTextColor={colors.subText}
+              value={search}
+              onChangeText={setSearch}
+              style={[styles.searchInput, { color: colors.text }]}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.filterBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => setFilterModal(true)}
+          >
+            <Image
+              source={isDark ? require('../assets/sort-white.png') : require('../assets/sort.png')}
+              style={{ width: 20, height: 20, resizeMode: 'contain' }}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* LIST */}
@@ -328,6 +265,78 @@ const ProjectListScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
           />
         )}
+
+        {/* FILTER MODAL */}
+        <Modal visible={filterModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Sort & Filter</Text>
+                <TouchableOpacity onPress={() => setFilterModal(false)} style={styles.modalCloseBtn}>
+                  <Text style={[styles.modalCloseText, { color: colors.text }]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.label, { color: colors.subText }]}>Faculty</Text>
+              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
+                <Picker
+                  selectedValue={facultyFilter}
+                  onValueChange={(val) => setFacultyFilter(val)}
+                  style={{ color: colors.text }}
+                  dropdownIconColor={colors.text}
+                >
+                  <Picker.Item label="All Faculties" value="" />
+                  {uniqueFaculties.map((f: any, idx) => (
+                    <Picker.Item key={idx} label={f} value={f} />
+                  ))}
+                </Picker>
+              </View>
+
+              <Text style={[styles.label, { color: colors.subText }]}>Domain</Text>
+              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
+                <Picker
+                  selectedValue={domainFilter}
+                  onValueChange={(val) => setDomainFilter(val)}
+                  style={{ color: colors.text }}
+                  dropdownIconColor={colors.text}
+                >
+                  <Picker.Item label="All Domains" value="" />
+                  {uniqueDomains.map((d: any, idx) => (
+                    <Picker.Item key={idx} label={d} value={d} />
+                  ))}
+                </Picker>
+              </View>
+
+              <Text style={[styles.label, { color: colors.subText }]}>Subdomain</Text>
+              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
+                <Picker
+                  selectedValue={subDomainFilter}
+                  onValueChange={(val) => setSubDomainFilter(val)}
+                  style={{ color: colors.text }}
+                  dropdownIconColor={colors.text}
+                >
+                  <Picker.Item label="All Subdomains" value="" />
+                  {uniqueSubDomains.map((sd: any, idx) => (
+                    <Picker.Item key={idx} label={sd} value={sd} />
+                  ))}
+                </Picker>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 24 }]}
+                onPress={() => {
+                  setFacultyFilter('');
+                  setDomainFilter('');
+                  setSubDomainFilter('');
+                }}
+              >
+                <Text style={styles.btnText}>Clear Filters</Text>
+              </TouchableOpacity>
+
+            </View>
+          </View>
+        </Modal>
 
       </View>
     </SafeAreaView>
@@ -409,21 +418,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  filterBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -4 },
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalCloseText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
   primaryBtn: {
-    marginTop: 12,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  btnContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-
   btnText: {
     color: '#fff',
     fontWeight: '700',
+    fontSize: 16,
   },
 });

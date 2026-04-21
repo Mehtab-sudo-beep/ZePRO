@@ -16,7 +16,8 @@ import {
   Dimensions,
 } from 'react-native';
 
-import { createProject, getDomains, getSubDomains, getAllocationRules } from '../api/facultyApi';
+import { createProject, getDomains, getSubDomains, getAllocationRules, uploadProjectDocuments } from '../api/facultyApi';
+import * as DocumentPicker from 'expo-document-picker';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
@@ -162,6 +163,7 @@ const CreateProjectScreen = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [maxTeamSize, setMaxTeamSize] = useState(10);
+  const [documents, setDocuments] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
 
   const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
@@ -237,7 +239,7 @@ const CreateProjectScreen = () => {
 
     try {
       setLoading(true);
-      await createProject(
+      const projectRes = await createProject(
         {
           title,
           description,
@@ -247,6 +249,19 @@ const CreateProjectScreen = () => {
         },
         user!.token,
       );
+
+      if (documents.length > 0 && projectRes.projectId) {
+        const formData = new FormData();
+        documents.forEach((doc, index) => {
+          formData.append('files', {
+            uri: doc.uri,
+            name: doc.name,
+            type: doc.mimeType || 'application/octet-stream',
+          } as any);
+        });
+        await uploadProjectDocuments(projectRes.projectId, formData, user!.token);
+      }
+
       setSuccess(true);
       setTimeout(() => {
         setTitle('');
@@ -256,6 +271,7 @@ const CreateProjectScreen = () => {
         setSubDomainName('');
         setDomainId(null);
         setSubDomainId(null);
+        setDocuments([]);
         setSuccess(false);
         navigation.goBack();
       }, 2000);
@@ -423,6 +439,51 @@ const CreateProjectScreen = () => {
               </Text>
               <Text style={[styles.selectorArrow, { color: colors.subText }]}>›</Text>
             </TouchableOpacity>
+
+            <Text style={[styles.fieldLabel, { color: colors.text, marginTop: 12 }]}>
+              Supporting Documents
+            </Text>
+            <TouchableOpacity
+              style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={async () => {
+                try {
+                  const result = await DocumentPicker.getDocumentAsync({
+                    type: '*/*',
+                    multiple: true,
+                  });
+                  if (!result.canceled && result.assets) {
+                    setDocuments(prev => [...prev, ...result.assets]);
+                  }
+                } catch (err) {
+                  console.log('Document picker Error: ', err);
+                }
+              }}
+              activeOpacity={0.75}
+              disabled={loading}
+            >
+              <Text style={[styles.selectorText, { color: documents.length > 0 ? colors.text : colors.subText }]}>
+                {documents.length > 0 ? `${documents.length} files selected` : 'Upload Documents...'}
+              </Text>
+              <Text style={[styles.selectorArrow, { color: colors.subText }]}>+</Text>
+            </TouchableOpacity>
+
+            {documents.length > 0 && (
+              <View style={styles.documentsContainer}>
+                {documents.map((doc, index) => (
+                  <View key={index} style={[styles.documentBadge, { backgroundColor: accentSoft, borderColor: colors.border }]}>
+                    <Text style={[styles.documentText, { color: colors.text }]} numberOfLines={1}>
+                      {doc.name}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setDocuments(docs => docs.filter((_, i) => i !== index))}
+                      style={styles.documentRemoveBtn}
+                    >
+                      <Text style={[styles.documentRemoveText, { color: colors.primary }]}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <TouchableOpacity
               style={[
@@ -600,6 +661,35 @@ const styles = StyleSheet.create({
   selectorArrow: {
     fontSize: 18,
     marginLeft: 8,
+  },
+
+  documentsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  documentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: '100%',
+  },
+  documentText: {
+    fontSize: 12,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  documentRemoveBtn: {
+    marginLeft: 6,
+    padding: 2,
+  },
+  documentRemoveText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   primaryBtn: {

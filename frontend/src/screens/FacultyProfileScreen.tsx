@@ -21,6 +21,9 @@ import {
   getFacultyProfile,
   updateFacultyProfile,
 } from '../api/facultyApi';
+import { uploadProfilePicture } from '../api/authApi';
+import * as ImagePicker from 'expo-image-picker';
+import { BASE_URL } from '../api/api';
 
 // ✅ OUTSIDE COMPONENT
 const InfoRow = ({ label, value, editKey, onEdit, colors, isDark }: any) => (
@@ -61,6 +64,45 @@ const FacultyProfileScreen: React.FC = () => {
   const [editModal, setEditModal] = useState(false);
   const [editField, setEditField] = useState<any>(null);
   const [editValue, setEditValue] = useState('');
+  const [picModal, setPicModal] = useState(false);
+
+  const getAvatarSource = () => {
+    if (user?.profilePictureUrl) {
+      return { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` };
+    }
+    return require('../assets/avatar.png');
+  };
+
+  const handlePickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const formData = new FormData() as any;
+      formData.append('email', user?.email || '');
+      formData.append('file', {
+        uri: asset.uri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      });
+
+      try {
+        const res = await uploadProfilePicture(formData);
+        const newUrl = res.data;
+        setUser({ ...user, profilePictureUrl: newUrl });
+        Alert.alert('Success', 'Profile picture updated');
+        setPicModal(false);
+      } catch (err) {
+        console.log('Upload error:', err);
+        Alert.alert('Error', 'Failed to upload picture');
+      }
+    }
+  };
 
   // ✅ LOAD PROFILE
   useEffect(() => {
@@ -151,9 +193,14 @@ const FacultyProfileScreen: React.FC = () => {
             
         {/* Banner */}
         <View style={[styles.banner, { backgroundColor: colors.card }]}>
-          <View style={[styles.avatarWrapper, { borderColor: colors.primary }]}>
-            <Image source={require('../assets/avatar.png')} style={styles.avatar} />
-          </View>
+          <TouchableOpacity onPress={() => setPicModal(true)}>
+            <View style={[styles.avatarWrapper, { borderColor: colors.primary }]}>
+              <Image source={getAvatarSource()} style={styles.avatar} />
+            </View>
+            <View style={{ position: 'absolute', bottom: 15, right: 0, backgroundColor: colors.primary, borderRadius: 12, padding: 4 }}>
+              <Text style={{ color: 'white', fontSize: 10 }}>Edit</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.bannerName, { color: colors.text }]}>
             {profile.name}
           </Text>
@@ -251,6 +298,24 @@ const FacultyProfileScreen: React.FC = () => {
         </View>
 
       </ScrollView>
+
+      {/* Picture View/Edit Modal */}
+      <Modal visible={picModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPicModal(false)}>
+          <View style={[styles.modalBox, { backgroundColor: colors.card, alignItems: 'center' }]}>
+            <Image
+              source={getAvatarSource()}
+              style={{ width: 200, height: 200, borderRadius: 100, marginBottom: 20 }}
+            />
+            <TouchableOpacity style={{ backgroundColor: '#3B82F6', padding: 14, borderRadius: 10, alignItems: 'center', marginVertical: 10, width: '100%' }} onPress={handlePickImage}>
+              <Text style={{ color: '#fff', fontWeight: '500' }}>Change Picture</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setPicModal(false)} style={{ marginTop: 15 }}>
+              <Text style={{ color: colors.subText }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Modal */}
       <Modal visible={editModal} transparent animationType="slide">

@@ -13,18 +13,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AuthContext } from '../context/AuthContext';
 import API from '../api/api';
 
 const HelpCenterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
+  const { user } = useContext(AuthContext);
   const isDark = colors.background === '#111827';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    API.get('/api/help-center')
+    API.get('/api/help-center', { headers: { Authorization: `Bearer ${user?.token}` } })
       .then(res => {
         setData(res.data);
       })

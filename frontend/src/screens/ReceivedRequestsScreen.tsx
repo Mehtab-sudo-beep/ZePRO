@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ interface Request {
   studentName: string;
   status: string;
   rejectionReason?: string;
+  studentEmail?: string;
 }
 
 const ReceivedRequestsScreen: React.FC = () => {
@@ -162,6 +164,14 @@ const ReceivedRequestsScreen: React.FC = () => {
     }
   };
 
+  const handleSendEmail = (email?: string) => {
+    if (email) {
+      Linking.openURL(`mailto:${email}`);
+    } else {
+      showAlert('Error', 'No email provided for this user.');
+    }
+  };
+
   const statusColor = (status: string) => {
     if (status === 'ACCEPTED' || status === 'APPROVED') return '#16A34A';
     if (status === 'REJECTED') return '#DC2626';
@@ -186,7 +196,7 @@ const ReceivedRequestsScreen: React.FC = () => {
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               Join Requests
             </Text>
-            <Text style={{ color: colors.subText, fontSize: 12 }}>
+            <Text style={{ color: colors.subText, fontSize: 13 }}>
               {pendingCount} pending • {requests.length} total
             </Text>
           </View>
@@ -200,6 +210,12 @@ const ReceivedRequestsScreen: React.FC = () => {
         ) : (
           <ScrollView contentContainerStyle={{ padding: 16 }}>
 
+            <View style={[styles.infoBanner, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
+              <Text style={{ color: '#0284C7', fontSize: 12, fontWeight: '500' }}>
+                ℹ️ Clicking on a student's email will redirect you to send an email to them.
+              </Text>
+            </View>
+
             {requests.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Text style={{ color: colors.subText, fontSize: 16 }}>No requests yet</Text>
@@ -208,32 +224,42 @@ const ReceivedRequestsScreen: React.FC = () => {
               requests.map((req) => (
                 <View
                   key={req.requestId}
-                  style={[styles.card, { backgroundColor: colors.card }]}
+                  style={[styles.card, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', shadowColor: isDark ? '#000' : '#CBD5E1' }]}
                 >
                   <View style={styles.cardRow}>
-                    <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+                    <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
                       {req.studentName}
                     </Text>
-                    <View style={[styles.badge, { backgroundColor: statusColor(req.status) + '20' }]}>
-                      <Text style={{ color: statusColor(req.status), fontWeight: '600', fontSize: 12 }}>
+                    <View style={[styles.badge, { backgroundColor: statusColor(req.status) }]}>
+                      <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 11, textTransform: 'uppercase' }}>
                         {req.status}
                       </Text>
                     </View>
                   </View>
 
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                  <View style={[styles.divider, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]} />
 
-                  <Text style={{ color: colors.subText, fontSize: 13 }}>
-                    Student ID: {req.studentId}
-                  </Text>
+                  <View style={styles.detailRow}>
+                    <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Student ID: </Text>
+                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{req.studentId}</Text>
+                  </View>
+
+                  {req.studentEmail ? (
+                    <View style={styles.detailRow}>
+                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Email: </Text>
+                      <TouchableOpacity onPress={() => handleSendEmail(req.studentEmail)}>
+                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>{req.studentEmail}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
 
                   {/* Show rejection reason if rejected */}
                   {req.status === 'REJECTED' && req.rejectionReason ? (
-                    <View style={[styles.reasonBox, { backgroundColor: '#FEE2E2' }]}>
-                      <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>
-                        Reason:
+                    <View style={[styles.reasonBox, { backgroundColor: '#FEE2E2', borderColor: '#FECACA', borderWidth: 1 }]}>
+                      <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700' }}>
+                        Rejection Reason:
                       </Text>
-                      <Text style={{ color: '#DC2626', fontSize: 13, marginTop: 2 }}>
+                      <Text style={{ color: '#DC2626', fontSize: 13, marginTop: 4, fontWeight: '500' }}>
                         {req.rejectionReason}
                       </Text>
                     </View>
@@ -242,23 +268,23 @@ const ReceivedRequestsScreen: React.FC = () => {
                   {req.status === 'PENDING' && (
                     <View style={styles.actions}>
                       <TouchableOpacity
-                        style={styles.acceptBtn}
+                        style={[styles.acceptBtn, { backgroundColor: '#16A34A' }]}
                         onPress={() => handleAccept(req.requestId)}
                         disabled={processingId === req.requestId}
                       >
                         {processingId === req.requestId ? (
-                          <ActivityIndicator color="#16A34A" size="small" />
+                          <ActivityIndicator color="#FFF" size="small" />
                         ) : (
-                          <Text style={{ color: '#16A34A', fontWeight: '600' }}>Accept</Text>
+                          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Accept Request</Text>
                         )}
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={styles.rejectBtn}
+                        style={[styles.rejectBtn, { backgroundColor: '#DC2626' }]}
                         onPress={() => openRejectModal(req.requestId)}
                         disabled={processingId === req.requestId}
                       >
-                        <Text style={{ color: '#DC2626', fontWeight: '600' }}>Reject</Text>
+                        <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Reject Request</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -308,11 +334,11 @@ const ReceivedRequestsScreen: React.FC = () => {
               {/* Modal buttons */}
               <View style={styles.modalActions}>
                 <TouchableOpacity
-                  style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                  style={[styles.modalCancelBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
                   onPress={() => setShowRejectModal(false)}
                   disabled={rejectingId !== null}
                 >
-                  <Text style={{ color: colors.subText, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
+                  <Text style={{ color: colors.text, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -366,15 +392,21 @@ const styles = StyleSheet.create({
 
   backIcon: { width: 22, height: 22, resizeMode: 'contain' },
 
+  infoBanner: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+
   card: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    padding: 18,
+    borderRadius: 14,
+    marginBottom: 16,
+    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
 
   cardRow: {
@@ -384,41 +416,53 @@ const styles = StyleSheet.create({
   },
 
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
 
-  divider: { height: 1, marginVertical: 10 },
+  divider: { height: 1, marginVertical: 12 },
+
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
 
   reasonBox: {
-    marginTop: 10,
-    padding: 10,
-    borderRadius: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
   },
 
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
+    gap: 12,
+    marginTop: 16,
   },
 
   acceptBtn: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#16A34A',
-    padding: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
 
   rejectBtn: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#DC2626',
-    padding: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
 
   emptyBox: {
@@ -428,7 +472,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -439,7 +483,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     borderRadius: 16,
     borderWidth: 1,
-    padding: 20,
+    padding: 24,
     elevation: 5,
   },
 
@@ -447,40 +491,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
-  modalTitle: { fontSize: 18, fontWeight: '700' },
+  modalTitle: { fontSize: 20, fontWeight: '800' },
 
-  modalDivider: { height: 1, marginBottom: 14 },
+  modalDivider: { height: 1, marginBottom: 16 },
 
   reasonInput: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
     textAlignVertical: 'top',
-    minHeight: 100,
-    marginBottom: 16,
+    minHeight: 120,
+    marginBottom: 18,
   },
 
   modalActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
 
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
   },
 
   modalRejectBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     backgroundColor: '#EF4444',
   },

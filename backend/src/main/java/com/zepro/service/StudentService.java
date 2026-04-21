@@ -382,7 +382,8 @@ public class StudentService {
                             maxSlots,
                             remainingSlots,
                             facultyName,
-                            facultyId);
+                            facultyId,
+                            project.getDocuments());
                 })
                 .toList();
     }
@@ -821,7 +822,8 @@ public class StudentService {
                         req.getStudent().getStudentId(),
                         req.getStudent().getUser().getName(),
                         req.getStatus(),
-                        req.getRejectionReason()))
+                        req.getRejectionReason(),
+                        req.getStudent().getUser().getEmail()))
                 .toList();
     }
 
@@ -1283,10 +1285,19 @@ public class StudentService {
             if (principal != null) {
                 String email = principal.getName();
                 if (email != null && email.contains("@")) {
-                    String tail = email.split("@")[1];
-                    institutes = instituteRepository.findByTailIgnoreCase(tail);
-                    if (institutes.isEmpty()) {
-                        institutes = instituteRepository.findByTailIgnoreCase("@" + tail);
+                    String tail = email.split("@")[1].toLowerCase();
+                    List<Institute> allInstitutes = instituteRepository.findAll();
+                    
+                    for (Institute inst : allInstitutes) {
+                        String instTail = inst.getTail().toLowerCase();
+                        if (instTail.startsWith("@")) {
+                            instTail = instTail.substring(1);
+                        }
+                        
+                        // Check if the email domain is the same or ends with "." + instTail
+                        if (tail.equals(instTail) || tail.endsWith("." + instTail)) {
+                            institutes.add(inst);
+                        }
                     }
                     System.out.println("[StudentService] 🔍 Filtering institutes by tail: " + tail);
                 }

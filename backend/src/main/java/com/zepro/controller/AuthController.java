@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import com.zepro.service.AuthService;
 
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/auth")
@@ -37,17 +38,16 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        return authService.forgotPassword(request);
+    public String forgotPassword(@RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+        String baseUrl = "http://" + httpRequest.getServerName() + ":" + httpRequest.getServerPort();
+        return authService.forgotPassword(request.getEmail(), baseUrl);
     }
 
-    @PostMapping("/reset-password")
-    public String resetPassword(
-            @RequestParam String token,
-            @RequestParam String newPassword) {
-
-        authService.resetPassword(token, newPassword);
-        return "Password updated";
+    @GetMapping("/reset-password-action")
+    public String resetPasswordAction(
+            @RequestParam String email,
+            @RequestParam String token) {
+        return authService.resetPasswordAction(email, token);
     }
 
     @PostMapping("/change-password")
@@ -59,6 +59,35 @@ public class AuthController {
                 request.getCurrentPassword(), 
                 request.getNewPassword()
         );
+    }
+    
+    // Notification Request DTO logic encapsulated here
+    public static class NotificationRequest {
+        private String email;
+        private boolean emailNotifications;
+        private boolean pushNotifications;
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public boolean isEmailNotifications() { return emailNotifications; }
+        public void setEmailNotifications(boolean emailNotifications) { this.emailNotifications = emailNotifications; }
+        public boolean isPushNotifications() { return pushNotifications; }
+        public void setPushNotifications(boolean pushNotifications) { this.pushNotifications = pushNotifications; }
+    }
+
+    @PutMapping("/notifications")
+    public String updateNotifications(@RequestBody NotificationRequest request) {
+        return authService.updateNotificationPreferences(
+                request.getEmail(),
+                request.isEmailNotifications(),
+                request.isPushNotifications()
+        );
+    }
+
+    @PostMapping(value = "/profile-picture", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String uploadProfilePicture(
+            @org.springframework.web.bind.annotation.RequestParam("email") String email,
+            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return authService.updateProfilePicture(email, file);
     }
 
     @PostMapping("/logout")

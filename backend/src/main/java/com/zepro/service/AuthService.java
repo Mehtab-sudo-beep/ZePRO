@@ -23,6 +23,8 @@ import com.zepro.repository.FacultyRepository;
 import com.zepro.repository.StudentRepository;
 import com.zepro.repository.UserRepository;
 import com.zepro.security.JwtUtil;
+import com.zepro.service.EmailService;
+import com.zepro.service.FileUploadService;
 
 @Service
 public class AuthService {
@@ -33,13 +35,17 @@ public class AuthService {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailService emailService;
+    private final FileUploadService fileUploadService;
 
     public AuthService(UserRepository userRepository,
-                       StudentRepository studentRepository,
-                       FacultyRepository facultyRepository,
-                       AdminRepository adminRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil){
+            StudentRepository studentRepository,
+            FacultyRepository facultyRepository,
+            AdminRepository adminRepository,
+            PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil,
+            EmailService emailService,
+            FileUploadService fileUploadService) {
 
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -47,6 +53,8 @@ public class AuthService {
         this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
+        this.fileUploadService = fileUploadService;
     }
 
     // ✅ Google Login Endpoint
@@ -70,7 +78,7 @@ public class AuthService {
             String name = (String) body.get("name");
             String googleId = (String) body.get("sub");
             String pictureUrl = (String) body.get("picture");
-            
+
             Object emailVerifiedObj = body.get("email_verified");
             boolean emailVerified = false;
             if (emailVerifiedObj instanceof Boolean) {
@@ -96,7 +104,8 @@ public class AuthService {
                 user.setProfilePictureUrl(pictureUrl);
                 user.setOAuthUser(true);
 
-                user.setPassword(passwordEncoder.encode("oauth-google-" + googleId));
+                String usernamePrefix = email.indexOf("@") > 0 ? email.substring(0, email.indexOf("@")) : email;
+                user.setPassword(passwordEncoder.encode(usernamePrefix));
 
                 user = userRepository.save(user);
                 createUserRoleProfile(user);
@@ -104,9 +113,19 @@ public class AuthService {
                 user = userOptional.get();
                 if (user.isOAuthUser() && user.getOauthProvider() != null) {
                     if (!user.getOauthProvider().equals("google")) {
-                        throw new RuntimeException("This email was registered with " + user.getOauthProvider() + " OAuth. Please use that to login.");
+                        throw new RuntimeException("This email was registered with " + user.getOauthProvider()
+                                + " OAuth. Please use that to login.");
                     }
                 }
+
+                if ((user.getProfilePictureUrl() == null || user.getProfilePictureUrl().trim().isEmpty())
+                        && pictureUrl != null) {
+                    user.setProfilePictureUrl(pictureUrl);
+                }
+                if (googleId != null)
+                    user.setOauthId(googleId);
+                user.setOAuthUser(true);
+                user = userRepository.save(user);
             }
 
             // Generate JWT Token
@@ -132,7 +151,7 @@ public class AuthService {
                 Faculty faculty = facultyRepository
                         .findByUser_Email(user.getEmail())
                         .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
-                
+
                 facultyId = faculty.getFacultyId();
                 isFC = (faculty.getIsFC() != null && faculty.getIsFC());
             }
@@ -153,16 +172,18 @@ public class AuthService {
                     user.getEmail(),
                     user.getName(),
                     user.getPhone(),
-                    isFC
-            );
+                    isFC,
+                    user.isEmailNotifications(),
+                    user.isPushNotifications(),
+                    user.getProfilePictureUrl());
         } catch (Exception e) {
             throw new RuntimeException("Google authentication failed: " + e.getMessage(), e);
         }
     }
 
     // ✅ NEW: Helper method to create role profile
-    private void createUserRoleProfile(Users user){
-        switch(user.getRole()){
+    private void createUserRoleProfile(Users user) {
+        switch (user.getRole()) {
             case STUDENT:
                 Student student = new Student();
                 student.setUser(user);
@@ -189,7 +210,7 @@ public class AuthService {
     // SIGNUP
     // ------------------------------------------------
 
-    public String signup(SignupRequest request){
+    public String signup(SignupRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already registered. Please login.");
         }
@@ -202,13 +223,13 @@ public class AuthService {
         createUserRoleProfile(savedUser);
         return "User created successfully";
     }
-    
-    public LoginResponse login(LoginRequest request){
+
+    public LoginResponse login(LoginRequest request) {
         String email = request.getEmail().trim();
         Users user = userRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
@@ -216,7 +237,7 @@ public class AuthService {
         Long facultyId = null;
         boolean isInTeam = false;
         boolean isTeamLead = false;
-        if(user.getRole() == UserRole.STUDENT){
+        if (user.getRole() == UserRole.STUDENT) {
             Student student = studentRepository
                     .findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Student profile not found"));
@@ -225,18 +246,18 @@ public class AuthService {
             isTeamLead = student.isTeamLead();
         }
         boolean isFC = false;
-        if(user.getRole() == UserRole.FACULTY){
+        if (user.getRole() == UserRole.FACULTY) {
             Faculty faculty = facultyRepository
                     .findByUser_Email(user.getEmail())
                     .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
             facultyId = faculty.getFacultyId();
             isFC = (faculty.getIsFC() != null && faculty.getIsFC());
-        }   
-        if(user.getRole() == UserRole.ADMIN){
+        }
+        if (user.getRole() == UserRole.ADMIN) {
             adminRepository
                     .findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Admin profile not found"));
-        }   
+        }
         return new LoginResponse(
                 token,
                 user.getRole().name(),
@@ -247,23 +268,57 @@ public class AuthService {
                 user.getEmail(),
                 user.getName(),
                 user.getPhone(),
-                isFC
-        );
+                isFC,
+                user.isEmailNotifications(),
+                user.isPushNotifications(),
+                user.getProfilePictureUrl());
     }
 
     // ------------------------------------------------
     // FORGOT PASSWORD
     // ------------------------------------------------
 
-    public String forgotPassword(ForgotPasswordRequest request){
+    public String forgotPassword(String email, String baseUrl) {
         Users user = userRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return "Password reset link sent";
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String resetLink = baseUrl + "/api/auth/reset-password-action?email=" + email + "&token=" + token;
+
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
+
+        return "Password reset link sent to your email";
     }
 
-    public void resetPassword(String token,String newPassword){
-        // implement reset logic later
+    public String resetPasswordAction(String email, String token) {
+        if (!jwtUtil.validateToken(token, email)) {
+            return "<html><body><h2>Invalid or expired reset link.</h2></body></html>";
+        }
+        Users user = userRepository.findByEmail(email).orElse(null);
+        if (user == null)
+            return "<html><body><h2>User not found.</h2></body></html>";
+
+        String newPassword = "";
+        if (user.getRole() == UserRole.STUDENT) {
+            Student student = studentRepository.findByUser(user).orElse(null);
+            if (student != null && student.getRollNumber() != null && !student.getRollNumber().trim().isEmpty()) {
+                newPassword = student.getRollNumber().trim();
+            }
+        }
+
+        if (newPassword.isEmpty()) {
+            newPassword = email.indexOf("@") > 0 ? email.substring(0, email.indexOf("@")) : email;
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'>" +
+                "<h2 style='color:green;'>Password Reset Successful!</h2>" +
+                "<p>Your new password is: <b>" + newPassword + "</b></p>" +
+                "<p>You can now close this page and login to the ZePRO app.</p>" +
+                "</body></html>";
     }
 
     public String changePassword(String email, String currentPassword, String newPassword) {
@@ -280,10 +335,34 @@ public class AuthService {
     public String updateProfile(String currentEmail, String newName, String newPhone) {
         Users user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (newName != null && !newName.trim().isEmpty()) user.setName(newName);
-        if (newPhone != null && !newPhone.trim().isEmpty()) user.setPhone(newPhone);
+        if (newName != null && !newName.trim().isEmpty())
+            user.setName(newName);
+        if (newPhone != null && !newPhone.trim().isEmpty())
+            user.setPhone(newPhone);
         userRepository.save(user);
         return "Profile updated successfully";
+    }
+
+    public String updateNotificationPreferences(String email, boolean emailNotifications, boolean pushNotifications) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setEmailNotifications(emailNotifications);
+        user.setPushNotifications(pushNotifications);
+        userRepository.save(user);
+        return "Notification preferences updated";
+    }
+
+    public String updateProfilePicture(String email, org.springframework.web.multipart.MultipartFile file) {
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            String path = fileUploadService.saveFile("profile_pictures", file);
+            user.setProfilePictureUrl(path);
+            userRepository.save(user);
+            return path;
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload profile picture: " + e.getMessage());
+        }
     }
 
     public String deleteAccount(String email) {

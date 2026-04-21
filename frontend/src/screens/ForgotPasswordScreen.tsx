@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -15,27 +16,36 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleReset = async () => {
+  const handleResetLink = async () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
 
     try {
-      await forgotPassword({
-        email: email,
-      });
+      setLoading(true);
+      await forgotPassword({ email });
 
       Alert.alert(
         'Reset Link Sent',
         'If the email exists, a password reset link has been sent.',
+        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
-
-      navigation.navigate('Login');
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again later.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Something went wrong. Please try again later.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleOTP = () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+    Alert.alert('Notice', 'OTP verification will be rolling out in an upcoming update! Please use the reset link option for now.');
   };
 
   return (
@@ -44,7 +54,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.title}>Forgot Password</Text>
 
         <Text style={styles.subtitle}>
-          Enter your email to receive a reset link
+          Enter your email and choose a method to recover your account
         </Text>
 
         <TextInput
@@ -53,12 +63,31 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
           onChangeText={setEmail}
           style={styles.input}
           autoCapitalize="none"
+          keyboardType="email-address"
           placeholderTextColor="#9ca3af"
         />
 
-        <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-          <Text style={styles.resetText}>Send Reset Link</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: '#3b82f6' }]} 
+            onPress={handleResetLink}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.btnText}>Reset Using Link</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: '#10b981', marginTop: 10 }]} 
+            onPress={handleOTP}
+            disabled={loading}
+          >
+            <Text style={styles.btnText}>OTP To Mail</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.backLink}>Back to Login</Text>
@@ -82,50 +111,64 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 25,
-    elevation: 6,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
 
   title: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+    color: '#1f2937',
   },
 
   subtitle: {
     fontSize: 14,
     color: '#6b7280',
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
+    lineHeight: 20,
   },
 
   input: {
-    color: '#000000',
+    color: '#111827',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 15,
-    backgroundColor: '#ffffff',
-  },
-
-  resetBtn: {
-    backgroundColor: '#3b82f6',
+    borderColor: '#d1d5db',
+    borderRadius: 8,
     padding: 14,
-    borderRadius: 6,
-    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#f9fafb',
+    fontSize: 15,
   },
 
-  resetText: {
+  buttonContainer: {
+    marginTop: 5,
+    marginBottom: 10,
+  },
+
+  actionBtn: {
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    elevation: 2,
+  },
+
+  btnText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 15,
   },
 
   backLink: {
-    marginTop: 15,
+    marginTop: 20,
     textAlign: 'center',
     color: '#2563eb',
+    fontWeight: '600',
   },
 });

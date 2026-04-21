@@ -24,6 +24,7 @@ public class ProjectResponse {
     private int assignedStudents;
     private int maxSlots;
     private int presentSlots;
+    private List<String> documents;
 
     private List<TeamMemberDetailDTO> teamMemberDetails;
     private String teamMembersNames;
@@ -37,7 +38,7 @@ public class ProjectResponse {
     // 🔥 Constructor for projects
     public ProjectResponse(Long projectId, String title, String description,
                            String status, String domain, String subdomain, boolean isActive, 
-                           int assignedStudents, int maxSlots,int presentSlots) {
+                           int assignedStudents, int maxSlots,int presentSlots, List<String> documents) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
@@ -48,6 +49,7 @@ public class ProjectResponse {
         this.assignedStudents = assignedStudents;
         this.maxSlots = maxSlots;
         this.presentSlots = presentSlots;
+        this.documents = documents;
     }
 
     // 🔥 Optional full constructor
@@ -55,7 +57,7 @@ public class ProjectResponse {
                            String status, Long teamId, String teamName,
                            String teamLead, List<String> members,
                            String domain, String subdomain, 
-                           int assignedStudents, int maxSlots,int presentSlots) {
+                           int assignedStudents, int maxSlots,int presentSlots, List<String> documents) {
 
         this.projectId = projectId;
         this.requestId = requestId;
@@ -71,6 +73,7 @@ public class ProjectResponse {
         this.assignedStudents = assignedStudents;
         this.maxSlots = maxSlots;
         this.presentSlots = presentSlots;
+        this.documents = documents;
     }
 
     // ---------------- GETTERS & SETTERS ----------------
@@ -138,4 +141,7 @@ public class ProjectResponse {
 
     public String getTeamMembersMarkSheetLinks() { return teamMembersMarkSheetLinks; }
     public void setTeamMembersMarkSheetLinks(String teamMembersMarkSheetLinks) { this.teamMembersMarkSheetLinks = teamMembersMarkSheetLinks; }
+
+    public List<String> getDocuments() { return documents; }
+    public void setDocuments(List<String> documents) { this.documents = documents; }
 }

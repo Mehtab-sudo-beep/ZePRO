@@ -27,6 +27,8 @@ import {
   getStudentProfile,
   updateStudentProfile,
 } from '../api/studentApi';
+import { uploadProfilePicture } from '../api/authApi';
+import * as ImagePicker from 'expo-image-picker';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -134,6 +136,46 @@ const ProfileScreen: React.FC = () => {
     load();
   }, []);
 
+  const [picModal, setPicModal] = useState(false);
+
+  const handlePickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const formData = new FormData() as any;
+      formData.append('email', user?.email || '');
+      formData.append('file', {
+        uri: asset.uri,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      });
+
+      try {
+        const res = await uploadProfilePicture(formData);
+        const newUrl = res.data;
+        setUser({ ...user, profilePictureUrl: newUrl });
+        Alert.alert('Success', 'Profile picture updated');
+        setPicModal(false);
+      } catch (err) {
+        console.log('Upload error:', err);
+        Alert.alert('Error', 'Failed to upload picture');
+      }
+    }
+  };
+
+  const getAvatarSource = () => {
+    if (user?.profilePictureUrl) {
+      return { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` };
+    }
+    return require('../assets/avatar.png');
+  };
+
   const openEdit = (key: string, label: string, val: string) => {
     setEditField({ key, label });
     setValue(val || '');
@@ -219,10 +261,15 @@ const ProfileScreen: React.FC = () => {
 
         {/* Top */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
-          <Image
-            source={require('../assets/avatar.png')}
-            style={styles.profileImage}
-          />
+          <TouchableOpacity onPress={() => setPicModal(true)}>
+            <Image
+              source={getAvatarSource()}
+              style={styles.profileImage}
+            />
+            <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.primary, borderRadius: 12, padding: 4 }}>
+              <Text style={{ color: 'white', fontSize: 10 }}>Edit</Text>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: colors.text }]}>
@@ -276,6 +323,24 @@ const ProfileScreen: React.FC = () => {
         </ScrollView>
 
       </View>
+
+      {/* Picture View/Edit Modal */}
+      <Modal visible={picModal} transparent animationType="fade">
+        <TouchableOpacity style={styles.modal} activeOpacity={1} onPress={() => setPicModal(false)}>
+          <View style={[styles.modalBox, { backgroundColor: colors.card, alignItems: 'center' }]}>
+            <Image
+              source={getAvatarSource()}
+              style={{ width: 200, height: 200, borderRadius: 100, marginBottom: 20 }}
+            />
+            <TouchableOpacity style={styles.filePickerBtn} onPress={handlePickImage}>
+              <Text style={{ color: '#fff', fontWeight: '500' }}>Change Picture</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setPicModal(false)} style={{ marginTop: 15 }}>
+              <Text style={{ color: colors.subText }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Modal */}
       <Modal visible={modal} transparent animationType="fade">

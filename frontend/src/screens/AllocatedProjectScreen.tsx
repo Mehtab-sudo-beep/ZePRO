@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
@@ -84,6 +84,12 @@ const AllocatedProjectScreen: React.FC = () => {
     );
   };
 
+  const openDocument = (url: string) => {
+    const API_BASE = 'http://10.226.126.133:8080';
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+    Linking.openURL(fullUrl).catch(err => console.error("Couldn't load page", err));
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* HEADER */}
@@ -155,7 +161,7 @@ const AllocatedProjectScreen: React.FC = () => {
               </View>
             </View>
 
-            <View style={[styles.detailRow, { marginBottom: 0 }]}>
+            <View style={[styles.detailRow, { marginBottom: 16 }]}>
               <View style={[styles.iconWrap, { backgroundColor: accentSoft }]}>
                 <Icon name="status" size={16} />
               </View>
@@ -166,6 +172,34 @@ const AllocatedProjectScreen: React.FC = () => {
                 </View>
               </View>
             </View>
+
+            {project.subdomain && (
+              <View style={styles.detailRow}>
+                <View style={[styles.iconWrap, { backgroundColor: accentSoft }]}>
+                  <Icon name="tag" size={16} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.detailLabel, { color: colors.subText }]}>Subdomain</Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{project.subdomain}</Text>
+                </View>
+              </View>
+            )}
+
+            {project.documents && project.documents.length > 0 && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={[styles.sectionLabel, { color: colors.subText, marginLeft: 0 }]}>Documents</Text>
+                {project.documents.map((doc: string, index: number) => {
+                  const fileName = doc.split('/').pop() || `Document ${index + 1}`;
+                  return (
+                    <TouchableOpacity key={index} style={styles.docLink} onPress={() => openDocument(doc)}>
+                      <Text style={[styles.linkText, { color: colors.primary }]}>
+                        • {fileName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
           </View>
 
@@ -290,5 +324,14 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  docLink: {
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#ccc',
+  },
+  linkText: {
+    fontSize: 15,
+    textDecorationLine: 'underline',
   },
 });

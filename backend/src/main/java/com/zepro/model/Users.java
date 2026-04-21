@@ -28,6 +28,12 @@ public class Users {
     private String profilePictureUrl;
     private boolean isOAuthUser = false;
 
+    @Column(columnDefinition = "boolean default true")
+    private boolean emailNotifications = true;
+
+    @Column(columnDefinition = "boolean default true")
+    private boolean pushNotifications = true;
+
     // ---------- GETTERS ----------
 
     public Long getUserId() {
@@ -70,6 +76,14 @@ public class Users {
         return isOAuthUser;
     }
 
+    public boolean isEmailNotifications() {
+        return emailNotifications;
+    }
+
+    public boolean isPushNotifications() {
+        return pushNotifications;
+    }
+
     // ---------- SETTERS ----------
 
     public void setUserId(Long userId) {
@@ -110,5 +124,13 @@ public class Users {
 
     public void setOAuthUser(boolean oAuthUser) {
         this.isOAuthUser = oAuthUser;
+    }
+
+    public void setEmailNotifications(boolean emailNotifications) {
+        this.emailNotifications = emailNotifications;
+    }
+
+    public void setPushNotifications(boolean pushNotifications) {
+        this.pushNotifications = pushNotifications;
     }
 }

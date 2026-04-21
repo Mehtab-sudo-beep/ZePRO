@@ -41,7 +41,15 @@ public class Project {
     @Column(name = "maximum_slots_reached_till_now")
     private int maximumSlotsReachedTillNow = 0;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "project_documents", joinColumns = @JoinColumn(name = "project_id"))
+    @Column(name = "document_url", length = 500)
+    private java.util.List<String> documents = new java.util.ArrayList<>();
+
     // ─── Getters & Setters ─────────────────────────────────
+
+    public java.util.List<String> getDocuments() { return documents; }
+    public void setDocuments(java.util.List<String> documents) { this.documents = documents; }
 
     public Long getProjectId() {
         return projectId;

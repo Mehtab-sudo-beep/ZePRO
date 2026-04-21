@@ -27,7 +27,7 @@ GoogleSignin.configure({
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const { setUser } = useContext(AuthContext);
+  const { user, setUser, loading: authLoading } = useContext(AuthContext);
   const { setStudentUser } = useContext(StudentAuthContext);
   const { colors } = useContext(ThemeContext);
 
@@ -36,6 +36,20 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [secure, setSecure] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // --- AUTO LOGIN EFFECT ---
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Restore user state locally to process directly into the app
+      processLoginSession({
+        ...user,
+        inTeam: user.isInTeam,
+        teamLead: user.isTeamLead,
+        fc: user.isFC
+      });
+    }
+  }, [authLoading, user]);
+
   // --- HELPER: SAVE SESSION & NAVIGATE ---
   const processLoginSession = async (data: any) => {
     const {
@@ -163,6 +177,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+  if (authLoading || user) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]} />
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.brandContainer}>

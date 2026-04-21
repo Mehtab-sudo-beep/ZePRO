@@ -12,6 +12,9 @@ interface User {
   isTeamLead?: boolean;
   phone?: string;
   isFC?: boolean;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  profilePictureUrl?: string;
 }
 
 interface AuthContextType {

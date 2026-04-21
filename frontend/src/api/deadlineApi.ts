@@ -65,3 +65,9 @@ export const deleteDeadline = async (deadlineId: number, token: string) => {
     headers: { Authorization: `Bearer ${token}` },
   }).then(res => res.data);
 };
+// ✅ SEND DEADLINE EMAIL MANUALLY (Faculty Coordinator only)
+export const sendDeadlineEmailManually = async (deadlineId: number, token: string) => {
+  return axios.post(`${API}/${deadlineId}/send-email`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(res => res.data);
+};

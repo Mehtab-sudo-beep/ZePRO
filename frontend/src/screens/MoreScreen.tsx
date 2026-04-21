@@ -14,16 +14,25 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../api/api';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
 const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
 
   const logout = async () => {
-  await AsyncStorage.removeItem("token");
-  await AsyncStorage.removeItem("studentId");
-  navigation.replace("Login");
-};
+    try {
+      await GoogleSignin.signOut();
+    } catch (e) {
+      // Ignore if not signed in with Google
+    }
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("studentId");
+    await setUser(null);
+    navigation.replace("Login");
+  };
 
   if (!user || user.role !== 'STUDENT') return null;
 
@@ -38,7 +47,11 @@ const MoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={require('../assets/avatar.png')}
+            source={
+              user?.profilePictureUrl
+                ? { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` }
+                : require('../assets/avatar.png')
+            }
             style={[
               styles.profileImage,
               {

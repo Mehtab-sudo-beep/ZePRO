@@ -3,9 +3,11 @@ import axios from 'axios';
 const API = 'http://10.226.126.133:8080';
 
 // ✅ GET ALL INSTITUTES
-export const getAllInstitutes = () => {
+export const getAllInstitutes = (token: string) => {
   console.log('[facultyApi] 📡 Calling getAllInstitutes');
-  return axios.get(`${API}/faculty/institutes`);
+  return axios.get(`${API}/faculty/institutes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 };
 
 // ✅ GET DEPARTMENTS BY INSTITUTE
@@ -88,6 +90,16 @@ export const createProject = async (data: any, token: string) => {
 export const updateProject = async (projectId: number, data: any, token: string) => {
   const res = await axios.put(`${API}/faculty/project/${projectId}`, data, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const uploadProjectDocuments = async (projectId: number, formData: FormData, token: string) => {
+  const res = await axios.post(`${API}/faculty/project/${projectId}/documents`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
   });
   return res.data;
 };

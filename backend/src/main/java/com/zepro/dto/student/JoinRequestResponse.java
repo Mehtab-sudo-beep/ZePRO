@@ -7,14 +7,16 @@ public class JoinRequestResponse {
     private String studentName;
     private String status;
     private String rejectionReason;
+    private String studentEmail;
 
     public JoinRequestResponse(Long requestId, Long studentId, String studentName, String status,
-            String rejectionReason) {
+            String rejectionReason, String studentEmail) {
         this.requestId = requestId;
         this.studentId = studentId;
         this.studentName = studentName;
         this.status = status;
         this.rejectionReason = rejectionReason;
+        this.studentEmail = studentEmail;
     }
 
     public Long getRequestId() {
@@ -35,5 +37,9 @@ public class JoinRequestResponse {
 
     public String getRejectionReason() {
         return rejectionReason;
+    }
+
+    public String getStudentEmail() {
+        return studentEmail;
     }
 }

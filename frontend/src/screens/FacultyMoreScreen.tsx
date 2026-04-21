@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../api/api';
 import { useState, useEffect } from 'react';
 import { getFacultyProfile } from '../api/facultyApi';
 
@@ -54,6 +55,7 @@ const FacultyMoreScreen: React.FC = () => {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
+            try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('role');
             await AsyncStorage.removeItem('facultyId');

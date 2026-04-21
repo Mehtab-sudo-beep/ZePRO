@@ -71,7 +71,13 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
         {
           text: 'Log Out',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+             try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
+             await import('@react-native-async-storage/async-storage').then(m => {
+              m.default.removeItem('token');
+              m.default.removeItem('role');
+              m.default.removeItem('facultyId');
+            });
             setUser(null);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },

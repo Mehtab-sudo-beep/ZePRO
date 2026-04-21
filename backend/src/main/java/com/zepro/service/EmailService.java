@@ -205,4 +205,38 @@ public class EmailService {
                 "</body>" +
                 "</html>";
     }
+    public void sendPasswordResetEmail(String toEmail, String name, String resetLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom("zepro205@gmail.com");
+            helper.setTo(toEmail);
+            helper.setSubject("ZePRO: Password Reset Request");
+
+            String htmlContent = buildResetPasswordTemplate(name, resetLink);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            System.out.println("[EmailService] ✅ Successfully sent password reset email to " + toEmail);
+        } catch (Exception e) {
+            System.err.println("[EmailService] ❌ Failed to send reset email: " + e.getMessage());
+        }
+    }
+
+    private String buildResetPasswordTemplate(String name, String resetLink) {
+        String safeName = (name != null && !name.isEmpty()) ? name : "User";
+        return "<!DOCTYPE html><html><head><style>" +
+               "body { font-family: 'Inter', sans-serif; background-color: #f5f5f5; padding: 20px; }" +
+               ".container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; text-align: center; border-radius:10px; }" +
+               ".button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #fff; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }" +
+               "</style></head><body><div class='container'>" +
+               "<h2>Reset Your Password</h2>" +
+               "<p>Hello " + safeName + ",</p>" +
+               "<p>You requested to reset your password. Click the button below to instantly reset it.</p>" +
+               "<p>Your new password will be set to your <b>Roll Number</b>. If you don't have one, it will be the <b>first part of your email</b>.</p>" +
+               "<a href='" + resetLink + "' class='button'>Reset Password</a>" +
+               "<p>If you didn't request this, ignore this email.</p>" +
+               "</div></body></html>";
+    }
 }
