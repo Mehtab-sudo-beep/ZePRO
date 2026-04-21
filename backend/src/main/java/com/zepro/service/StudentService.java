@@ -47,6 +47,7 @@ public class StudentService {
     private final DeactivatedTeamJoinRequestRepository deactivatedTeamJoinRequestRepository;
     private final com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository;
     private final FileUploadService fileUploadService;
+    private final NotificationService notificationService;
 
     public StudentService(StudentRepository studentRepository,
             TeamRepository teamRepository,
@@ -62,7 +63,8 @@ public class StudentService {
             UserRepository userRepository,
             DeactivatedTeamJoinRequestRepository deactivatedTeamJoinRequestRepository,
             com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository,
-            FileUploadService fileUploadService) {
+            FileUploadService fileUploadService,
+            NotificationService notificationService) {
         this.studentRepository = studentRepository;
         this.teamRepository = teamRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -78,6 +80,7 @@ public class StudentService {
         this.deactivatedTeamJoinRequestRepository = deactivatedTeamJoinRequestRepository;
         this.departmentDeadlinesRepository = departmentDeadlinesRepository;
         this.fileUploadService = fileUploadService;
+        this.notificationService = notificationService;
     }
 
     // ------------------------------------------------
@@ -884,6 +887,17 @@ public class StudentService {
 
         deactivateOtherJoinRequests(student.getStudentId());
 
+        // Notify student
+        if (student.getUser() != null) {
+            notificationService.createAndSendNotification(
+                student.getUser(),
+                "Team Request Approved! 🎉",
+                "You have been successfully added to team " + team.getTeamName(),
+                "StudentHome",
+                null
+            );
+        }
+
         return "Student added to team successfully";
     }
 
@@ -895,6 +909,17 @@ public class StudentService {
         request.setStatus("REJECTED");
         request.setRejectionReason(reason != null ? reason : "");
         joinRequestRepository.save(request);
+
+        // Notify student
+        if (request.getStudent() != null && request.getStudent().getUser() != null) {
+            notificationService.createAndSendNotification(
+                request.getStudent().getUser(),
+                "Team Request Rejected",
+                "Your request to join team " + request.getTeam().getTeamName() + " was rejected.",
+                "SentRequests",
+                null
+            );
+        }
 
         return "Request rejected";
     }
@@ -1074,6 +1099,10 @@ public class StudentService {
 
         response.setDomain(domainStr);
         response.setSubDomain(subdomainStr);
+        response.setProjectId(project.getProjectId());
+        response.setDescription(project.getDescription());
+        response.setMeetingLink(meeting.getMeetingLink());
+        response.setTeamName(team.getTeamName());
 
         List<String> members = team.getMembers()
                 .stream()
@@ -1081,6 +1110,9 @@ public class StudentService {
                 .toList();
 
         response.setMembers(members);
+
+        // Fetch documents
+        response.setDocuments(project.getDocuments());
 
         return response;
     }

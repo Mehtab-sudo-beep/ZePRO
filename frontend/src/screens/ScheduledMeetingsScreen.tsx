@@ -317,7 +317,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
     onPress={() => navigation.navigate('StudentHome')}
   >
     <Image
-      source={require('../assets/home.png')}
+      source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
       style={styles.tabIcon}
     />
     <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
@@ -338,7 +338,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
     onPress={() => navigation.navigate('More')}
   >
     <Image
-      source={require('../assets/more.png')}
+      source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
       style={styles.tabIcon}
     />
     <Text style={[styles.tab, { color: colors.subText }]}>More</Text>

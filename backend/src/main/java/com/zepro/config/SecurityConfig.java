@@ -79,11 +79,15 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasRole("ADMIN")
 
                 // ✅ FACULTY APIs
+                .requestMatchers("/api/notifications/**").hasAnyRole("STUDENT","FACULTY","ADMIN")
+                .requestMatchers("/notifications/**").hasAnyRole("STUDENT","FACULTY","ADMIN")
+                .requestMatchers("/api/deadlines/**").hasAnyRole("STUDENT","FACULTY","ADMIN")
                 .requestMatchers("/faculty/profile-status/**").hasRole("FACULTY")
                 .requestMatchers("/faculty/complete-profile/**").hasRole("FACULTY")
                 .requestMatchers("/faculty/**").hasRole("FACULTY")
 
                 // ✅ COORDINATOR APIs
+                .requestMatchers("/api/coordinator/**").hasRole("FACULTY")
                 .requestMatchers("/coordinator/**").hasRole("FACULTY")
 
                 // ✅ STUDENT APIs

@@ -10,6 +10,7 @@ import com.zepro.service.AuthService;
 
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,40 +39,112 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        String baseUrl = "http://" + httpRequest.getServerName() + ":" + httpRequest.getServerPort();
-        return authService.forgotPassword(request.getEmail(), baseUrl);
+    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        return authService.forgotPasswordOtp(request.getEmail());
     }
 
-    @GetMapping("/reset-password-action")
-    public String resetPasswordAction(
-            @RequestParam String email,
-            @RequestParam String token) {
-        return authService.resetPasswordAction(email, token);
+    public static class VerifyOtpRequest {
+        private String email;
+        private String otp;
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getOtp() {
+            return otp;
+        }
+
+        public void setOtp(String otp) {
+            this.otp = otp;
+        }
+    }
+
+    @PostMapping("/verify-otp")
+    public java.util.Map<String, Boolean> verifyOtp(@RequestBody VerifyOtpRequest request) {
+        boolean isValid = authService.verifyOtp(request.getEmail(), request.getOtp());
+        return java.util.Collections.singletonMap("valid", isValid);
+    }
+
+    public static class ResetPasswordOtpRequest {
+        private String email;
+        private String otp;
+        private String newPassword;
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getOtp() {
+            return otp;
+        }
+
+        public void setOtp(String otp) {
+            this.otp = otp;
+        }
+
+        public String getNewPassword() {
+            return newPassword;
+        }
+
+        public void setNewPassword(String newPassword) {
+            this.newPassword = newPassword;
+        }
+    }
+
+    @PostMapping("/reset-password-otp")
+    public java.util.Map<String, String> resetPasswordOtp(@RequestBody ResetPasswordOtpRequest request) {
+        String msg = authService.resetPasswordOtp(request.getEmail(), request.getOtp(), request.getNewPassword());
+        return java.util.Collections.singletonMap("message", msg);
     }
 
     @PostMapping("/change-password")
     public String changePassword(
             @RequestBody ChangePasswordRequest request) {
-        
+
         return authService.changePassword(
-                request.getEmail(), 
-                request.getCurrentPassword(), 
-                request.getNewPassword()
-        );
+                request.getEmail(),
+                request.getCurrentPassword(),
+                request.getNewPassword());
     }
-    
+
     // Notification Request DTO logic encapsulated here
     public static class NotificationRequest {
         private String email;
         private boolean emailNotifications;
         private boolean pushNotifications;
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public boolean isEmailNotifications() { return emailNotifications; }
-        public void setEmailNotifications(boolean emailNotifications) { this.emailNotifications = emailNotifications; }
-        public boolean isPushNotifications() { return pushNotifications; }
-        public void setPushNotifications(boolean pushNotifications) { this.pushNotifications = pushNotifications; }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public boolean isEmailNotifications() {
+            return emailNotifications;
+        }
+
+        public void setEmailNotifications(boolean emailNotifications) {
+            this.emailNotifications = emailNotifications;
+        }
+
+        public boolean isPushNotifications() {
+            return pushNotifications;
+        }
+
+        public void setPushNotifications(boolean pushNotifications) {
+            this.pushNotifications = pushNotifications;
+        }
     }
 
     @PutMapping("/notifications")
@@ -79,8 +152,28 @@ public class AuthController {
         return authService.updateNotificationPreferences(
                 request.getEmail(),
                 request.isEmailNotifications(),
-                request.isPushNotifications()
-        );
+                request.isPushNotifications());
+    }
+
+    public static class PushTokenRequest {
+        private String token;
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+    }
+
+    @PostMapping("/push-token")
+    public ResponseEntity<?> updatePushToken(Authentication authentication, @RequestBody PushTokenRequest request) {
+        if (authentication == null)
+            return ResponseEntity.status(401).body("Unauthorized");
+        String email = authentication.getName();
+        authService.updatePushToken(email, request.getToken());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/profile-picture", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)

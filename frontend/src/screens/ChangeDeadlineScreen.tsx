@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { coordinatorApi } from '../api/coordinatorApi';
 
 interface Deadlines {
@@ -24,11 +24,17 @@ interface Deadlines {
 const ChangeDeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
 
-  const [deadlines, setDeadlines] = useState<Deadlines>({
-    teamFormationDeadline: '',
-    projectRequestDeadline: '',
-    meetingSchedulingDeadline: '',
+  const [deadlines, setDeadlines] = useState<{
+    teamFormationDeadline: Date | null;
+    projectRequestDeadline: Date | null;
+    meetingSchedulingDeadline: Date | null;
+  }>({
+    teamFormationDeadline: null,
+    projectRequestDeadline: null,
+    meetingSchedulingDeadline: null,
   });
+
+  const [showPicker, setShowPicker] = useState<keyof Deadlines | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -39,34 +45,28 @@ const ChangeDeadlinesScreen: React.FC = () => {
     fetchDeadlines();
   }, []);
 
-  const formatDateForFrontend = (isoString: string) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
+  const formatDateForFrontend = (date: Date | null) => {
+    if (!date) return 'Not set';
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
-  const formatDateForBackend = (ddmmyyyy: string) => {
-    if (!ddmmyyyy) return null;
-    const parts = ddmmyyyy.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}T23:59:59`;
-    }
-    return null;
+  const formatDateForBackend = (date: Date | null) => {
+    if (!date) return null;
+    // Format to ISO string for backend
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T23:59:59`;
   };
 
   const fetchDeadlines = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) throw new Error('Authentication token missing');
-
-      const data = await coordinatorApi.getDeadlines(token);
+      const data = await coordinatorApi.getDeadlines();
       setDeadlines({
-        teamFormationDeadline: formatDateForFrontend(data.teamFormationDeadline),
-        projectRequestDeadline: formatDateForFrontend(data.projectRequestDeadline),
-        meetingSchedulingDeadline: formatDateForFrontend(data.meetingSchedulingDeadline),
+        teamFormationDeadline: data.teamFormationDeadline ? new Date(data.teamFormationDeadline) : null,
+        projectRequestDeadline: data.projectRequestDeadline ? new Date(data.projectRequestDeadline) : null,
+        meetingSchedulingDeadline: data.meetingSchedulingDeadline ? new Date(data.meetingSchedulingDeadline) : null,
       });
     } catch (error: any) {
       console.log('Error fetching deadlines', error);
@@ -99,8 +99,8 @@ const ChangeDeadlinesScreen: React.FC = () => {
     ];
 
     fields.forEach(({ key, label }) => {
-      if (deadlines[key] && !isValidDate(deadlines[key])) {
-        newErrors[key] = 'Enter a valid date in DD/MM/YYYY format';
+      if (!deadlines[key]) {
+        newErrors[key] = `${label} is required`;
       }
     });
 
@@ -117,16 +117,13 @@ const ChangeDeadlinesScreen: React.FC = () => {
     setLoading(true);
 
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) throw new Error('Authentication token missing');
-
       const payload = {
         teamFormationDeadline: formatDateForBackend(deadlines.teamFormationDeadline),
         projectRequestDeadline: formatDateForBackend(deadlines.projectRequestDeadline),
         meetingSchedulingDeadline: formatDateForBackend(deadlines.meetingSchedulingDeadline),
       };
 
-      await coordinatorApi.saveDeadlines(payload, token);
+      await coordinatorApi.saveDeadlines(payload);
       
       Alert.alert(
         '✅ Deadlines Updated',
@@ -143,10 +140,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
   const handleSendEmails = async () => {
     setEmailLoading(true);
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) throw new Error('Authentication token missing');
-
-      const response = await coordinatorApi.sendDepartmentDeadlineEmail(token);
+      const response = await coordinatorApi.sendDepartmentDeadlineEmail();
       Alert.alert('✅ Success', response.message || 'Emails sent successfully.');
     } catch (error: any) {
       Alert.alert('❌ Error', error.message || 'Failed to send emails. Make sure there are deadlines configured.');
@@ -200,18 +194,16 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
           <DeadlineField
             label="Team Formation Deadline"
-            placeholder="DD/MM/YYYY"
-            value={deadlines.teamFormationDeadline}
-            onChangeText={v => handleChange('teamFormationDeadline', v)}
+            value={formatDateForFrontend(deadlines.teamFormationDeadline)}
+            onPress={() => setShowPicker('teamFormationDeadline')}
             error={errors.teamFormationDeadline}
             description="Last date for students to form their project teams"
           />
 
           <DeadlineField
             label="Project Request Deadline"
-            placeholder="DD/MM/YYYY"
-            value={deadlines.projectRequestDeadline}
-            onChangeText={v => handleChange('projectRequestDeadline', v)}
+            value={formatDateForFrontend(deadlines.projectRequestDeadline)}
+            onPress={() => setShowPicker('projectRequestDeadline')}
             error={errors.projectRequestDeadline}
             description="Last date for teams to send faculty allocation requests"
           />
@@ -223,13 +215,30 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
           <DeadlineField
             label="Meeting Scheduling Deadline"
-            placeholder="DD/MM/YYYY"
-            value={deadlines.meetingSchedulingDeadline}
-            onChangeText={v => handleChange('meetingSchedulingDeadline', v)}
+            value={formatDateForFrontend(deadlines.meetingSchedulingDeadline)}
+            onPress={() => setShowPicker('meetingSchedulingDeadline')}
             error={errors.meetingSchedulingDeadline}
             description="Latest possible date to schedule a meeting with a student"
           />
         </View>
+
+        {showPicker && (
+          <DateTimePicker
+            value={deadlines[showPicker] || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            minimumDate={new Date()}
+            onChange={(_, date) => {
+              setShowPicker(null);
+              if (date) {
+                setDeadlines(prev => ({ ...prev, [showPicker]: date }));
+                if (errors[showPicker]) {
+                  setErrors(prev => ({ ...prev, [showPicker]: '' }));
+                }
+              }
+            }}
+          />
+        )}
 
         {/* Action Buttons */}
         <TouchableOpacity
@@ -270,35 +279,32 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
 const DeadlineField = ({
   label,
-  placeholder,
   value,
-  onChangeText,
+  onPress,
   error,
   description,
 }: {
   label: string;
-  placeholder: string;
   value: string;
-  onChangeText: (v: string) => void;
+  onPress: () => void;
   error?: string;
   description?: string;
 }) => {
-  const { TextInput } = require('react-native');
   return (
     <View style={fieldStyles.wrapper}>
       <Text style={fieldStyles.label}>{label}</Text>
-      <View style={[fieldStyles.inputRow, error ? fieldStyles.inputRowError : null]}>
-        
-        <TextInput
-          style={fieldStyles.input}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
-          value={value}
-          onChangeText={onChangeText}
-          keyboardType="numeric"
-          maxLength={10}
+      <TouchableOpacity 
+        style={[fieldStyles.inputRow, error ? fieldStyles.inputRowError : null]}
+        onPress={onPress}
+      >
+        <Text style={[fieldStyles.input, value === 'Not set' ? { color: '#9CA3AF' } : null]}>
+          {value}
+        </Text>
+        <Image 
+          source={require('../assets/deadlines/calendar.png')} 
+          style={{ width: 18, height: 18, tintColor: '#4F46E5' }} 
         />
-      </View>
+      </TouchableOpacity>
       {description && !error && (
         <Text style={fieldStyles.description}>{description}</Text>
       )}

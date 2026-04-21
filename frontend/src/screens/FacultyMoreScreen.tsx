@@ -22,6 +22,7 @@ const FacultyMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -154,7 +155,7 @@ const FacultyMoreScreen: React.FC = () => {
             onPress={() => navigation.navigate('FacultyHome')}
           >
             <Image
-              source={require('../assets/home.png')}
+              source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
               style={styles.tabIcon}
             />
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
@@ -165,7 +166,7 @@ const FacultyMoreScreen: React.FC = () => {
             onPress={() => navigation.navigate('FacultyCreateMenu')}
           >
             <Image
-              source={require('../assets/create.png')}
+              source={isDark ? require('../assets/create-white.png') : require('../assets/create.png')}
               style={styles.tabIcon}
             />
             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>

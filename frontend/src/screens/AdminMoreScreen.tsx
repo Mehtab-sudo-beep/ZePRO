@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  StatusBar,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +19,8 @@ import { BASE_URL } from '../api/api';
 const AdminMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
-  const { colors } = useContext(ThemeContext);
+  const { colors, theme } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
   const { showAlert } = useContext(AlertContext);
 
   // ✅ LOGOUT WITH ALERT CONTEXT
@@ -49,6 +51,7 @@ const AdminMoreScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
       <View style={styles.container}>
 
         {/* Header */}
@@ -103,17 +106,7 @@ const AdminMoreScreen: React.FC = () => {
             colors={colors}
           />
 
-          <MenuItem
-            title="Rule Management"
-            onPress={() => navigation.navigate('RuleManagement')}
-            colors={colors}
-          />
 
-          <MenuItem
-            title="Deadline Management"
-            onPress={() => navigation.navigate('DeadlineManagement')}
-            colors={colors}
-          />
 
           <MenuItem
             title="Settings"
@@ -144,7 +137,7 @@ const AdminMoreScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
           >
             <Image
-              source={require('../assets/home.png')}
+              source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
               style={styles.tabIcon}
             />
             <Text style={[styles.tab, { color: colors.subText }]}>

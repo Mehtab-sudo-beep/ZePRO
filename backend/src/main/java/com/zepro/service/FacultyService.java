@@ -598,9 +598,7 @@ public class FacultyService {
         faculty.setQualification(request.getQualification().trim());
         faculty.setCabinNo(request.getCabinNo().trim());
         faculty.setPhone(request.getPhone().trim());
-        faculty.setProblemStatementLink(request.getProblemStatementLink().trim());
-        faculty.setDomains(request.getDomains().trim());
-        faculty.setSubDomains(request.getSubDomains().trim());
+
 
         // Set department
         if (request.getDepartmentId() != null) {
@@ -637,9 +635,7 @@ public class FacultyService {
                 saved.getQualification(),
                 saved.getCabinNo(),
                 saved.getPhone(),
-                saved.getProblemStatementLink(),
-                saved.getDomains(),
-                saved.getSubDomains(),
+
                 saved.getDepartment() != null ? saved.getDepartment().getDepartmentId() : null,
                 saved.getDepartment() != null ? saved.getDepartment().getDepartmentName() : null,
                 saved.getInstitute() != null ? saved.getInstitute().getInstituteId() : null,
@@ -669,9 +665,7 @@ public class FacultyService {
                 faculty.getQualification(),
                 faculty.getCabinNo(),
                 faculty.getPhone(),
-                faculty.getProblemStatementLink(),
-                faculty.getDomains(),
-                faculty.getSubDomains(),
+
                 faculty.getDepartment() != null ? faculty.getDepartment().getDepartmentId() : null,
                 faculty.getDepartment() != null ? faculty.getDepartment().getDepartmentName() : null,
                 faculty.getInstitute() != null ? faculty.getInstitute().getInstituteId() : null,
@@ -704,11 +698,7 @@ public class FacultyService {
         String cabinNo = faculty.getCabinNo();
         if (cabinNo == null || cabinNo.trim().isEmpty()) return false;
 
-        String problemStatement = faculty.getProblemStatementLink();
-        if (problemStatement == null || problemStatement.trim().isEmpty()) return false;
 
-        String domains = faculty.getDomains();
-        if (domains == null || domains.trim().isEmpty()) return false;
 
         if (faculty.getDepartment() == null) return false;
         if (faculty.getInstitute() == null) return false;
@@ -731,10 +721,7 @@ public class FacultyService {
             throw new RuntimeException("Cabin number is required");
         if (request.getPhone() == null || request.getPhone().trim().isEmpty())
             throw new RuntimeException("Phone is required");
-        if (request.getProblemStatementLink() == null || request.getProblemStatementLink().trim().isEmpty())
-            throw new RuntimeException("Problem statement link is required");
-        if (request.getDomains() == null || request.getDomains().trim().isEmpty())
-            throw new RuntimeException("Domains are required");
+
         if (request.getDepartmentId() == null)
             throw new RuntimeException("Department ID is required");
         if (request.getInstituteId() == null)

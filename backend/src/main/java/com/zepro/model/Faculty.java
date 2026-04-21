@@ -26,9 +26,7 @@ public class Faculty {
     private String qualification;
     private String cabinNo;
     private String phone;
-    private String problemStatementLink;
-    private String domains;
-    private String subDomains;
+
 
     private int allocatedStudents = 0;
     private int maxStudents = 10;
@@ -57,9 +55,7 @@ public class Faculty {
         return institute;
     }
     public String getPhone() { return phone; }
-    public String getProblemStatementLink() { return problemStatementLink; }
-    public String getDomains() { return domains; }
-    public String getSubDomains() { return subDomains; }
+
     public int getAllocatedStudents() { return allocatedStudents; }
     public int getMaxStudents() { return maxStudents; }
 
@@ -78,9 +74,7 @@ public class Faculty {
     public void setCabinNo(String cabinNo) { this.cabinNo = cabinNo; }
     public void setInstitute(Institute institute) { this.institute = institute; }
     public void setPhone(String phone) { this.phone = phone; }
-    public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
-    public void setDomains(String domains) { this.domains = domains; }
-    public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
+
     public void setAllocatedStudents(int allocatedStudents) { this.allocatedStudents = allocatedStudents; }
     public void setMaxStudents(int maxStudents) { this.maxStudents = maxStudents; }
 }

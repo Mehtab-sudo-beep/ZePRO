@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { ThemeContext } from '../theme/ThemeContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -46,6 +47,7 @@ interface DepartmentStats {
 const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
   const { instituteId, instituteName } = route.params;
   const { showAlert } = useContext(AlertContext);
+  const { colors, theme } = useContext(ThemeContext);
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentStats, setDepartmentStats] = useState<Record<string, DepartmentStats>>({});
@@ -231,43 +233,43 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
 
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backArrow}>‹</Text>
+            <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>{instituteName}</Text>
-            <Text style={styles.headerSubtitle}>Departments</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{instituteName}</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.subText }]}>Departments</Text>
           </View>
         </View>
 
         {/* ✅ UPDATED Stats with dynamic data */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#4F46E5' }]}>{departments.length}</Text>
-            <Text style={styles.statLabel}>Departments</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{departments.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Departments</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: '#059669' }]}>{totalStats.students}</Text>
-            <Text style={styles.statLabel}>Students</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Students</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: '#D97706' }]}>{totalStats.faculty}</Text>
-            <Text style={styles.statLabel}>Faculty</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Faculty</Text>
           </View>
         </View>
 
         {/* Search */}
         <View style={styles.searchWrapper}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
             placeholder="Search departments..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.subText}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -276,7 +278,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Add Button */}
         <View style={styles.addWrapper}>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowAddModal(true)}
           >
             <Text style={styles.addButtonText}>+ Add Department</Text>
@@ -304,7 +306,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
                 return (
                   <TouchableOpacity
                     key={dept.departmentId}
-                    style={styles.card}
+                    style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
                     onPress={() =>
                       navigation.navigate('DepartmentDetails', {
                         departmentId: dept.departmentId,
@@ -317,45 +319,45 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
                   >
                     {/* Card Header */}
                     <View style={styles.cardHeader}>
-                      <View style={styles.deptIcon}>
-                        <Text style={styles.deptIconText}>
+                      <View style={[styles.deptIcon, { backgroundColor: colors.primary + '15' }]}>
+                        <Text style={[styles.deptIconText, { color: colors.primary }]}>
                           {dept.departmentCode.substring(0, 2).toUpperCase()}
                         </Text>
                       </View>
                       <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={styles.cardTitle}>{dept.departmentName}</Text>
-                        <Text style={styles.cardText}>Code: {dept.departmentCode}</Text>
+                        <Text style={[styles.cardTitle, { color: colors.text }]}>{dept.departmentName}</Text>
+                        <Text style={[styles.cardText, { color: colors.subText }]}>Code: {dept.departmentCode}</Text>
                       </View>
-                      <Text style={styles.chevron}>›</Text>
+                      <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>
                     </View>
 
                     {/* ✅ DYNAMIC STATS ROW */}
-                    <View style={styles.statsRow}>
+                    <View style={[styles.statsRow, { backgroundColor: colors.background }]}>
                       <View style={styles.statItem}>
                         <Text style={[styles.statCount, { color: '#059669' }]}>
                           {stats.studentCount}
                         </Text>
-                        <Text style={styles.statName}>Students</Text>
+                        <Text style={[styles.statName, { color: colors.subText }]}>Students</Text>
                       </View>
-                      <View style={styles.divider} />
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
                       <View style={styles.statItem}>
                         <Text style={[styles.statCount, { color: '#D97706' }]}>
                           {stats.facultyCount}
                         </Text>
-                        <Text style={styles.statName}>Faculty</Text>
+                        <Text style={[styles.statName, { color: colors.subText }]}>Faculty</Text>
                       </View>
-                      <View style={styles.divider} />
+                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
                       <View style={styles.statItem}>
-                        <Text style={[styles.statCount, { color: '#4F46E5' }]}>
+                        <Text style={[styles.statCount, { color: colors.primary }]}>
                           {stats.projectCount}
                         </Text>
-                        <Text style={styles.statName}>Projects</Text>
+                        <Text style={[styles.statName, { color: colors.subText }]}>Projects</Text>
                       </View>
                     </View>
 
                     {/* Delete Button */}
                     <TouchableOpacity
-                      style={styles.deleteButton}
+                      style={[styles.deleteButton, { borderColor: '#DC2626' }]}
                       onPress={() => handleDelete(dept.departmentId, dept.departmentName)}
                     >
                       <Text style={styles.deleteButtonText}>Delete</Text>
@@ -368,17 +370,17 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
 
         {/* Add Modal */}
-        <Modal visible={showAddModal} transparent animationType="slide">
+                <Modal visible={showAddModal} transparent animationType="slide">
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Department</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add Department</Text>
                 <TouchableOpacity onPress={() => {
                   setShowAddModal(false);
                   setNewDept({ departmentName: '', departmentCode: '', description: '' });
                   setErrors({});
                 }}>
-                  <Text style={styles.closeButton}>✕</Text>
+                  <Text style={[styles.closeButton, { color: colors.subText }]}>✕</Text>
                 </TouchableOpacity>
               </View>
 
@@ -408,7 +410,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[styles.cancelButton, { borderColor: colors.border }]}
                   onPress={() => {
                     setShowAddModal(false);
                     setNewDept({ departmentName: '', departmentCode: '', description: '' });
@@ -416,10 +418,10 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
                   }}
                   disabled={submitting}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.submitButton, submitting && { backgroundColor: '#93C5FD' }]}
+                  style={[styles.submitButton, { backgroundColor: colors.primary }, submitting && { opacity: 0.7 }]}
                   onPress={handleAdd}
                   disabled={submitting}
                 >
@@ -456,72 +458,72 @@ const FormField = ({
   onChangeText: (text: string) => void;
   error?: string;
   multiline?: boolean;
-}) => (
-  <View style={{ marginBottom: 14 }}>
-    <Text style={styles.fieldLabel}>{label}</Text>
-    <TextInput
-      style={[
-        styles.fieldInput,
-        error && { borderColor: '#ef4444' },
-      ]}
-      placeholder={placeholder}
-      placeholderTextColor="#9CA3AF"
-      value={value}
-      onChangeText={onChangeText}
-      multiline={multiline}
-    />
-    {error && <Text style={styles.fieldError}>{error}</Text>}
-  </View>
-);
+}) => {
+  const { colors } = useContext(ThemeContext);
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
+      <TextInput
+        style={[
+          styles.fieldInput,
+          {
+            backgroundColor: colors.background,
+            borderColor: error ? '#ef4444' : colors.border,
+            color: colors.text,
+          },
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor={colors.subText}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+      />
+      {error && <Text style={styles.fieldError}>{error}</Text>}
+    </View>
+  );
+};
 
 export default DepartmentListScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
 
   header: {
-    backgroundColor: '#ffffff',
     paddingTop: 15,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
-  backBtn: { marginRight: 12, width: 40 },
-  backArrow: { fontSize: 36, color: '#1F2937', lineHeight: 40 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#000000' },
-  headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  backBtn: { marginRight: 12, width: 40, justifyContent: 'center', alignItems: 'center' },
+  backArrow: { fontSize: 32, fontWeight: '300' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: 13, marginTop: 2 },
 
   statsGrid: { flexDirection: 'row', gap: 12, padding: 16, paddingBottom: 0 },
   statCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     flex: 1,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   statValue: { fontSize: 24, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  statLabel: { fontSize: 11, marginTop: 4 },
 
   searchWrapper: { paddingHorizontal: 16, paddingTop: 16 },
   searchInput: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 
   addWrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   addButton: {
-    backgroundColor: '#4F46E5',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -532,45 +534,40 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 16 },
 
   emptyState: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 40,
     alignItems: 'center',
     marginTop: 8,
+    borderWidth: 1,
   },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 16, color: '#6B7280' },
+  emptyText: { fontSize: 16 },
 
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
-  cardText: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  chevron: { fontSize: 28, color: '#9CA3AF' },
+  cardTitle: { fontSize: 16, fontWeight: 'bold' },
+  cardText: { fontSize: 13, marginTop: 2 },
+  chevron: { fontSize: 28 },
 
   deptIcon: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deptIconText: { fontSize: 13, fontWeight: 'bold', color: '#4F46E5' },
+  deptIconText: { fontSize: 13, fontWeight: 'bold' },
 
-  // ✅ NEW STATS ROW STYLES
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -584,18 +581,15 @@ const styles = StyleSheet.create({
   },
   statName: {
     fontSize: 11,
-    color: '#6B7280',
     marginTop: 2,
   },
   divider: {
     width: 1,
     height: 30,
-    backgroundColor: '#E5E7EB',
   },
 
   deleteButton: {
     borderWidth: 1,
-    borderColor: '#DC2626',
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
@@ -604,53 +598,51 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: 32,
+    paddingBottom: 40,
+    borderWidth: 1,
+    borderBottomWidth: 0,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', color: '#1F2937' },
-  closeButton: { fontSize: 24, color: '#6B7280' },
+  modalTitle: { fontSize: 22, fontWeight: 'bold' },
+  closeButton: { fontSize: 24 },
 
-  fieldLabel: { fontWeight: '600', marginBottom: 6, color: '#374151', fontSize: 13 },
+  fieldLabel: { fontWeight: '700', marginBottom: 8, fontSize: 13 },
   fieldInput: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   fieldError: { color: '#ef4444', fontSize: 12, marginTop: 4 },
 
-  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 24 },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     alignItems: 'center',
   },
-  cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  cancelButtonText: { fontSize: 15, fontWeight: '600' },
   submitButton: {
     flex: 1,
-    backgroundColor: '#4F46E5',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
+    elevation: 2,
   },
   submitButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });

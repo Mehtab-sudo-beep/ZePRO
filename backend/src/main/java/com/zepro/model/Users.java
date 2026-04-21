@@ -31,8 +31,15 @@ public class Users {
     @Column(columnDefinition = "boolean default true")
     private boolean emailNotifications = true;
 
+    // ✅ NEW: OTP fields
+    private String resetOtp;
+    private java.time.LocalDateTime resetOtpExpiry;
+
     @Column(columnDefinition = "boolean default true")
     private boolean pushNotifications = true;
+
+    // ✅ NEW: Push token
+    private String expoPushToken;
 
     // ---------- GETTERS ----------
 
@@ -84,6 +91,18 @@ public class Users {
         return pushNotifications;
     }
 
+    public String getExpoPushToken() {
+        return expoPushToken;
+    }
+
+    public String getResetOtp() {
+        return resetOtp;
+    }
+
+    public java.time.LocalDateTime getResetOtpExpiry() {
+        return resetOtpExpiry;
+    }
+
     // ---------- SETTERS ----------
 
     public void setUserId(Long userId) {
@@ -132,5 +151,17 @@ public class Users {
 
     public void setPushNotifications(boolean pushNotifications) {
         this.pushNotifications = pushNotifications;
+    }
+
+    public void setExpoPushToken(String expoPushToken) {
+        this.expoPushToken = expoPushToken;
+    }
+
+    public void setResetOtp(String resetOtp) {
+        this.resetOtp = resetOtp;
+    }
+
+    public void setResetOtpExpiry(java.time.LocalDateTime resetOtpExpiry) {
+        this.resetOtpExpiry = resetOtpExpiry;
     }
 }

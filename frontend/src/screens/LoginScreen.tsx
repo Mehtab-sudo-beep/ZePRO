@@ -178,9 +178,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  if (authLoading || user) {
+  if (authLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
     );
   }
 

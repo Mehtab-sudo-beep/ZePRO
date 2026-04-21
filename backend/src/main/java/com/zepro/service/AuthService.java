@@ -25,6 +25,10 @@ import com.zepro.repository.UserRepository;
 import com.zepro.security.JwtUtil;
 import com.zepro.service.EmailService;
 import com.zepro.service.FileUploadService;
+import com.zepro.repository.DepartmentRepository;
+import com.zepro.repository.InstituteRepository;
+import com.zepro.model.Department;
+import com.zepro.model.Institute;
 
 @Service
 public class AuthService {
@@ -37,6 +41,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
     private final FileUploadService fileUploadService;
+    private final DepartmentRepository departmentRepository;
+    private final InstituteRepository instituteRepository;
 
     public AuthService(UserRepository userRepository,
             StudentRepository studentRepository,
@@ -45,7 +51,9 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
             EmailService emailService,
-            FileUploadService fileUploadService) {
+            FileUploadService fileUploadService,
+            DepartmentRepository departmentRepository,
+            InstituteRepository instituteRepository) {
 
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -55,6 +63,8 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.emailService = emailService;
         this.fileUploadService = fileUploadService;
+        this.departmentRepository = departmentRepository;
+        this.instituteRepository = instituteRepository;
     }
 
     // ✅ Google Login Endpoint
@@ -108,7 +118,7 @@ public class AuthService {
                 user.setPassword(passwordEncoder.encode(usernamePrefix));
 
                 user = userRepository.save(user);
-                createUserRoleProfile(user);
+                createUserRoleProfile(user, null, null, usernamePrefix); // raw password for Google login
             } else {
                 user = userOptional.get();
                 if (user.isOAuthUser() && user.getOauthProvider() != null) {
@@ -182,19 +192,28 @@ public class AuthService {
     }
 
     // ✅ NEW: Helper method to create role profile
-    private void createUserRoleProfile(Users user) {
+    private void createUserRoleProfile(Users user, Long departmentId, Long instituteId, String rawPassword) {
+        Department dept = (departmentId != null) ? departmentRepository.findById(departmentId).orElse(null) : null;
+        Institute inst = (instituteId != null) ? instituteRepository.findById(instituteId).orElse(null) : null;
+
         switch (user.getRole()) {
             case STUDENT:
                 Student student = new Student();
                 student.setUser(user);
                 student.setInTeam(false);
                 student.setTeamLead(false);
+                student.setDepartment(dept);
+                student.setInstitute(inst);
+                student.setRollNumber(rawPassword); 
                 studentRepository.save(student);
                 break;
 
             case FACULTY:
                 Faculty faculty = new Faculty();
                 faculty.setUser(user);
+                faculty.setDepartment(dept);
+                faculty.setInstitute(inst);
+                faculty.setEmployeeId(rawPassword); 
                 facultyRepository.save(faculty);
                 break;
 
@@ -220,7 +239,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
         Users savedUser = userRepository.save(user);
-        createUserRoleProfile(savedUser);
+        createUserRoleProfile(savedUser, request.getDepartmentId(), request.getInstituteId(), request.getPassword());
         return "User created successfully";
     }
 
@@ -278,48 +297,49 @@ public class AuthService {
     // FORGOT PASSWORD
     // ------------------------------------------------
 
-    public String forgotPassword(String email, String baseUrl) {
+    public String forgotPasswordOtp(String email) {
         Users user = userRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        String resetLink = baseUrl + "/api/auth/reset-password-action?email=" + email + "&token=" + token;
-
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetLink);
-
-        return "Password reset link sent to your email";
-    }
-
-    public String resetPasswordAction(String email, String token) {
-        if (!jwtUtil.validateToken(token, email)) {
-            return "<html><body><h2>Invalid or expired reset link.</h2></body></html>";
-        }
-        Users user = userRepository.findByEmail(email).orElse(null);
-        if (user == null)
-            return "<html><body><h2>User not found.</h2></body></html>";
-
-        String newPassword = "";
-        if (user.getRole() == UserRole.STUDENT) {
-            Student student = studentRepository.findByUser(user).orElse(null);
-            if (student != null && student.getRollNumber() != null && !student.getRollNumber().trim().isEmpty()) {
-                newPassword = student.getRollNumber().trim();
-            }
-        }
-
-        if (newPassword.isEmpty()) {
-            newPassword = email.indexOf("@") > 0 ? email.substring(0, email.indexOf("@")) : email;
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        
+        user.setResetOtp(otp);
+        user.setResetOtpExpiry(java.time.LocalDateTime.now().plusMinutes(10));
         userRepository.save(user);
 
-        return "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'>" +
-                "<h2 style='color:green;'>Password Reset Successful!</h2>" +
-                "<p>Your new password is: <b>" + newPassword + "</b></p>" +
-                "<p>You can now close this page and login to the ZePRO app.</p>" +
-                "</body></html>";
+        emailService.sendOtpEmail(user.getEmail(), user.getName(), otp);
+
+        return "OTP sent successfully to your email";
     }
+
+    public boolean verifyOtp(String email, String otp) {
+        Users user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) return false;
+        if (user.getResetOtp() == null || !user.getResetOtp().equals(otp)) return false;
+        if (user.getResetOtpExpiry() == null || user.getResetOtpExpiry().isBefore(java.time.LocalDateTime.now())) {
+            return false;
+        }
+        return true;
+    }
+
+    public String resetPasswordOtp(String email, String otp, String newPassword) {
+        if (!verifyOtp(email, otp)) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+        Users user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetOtp(null);
+        user.setResetOtpExpiry(null);
+        userRepository.save(user);
+
+        return "Password reset successfully";
+    }
+
+
 
     public String changePassword(String email, String currentPassword, String newPassword) {
         Users user = userRepository.findByEmail(email)
@@ -350,6 +370,14 @@ public class AuthService {
         user.setPushNotifications(pushNotifications);
         userRepository.save(user);
         return "Notification preferences updated";
+    }
+
+    public void updatePushToken(String email, String pushToken) {
+        Users user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            user.setExpoPushToken(pushToken);
+            userRepository.save(user);
+        }
     }
 
     public String updateProfilePicture(String email, org.springframework.web.multipart.MultipartFile file) {

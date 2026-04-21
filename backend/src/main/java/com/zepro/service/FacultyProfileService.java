@@ -71,9 +71,6 @@ public class FacultyProfileService {
             System.out.println("⚠️  No department assigned to faculty");
         }
 
-        dto.setProblemStatementLink(faculty.getProblemStatementLink());
-        dto.setDomains(faculty.getDomains());
-        dto.setSubDomains(faculty.getSubDomains());
 
         // ✅ GET DEPARTMENT-SPECIFIC ALLOCATION RULES
         Long departmentId = (faculty.getDepartment() != null) 
@@ -149,9 +146,6 @@ public class FacultyProfileService {
         // ❌ DON'T SET INSTITUTE OBJECT - CAUSES ISSUES
         // faculty.setInstitute(dto.getInstitute());
 
-        faculty.setProblemStatementLink(dto.getProblemStatementLink());
-        faculty.setDomains(dto.getDomains());
-        faculty.setSubDomains(dto.getSubDomains());
 
         facultyRepository.save(faculty);
 

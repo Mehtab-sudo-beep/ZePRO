@@ -59,3 +59,9 @@ export const getDepartmentStats = (departmentId: string) => {
   console.log('📊 GET /admin/department/' + departmentId + '/stats');
   return API.get(`/admin/department/${departmentId}/stats`);
 };
+
+// ✅ GET STUDENTS BY DEPARTMENT
+export const getStudentsByDepartment = (departmentId: string) => {
+  console.log('📡 GET /admin/department/' + departmentId + '/students');
+  return API.get(`/admin/department/${departmentId}/students`);
+};

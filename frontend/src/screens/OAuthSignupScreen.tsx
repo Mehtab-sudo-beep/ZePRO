@@ -48,14 +48,17 @@ const OAuthSignupScreen: React.FC<Props> = ({ navigation }) => {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 
-      const { user } = response;
-      const googleIdToken = response.idToken;
+      if (response.type !== 'success') {
+        throw new Error('Google Sign-In cancelled or failed');
+      }
+
+      const { user, idToken } = response.data;
 
       console.log('[OAuth] Google user:', user);
 
       // Send the Google ID Token and the requested role to backend
       const googleRequest = {
-        idToken: googleIdToken,
+        idToken: idToken,
         role: role,
       };
 

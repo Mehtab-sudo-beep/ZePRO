@@ -1,193 +1,91 @@
-const BASE_URL = 'http://10.226.126.133:8080/api/coordinator';
+import API from './api';
+
+const PREFIX = '/api/coordinator';
 
 export const coordinatorApi = {
   // ✅ STATS
-  getDashboardStats: (token: string) =>
-    fetch(`${BASE_URL}/stats`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getDashboardStats: () =>
+    API.get(`${PREFIX}/stats`).then(res => res.data),
 
   // ✅ FACULTIES
-  getAllFaculties: (token: string) =>
-    fetch(`${BASE_URL}/faculties`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAllFaculties: () =>
+    API.get(`${PREFIX}/faculties`).then(res => res.data),
 
-  searchFaculties: (query: string, token: string) =>
-    fetch(`${BASE_URL}/faculties/search?q=${encodeURIComponent(query)}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  searchFaculties: (query: string) =>
+    API.get(`${PREFIX}/faculties/search?q=${encodeURIComponent(query)}`).then(res => res.data),
 
   // ✅ STUDENTS
-  getAllStudents: (token: string) =>
-    fetch(`${BASE_URL}/students`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAllStudents: () =>
+    API.get(`${PREFIX}/students`).then(res => res.data),
 
-  searchStudents: (query: string, token: string) =>
-    fetch(`${BASE_URL}/students/search?q=${encodeURIComponent(query)}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  searchStudents: (query: string) =>
+    API.get(`${PREFIX}/students/search?q=${encodeURIComponent(query)}`).then(res => res.data),
 
-  getAllocatedStudents: (token: string) =>
-    fetch(`${BASE_URL}/students/allocated`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAllocatedStudents: () =>
+    API.get(`${PREFIX}/students/allocated`).then(res => res.data),
 
   // ✅ TEAMS
-  getAllTeams: (token: string) =>
-    fetch(`${BASE_URL}/teams`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAllTeams: () =>
+    API.get(`${PREFIX}/teams`).then(res => res.data),
 
-  getAllTeamsReport: (token: string) =>
-    fetch(`${BASE_URL}/teams/report`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAllTeamsReport: () =>
+    API.get(`${PREFIX}/teams/report`).then(res => res.data),
 
-  downloadTeamsReportPdf: (token: string) =>
-    fetch(`${BASE_URL}/teams/report/pdf`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.blob()),
+  downloadTeamsReportPdf: () =>
+    API.get(`${PREFIX}/teams/report/pdf`, { responseType: 'blob' }).then(res => res.data),
 
   // ✅ ALLOCATION
-  allocateStudent: (studentId: string, facultyId: string, token: string) =>
-    fetch(`${BASE_URL}/allocate`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ studentId, facultyId }),
-    }).then(res => res.json()),
+  allocateStudent: (studentId: string, facultyId: string) =>
+    API.post(`${PREFIX}/allocate`, { studentId, facultyId }).then(res => res.data),
 
-  overrideAllocation: (studentId: string, newFacultyId: string, token: string) =>
-    fetch(`${BASE_URL}/override`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ studentId, newFacultyId }),
-    }).then(res => res.json()),
+  overrideAllocation: (studentId: string, newFacultyId: string) =>
+    API.post(`${PREFIX}/override`, { studentId, newFacultyId }).then(res => res.data),
 
   // ✅ RULES
-  getRules: (token: string) =>
-    fetch(`${BASE_URL}/rules`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getRules: () =>
+    API.get(`${PREFIX}/rules`).then(res => res.data),
 
-  saveRules: (rules: any, token: string) =>
-    fetch(`${BASE_URL}/rules`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(rules),
-    }).then(res => res.json()),
+  saveRules: (rules: any) =>
+    API.post(`${PREFIX}/rules`, rules).then(res => res.data),
 
   // ✅ DEPARTMENT DEADLINES
-  getDeadlines: (token: string) =>
-    fetch(`${BASE_URL}/deadlines`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getDeadlines: () =>
+    API.get(`${PREFIX}/deadlines`).then(res => res.data),
 
-  saveDeadlines: (deadlines: any, token: string) =>
-    fetch(`${BASE_URL}/deadlines`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(deadlines),
-    }).then(res => res.json()),
+  saveDeadlines: (deadlines: any) =>
+    API.post(`${PREFIX}/deadlines`, deadlines).then(res => res.data),
 
-  sendDepartmentDeadlineEmail: (token: string) =>
-    fetch(`${BASE_URL}/deadlines/send-email`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  sendDepartmentDeadlineEmail: () =>
+    API.post(`${PREFIX}/deadlines/send-email`).then(res => res.data),
 
   // ✅ STUDENTS AND TEAMS
-  getStudentAndTeamDetails: (token: string) =>
-    fetch(`${BASE_URL}/student-team-details`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getStudentAndTeamDetails: () =>
+    API.get(`${PREFIX}/student-team-details`).then(res => res.data),
 
-  getAvailableTeamsToJoin: (token: string) =>
-    fetch(`${BASE_URL}/available-teams`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getAvailableTeamsToJoin: () =>
+    API.get(`${PREFIX}/available-teams`).then(res => res.data),
 
-  getFacultyProjects: (facultyId: string, token: string) =>
-    fetch(`${BASE_URL}/faculty-projects/${facultyId}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).then(res => res.json()),
+  getFacultyProjects: (facultyId: string) =>
+    API.get(`${PREFIX}/faculty-projects/${facultyId}`).then(res => res.data),
 
-  allocateTeamToFaculty: (teamId: string, facultyId: string, projectId: string, token: string) =>
-    fetch(`${BASE_URL}/allocate-team`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ teamId, facultyId, projectId }),
-    }).then(res => res.json()),
+  allocateTeamToFaculty: (teamId: string, facultyId: string, projectId: string) =>
+    API.post(`${PREFIX}/allocate-team`, { teamId, facultyId, projectId }).then(res => res.data),
 
   // ✅ CREATE TEAM
-  createTeam: (teamName: string, studentId: string, token: string) => {
+  createTeam: (teamName: string, studentId: string) => {
     console.log('[coordinatorApi] 🆕 Creating team:', teamName, 'for student:', studentId);
-    return fetch(`${BASE_URL}/create-team`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        teamName: teamName.trim(),
-        studentId: String(studentId)
-      }),
-    })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(err => {
-            throw new Error(err.error || `HTTP ${res.status}`);
-          });
-        }
-        return res.json();
-      })
-      .catch(err => {
-        console.log('[coordinatorApi] ❌ Create team error:', err);
-        throw err;
-      });
+    return API.post(`${PREFIX}/create-team`, {
+      teamName: teamName.trim(),
+      studentId: String(studentId)
+    }).then(res => res.data);
   },
 
   // ✅ JOIN TEAM
-  joinTeam: (studentId: string, teamId: string, token: string) => {
+  joinTeam: (studentId: string, teamId: string) => {
     console.log('[coordinatorApi] 👥 Joining team:', teamId, 'for student:', studentId);
-    return fetch(`${BASE_URL}/join-team`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        studentId: String(studentId),
-        teamId: String(teamId)
-      }),
-    })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(err => {
-            throw new Error(err.error || `HTTP ${res.status}`);
-          });
-        }
-        return res.json();
-      })
-      .catch(err => {
-        console.log('[coordinatorApi] ❌ Join team error:', err);
-        throw err;
-      });
+    return API.post(`${PREFIX}/join-team`, {
+      studentId: String(studentId),
+      teamId: String(teamId)
+    }).then(res => res.data);
   },
 };

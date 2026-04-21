@@ -21,6 +21,7 @@ const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
 
   const logout = async () => {
     try {
@@ -123,7 +124,7 @@ const MoreScreen: React.FC = () => {
             onPress={() => navigation.navigate('StudentHome')}
           >
             <Image
-              source={require('../assets/home.png')}
+              source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
               style={styles.tabIcon}
             />
             <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
@@ -134,7 +135,7 @@ const MoreScreen: React.FC = () => {
             onPress={() => navigation.navigate('ScheduledMeetings')}
           >
             <Image
-              source={require('../assets/meeting.png')}
+              source={isDark ? require('../assets/meeting-white.png') : require('../assets/meeting.png')}
               style={styles.tabIcon}
             />
             <Text style={[styles.tab, { color: colors.subText }]}>

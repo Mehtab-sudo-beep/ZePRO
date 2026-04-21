@@ -210,12 +210,6 @@ const ReceivedRequestsScreen: React.FC = () => {
         ) : (
           <ScrollView contentContainerStyle={{ padding: 16 }}>
 
-            <View style={[styles.infoBanner, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
-              <Text style={{ color: '#0284C7', fontSize: 12, fontWeight: '500' }}>
-                ℹ️ Clicking on a student's email will redirect you to send an email to them.
-              </Text>
-            </View>
-
             {requests.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Text style={{ color: colors.subText, fontSize: 16 }}>No requests yet</Text>

@@ -5,10 +5,10 @@ import {
   Text,
   StyleSheet,
   Image,
-  SafeAreaView,
   StatusBar,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -20,7 +20,7 @@ type Props = {
 };
 
 const FacultyCreateMenuScreen: React.FC<Props> = ({ navigation }) => {
-  const { colors } = useContext(ThemeContext);
+  const { colors, theme } = useContext(ThemeContext);
 
   const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
@@ -54,25 +54,14 @@ const FacultyCreateMenuScreen: React.FC<Props> = ({ navigation }) => {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
 
       <View style={styles.container}>
-        {/* Header - Consistent with FacultyHomeScreen */}
-        <View
-          style={[
-            styles.header,
-            { backgroundColor: colors.card, borderBottomColor: divider },
-          ]}
-        >
-          <View>
-            <Text style={[styles.headerGreeting, { color: colors.subText }]}>
-              Dashboard
-            </Text>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>
-              Create New
-            </Text>
-          </View>
+        {/* Header - Premium Style */}
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerGreeting, { color: colors.subText }]}>DASHBOARD</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Create New</Text>
         </View>
 
         <ScrollView
@@ -123,7 +112,10 @@ const FacultyCreateMenuScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.tabItem}
           onPress={() => navigation.navigate('FacultyHome')}
         >
-          <Image source={require('../assets/home.png')} style={styles.tabIcon} />
+          <Image
+            source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
+            style={styles.tabIcon}
+          />
           <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
         </TouchableOpacity>
 
@@ -137,7 +129,10 @@ const FacultyCreateMenuScreen: React.FC<Props> = ({ navigation }) => {
           style={styles.tabItem}
           onPress={() => navigation.navigate('FacultyMore')}
         >
-          <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+          <Image
+            source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+            style={styles.tabIcon}
+          />
           <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
         </TouchableOpacity>
       </View>
@@ -148,30 +143,27 @@ const FacultyCreateMenuScreen: React.FC<Props> = ({ navigation }) => {
 export default FacultyCreateMenuScreen;
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
 
   header: {
-    height: 72,
+    paddingTop: 15,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    elevation: 2,
+    borderBottomWidth: 1,
   },
   headerGreeting: {
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.4,
-    marginBottom: 2,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 22,
+    fontWeight: 'bold',
   },
 
-  content: { padding: 16, paddingBottom: 8 },
+  content: { padding: 16, paddingBottom: 32 },
 
   actionRow: {
     flexDirection: 'row',

@@ -41,6 +41,7 @@ interface Institute {
 const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useContext(AuthContext);
   const { showAlert } = useContext(AlertContext);
+  const { colors, theme } = useContext(ThemeContext);
 
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,38 +141,38 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
 
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Manage Institutes</Text>
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Admin Dashboard</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.subText }]}>Manage Institutes</Text>
         </View>
 
         {/* ✅ UPDATED Stats with dynamic data */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: '#4F46E5' }]}>{stats.institutes}</Text>
-            <Text style={styles.statLabel}>Institutes</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>{stats.institutes}</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Institutes</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: '#059669' }]}>{stats.departments}</Text>
-            <Text style={styles.statLabel}>Departments</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Departments</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.statValue, { color: '#D97706' }]}>{stats.users}</Text>
-            <Text style={styles.statLabel}>Users</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]}>Users</Text>
           </View>
         </View>
 
         {/* Search */}
         <View style={styles.searchWrapper}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
             placeholder="Search institutes..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.subText}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -180,7 +181,7 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
         {/* ✅ ADD Button - Navigate to AddInstituteScreen */}
         <View style={styles.addWrapper}>
           <TouchableOpacity
-            style={styles.addButton}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => navigation.navigate('AddInstitute')}
           >
             <Text style={styles.addButtonText}>+ Add Institute</Text>
@@ -195,8 +196,8 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
         ) : (
           <ScrollView style={styles.content}>
             {filtered.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
+              <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.emptyText, { color: colors.subText }]}>
                   {institutes.length === 0 ? 'No institutes found' : 'No results matching your search'}
                 </Text>
               </View>
@@ -204,7 +205,7 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
               filtered.map(inst => (
                 <TouchableOpacity
                   key={inst.instituteId}
-                  style={styles.card}
+                  style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
                   onPress={() =>
                     navigation.navigate('DepartmentList', {
                       instituteId: inst.instituteId,
@@ -215,31 +216,31 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
                 >
                   {/* Card Header */}
                   <View style={styles.cardHeader}>
-                    <View style={styles.instituteIcon}>
-                      <Text style={styles.instituteIconText}>
+                    <View style={[styles.instituteIcon, { backgroundColor: colors.primary + '15' }]}>
+                      <Text style={[styles.instituteIconText, { color: colors.primary }]}>
                         {inst.instituteName.charAt(0).toUpperCase()}
                       </Text>
                     </View>
                     <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.cardTitle}>{inst.instituteName}</Text>
-                      <Text style={styles.cardText}>{inst.address}</Text>
+                      <Text style={[styles.cardTitle, { color: colors.text }]}>{inst.instituteName}</Text>
+                      <Text style={[styles.cardText, { color: colors.subText }]}>{inst.address}</Text>
                     </View>
-                    <Text style={styles.chevron}>›</Text>
+                    <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>
                   </View>
 
                   {/* Info Row */}
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>
-                      Code: <Text style={{ fontWeight: '600' }}>{inst.instituteCode}</Text>
+                    <Text style={[styles.infoText, { color: colors.subText }]}>
+                      Code: <Text style={{ fontWeight: '600', color: colors.text }}>{inst.instituteCode}</Text>
                     </Text>
-                    <Text style={styles.infoText}>
-                      Phone: <Text style={{ fontWeight: '600' }}>{inst.phoneNumber}</Text>
+                    <Text style={[styles.infoText, { color: colors.subText }]}>
+                      Phone: <Text style={{ fontWeight: '600', color: colors.text }}>{inst.phoneNumber}</Text>
                     </Text>
                   </View>
 
                   {/* Delete */}
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { borderColor: '#DC2626' }]}
                     onPress={() => handleDelete(inst.instituteId, inst.instituteName)}
                   >
                     <Text style={styles.deleteButtonText}>Delete</Text>
@@ -260,6 +261,8 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
 /* ── Shared Bottom Tab ─────────────────────────────────── */
 export const BottomTab = ({ navigation, active }: { navigation: any; active: string }) => {
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
+
   return (
     <View style={[styles.bottomTab, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <TouchableOpacity
@@ -267,7 +270,13 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
         onPress={() => navigation.navigate('InstituteList')}
       >
         <Image
-          source={active === 'home' ? require('../assets/home-color.png') : require('../assets/home.png')}
+          source={
+            active === 'home'
+              ? require('../assets/home-color.png')
+              : isDark
+              ? require('../assets/home-white.png')
+              : require('../assets/home.png')
+          }
           style={styles.tabIcon}
         />
         <Text style={[styles.tabText, active === 'home' && { color: colors.primary, fontWeight: '700' }]}>
@@ -277,7 +286,13 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
 
       <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('AdminMore')}>
         <Image
-          source={active === 'more' ? require('../assets/more-color.png') : require('../assets/more.png')}
+          source={
+            active === 'more'
+              ? require('../assets/more-color.png')
+              : isDark
+              ? require('../assets/more-white.png')
+              : require('../assets/more.png')
+          }
           style={styles.tabIcon}
         />
         <Text
@@ -296,51 +311,88 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
 export default InstituteListScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
 
-  header: { backgroundColor: '#ffffff', paddingTop: 15, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#000000' },
-  headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  header: {
+    paddingTop: 15,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+  },
+  headerTitle: { fontSize: 24, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: 13, marginTop: 2 },
 
   statsGrid: { flexDirection: 'row', gap: 12, padding: 16, paddingBottom: 0 },
-  statCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, flex: 1, elevation: 2 },
+  statCard: {
+    borderRadius: 12,
+    padding: 16,
+    flex: 1,
+    elevation: 2,
+    borderWidth: 1,
+  },
   statValue: { fontSize: 24, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, color: '#6B7280', marginTop: 4 },
+  statLabel: { fontSize: 11, marginTop: 4 },
 
   searchWrapper: { paddingHorizontal: 16, paddingTop: 16 },
   searchInput: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
 
   addWrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  addButton: { backgroundColor: '#4F46E5', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  addButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    elevation: 2,
+  },
   addButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
 
   content: { flex: 1, padding: 16 },
 
-  emptyState: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 40, alignItems: 'center', marginTop: 8 },
-  emptyText: { fontSize: 16, color: '#6B7280' },
+  emptyState: {
+    borderRadius: 12,
+    padding: 40,
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  emptyText: { fontSize: 16 },
 
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 2 },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    borderWidth: 1,
+  },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#121416' },
-  cardText: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  chevron: { fontSize: 28, color: '#9CA3AF' },
+  cardTitle: { fontSize: 16, fontWeight: 'bold' },
+  cardText: { fontSize: 13, marginTop: 2 },
+  chevron: { fontSize: 28 },
 
-  instituteIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center' },
-  instituteIconText: { fontSize: 22, fontWeight: 'bold', color: '#4F46E5' },
+  instituteIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  instituteIconText: { fontSize: 22, fontWeight: 'bold' },
 
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingVertical: 8 },
-  infoText: { fontSize: 12, color: '#6B7280' },
+  infoText: { fontSize: 12 },
 
-  deleteButton: { borderWidth: 1, borderColor: '#DC2626', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  deleteButton: {
+    borderWidth: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
   deleteButtonText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
 
   bottomTab: { height: 60, borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },

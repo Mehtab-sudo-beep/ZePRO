@@ -34,7 +34,7 @@ const DepartmentDetailsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { showAlert } = useContext(AlertContext);
-  const { colors } = useContext(ThemeContext);
+  const { colors, theme } = useContext(ThemeContext);
 
   const { departmentId, departmentName, instituteId, instituteName } = route.params || {};
 
@@ -202,14 +202,14 @@ const DepartmentDetailsScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+        <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
 
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: '#ffffff', borderColor: colors.border }]}>
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Image
               source={require('../assets/angle.png')}
-              style={styles.backIcon}
+              style={[styles.backIcon, { tintColor: colors.text }]}
             />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
@@ -252,14 +252,14 @@ const DepartmentDetailsScreen: React.FC = () => {
 
               {currentCoordinator ? (
                 <>
-                  <View style={[styles.coordinatorCard, { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' }]}>
-                    <Text style={[styles.coordinatorName, { color: '#1F2937' }]}>
+                  <View style={[styles.coordinatorCard, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
+                    <Text style={[styles.coordinatorName, { color: colors.text }]}>
                       ✅ {currentCoordinator.name}
                     </Text>
-                    <Text style={[styles.coordinatorEmail, { color: '#6B7280' }]}>
+                    <Text style={[styles.coordinatorEmail, { color: colors.subText }]}>
                       {currentCoordinator.email}
                     </Text>
-                    <Text style={[styles.coordinatorRole, { color: '#4F46E5' }]}>
+                    <Text style={[styles.coordinatorRole, { color: colors.primary }]}>
                       FACULTY_COORDINATOR
                     </Text>
                   </View>
@@ -304,7 +304,7 @@ const DepartmentDetailsScreen: React.FC = () => {
                         backgroundColor: colors.background,
                         borderColor: colors.border,
                       },
-                      faculty.role === 'FACULTY_COORDINATOR' && styles.coordinatorHighlight,
+                      faculty.role === 'FACULTY_COORDINATOR' && { backgroundColor: colors.primary + '15' },
                     ]}
                   >
                     <View style={{ flex: 1 }}>
@@ -315,7 +315,7 @@ const DepartmentDetailsScreen: React.FC = () => {
                         {faculty.email}
                       </Text>
                       {faculty.role === 'FACULTY_COORDINATOR' && (
-                        <Text style={[styles.coordinatorBadge, { color: '#4F46E5' }]}>
+                        <Text style={[styles.coordinatorBadge, { color: colors.primary }]}>
                           📌 Coordinator
                         </Text>
                       )}
@@ -378,8 +378,8 @@ const DepartmentDetailsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
 
   header: {
     paddingTop: 15,

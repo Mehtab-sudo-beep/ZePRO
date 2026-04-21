@@ -35,4 +35,6 @@ public interface ProjectRepository extends JpaRepository<Project,Long>{
     // ✅ Find requests for a specific project and team
     @Query("SELECT pr FROM ProjectRequest pr WHERE pr.project = :project AND pr.team = :team")
     List<ProjectRequest> findByProjectAndTeam(@Param("project") Project project, @Param("team") Team team);
+
+    long countByFaculty_Department_DepartmentId(Long departmentId);
 }

@@ -12,7 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
 import { StudentAuthContext } from '../context/StudentAuthContext';
+import { AuthContext } from '../context/AuthContext';
 import { AlertContext } from '../context/AlertContext';
+import DocumentCard from '../components/DocumentCard';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { sendProjectRequest, getDepartmentDeadlines } from '../api/studentApi';
@@ -22,6 +24,7 @@ const API_BASE = 'http://10.226.126.133:8080';
 const ProjectDetailsScreen = () => {
   const { colors } = useContext(ThemeContext);
   const { studentUser } = useContext(StudentAuthContext);
+  const { user } = useContext(AuthContext);
   const { showAlert } = useContext(AlertContext);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -101,10 +104,7 @@ const ProjectDetailsScreen = () => {
     }
   };
 
-  const openDocument = (url: string) => {
-    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
-    Linking.openURL(fullUrl).catch(err => console.error("Couldn't load page", err));
-  };
+
 
   if (!project) return null;
 
@@ -149,13 +149,14 @@ const ProjectDetailsScreen = () => {
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Documents</Text>
             {project.documents.map((doc: string, index: number) => {
-              const fileName = doc.split('/').pop() || `Document ${index + 1}`;
               return (
-                <TouchableOpacity key={index} style={styles.docLink} onPress={() => openDocument(doc)}>
-                  <Text style={[styles.linkText, { color: colors.primary }]}>
-                    • {fileName}
-                  </Text>
-                </TouchableOpacity>
+                <DocumentCard
+                  key={index}
+                  label={`Document ${index + 1}`}
+                  value={doc}
+                  colors={colors}
+                  user={user}
+                />
               );
             })}
           </View>

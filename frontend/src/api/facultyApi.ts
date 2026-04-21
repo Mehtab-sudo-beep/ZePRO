@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://10.226.126.133:8080';
+const API = 'http://10.237.186.133:8080';
 
 // ✅ GET ALL INSTITUTES
 export const getAllInstitutes = (token: string) => {
@@ -33,9 +33,6 @@ export const completeFacultyProfile = (facultyId: number, data: {
   qualification: string;
   cabinNo: string;
   phone: string;
-  problemStatementLink: string;
-  domains: string;
-  subDomains: string;
   departmentId: number;
   instituteId: number;
 }, token: string) => {

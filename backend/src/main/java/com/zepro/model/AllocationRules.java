@@ -11,16 +11,16 @@ public class AllocationRules {
     private Long id;
 
     @Column(name = "max_team_size", nullable = false)
-    private int maxTeamSize;
+    private int maxTeamSize = 4;
 
     @Column(name = "max_students_per_faculty", nullable = false)
-    private int maxStudentsPerFaculty;
+    private int maxStudentsPerFaculty = 10;
 
     @Column(name = "max_projects_per_faculty", nullable = false)
-    private int maxProjectsPerFaculty;
+    private int maxProjectsPerFaculty = 3;
 
     @Column(name = "max_slots_per_project", nullable = false)
-    private int maxSlotsPerProject;
+    private int maxSlotsPerProject = 5;
 
     // ✅ ADD DEPARTMENT & INSTITUTE RELATIONS
     @ManyToOne

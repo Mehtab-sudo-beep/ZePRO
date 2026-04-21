@@ -141,9 +141,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [qualification, setQualification] = useState('');
   const [cabinNo, setCabinNo] = useState('');
   const [phone, setPhone] = useState('');
-  const [problemStatementLink, setProblemStatementLink] = useState('');
-  const [domains, setDomains] = useState('');
-  const [subDomains, setSubDomains] = useState('');
+
 
   // Institute / Department
   const [institutes, setInstitutes] = useState<any[]>([]);
@@ -296,9 +294,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
     if (!phone.trim()) return 'Phone number is required.';
     if (!/^[0-9]{10}$/.test(phone.replace(/\D/g, '')))
       return 'Please enter a valid 10-digit phone number.';
-    if (!problemStatementLink.trim()) return 'Problem statement link is required.';
-    if (!domains.trim()) return 'Domains are required.';
-    if (!subDomains.trim()) return 'Sub-domains are required.';
+
     if (!selectedInstitute) return 'Please select an institute.';
     if (!selectedDepartment) return 'Please select a department.';
     return null;
@@ -333,9 +329,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
         qualification: qualification.trim(),
         cabinNo: cabinNo.trim(),
         phone: phone.trim(),
-        problemStatementLink: problemStatementLink.trim(),
-        domains: domains.trim(),
-        subDomains: subDomains.trim(),
+
         departmentId: selectedDepartment.departmentId,
         instituteId: selectedInstitute.instituteId,
       };
@@ -578,52 +572,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* ── Section: Research Info ── */}
-        <Text style={[styles.sectionLabel, { color: colors.subText }]}>RESEARCH & DOMAINS</Text>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          {/* Problem Statement Link */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Problem Statement Link *</Text>
-            <TextInput
-              value={problemStatementLink}
-              onChangeText={setProblemStatementLink}
-              placeholder="https://drive.google.com/..."
-              placeholderTextColor={colors.subText}
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-          {/* Domains */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Domains *</Text>
-            <TextInput
-              value={domains}
-              onChangeText={setDomains}
-              placeholder="e.g. AI, ML, Blockchain"
-              placeholderTextColor={colors.subText}
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-            />
-          </View>
-
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-          {/* Sub-Domains */}
-          <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Sub-Domains *</Text>
-            <TextInput
-              value={subDomains}
-              onChangeText={setSubDomains}
-              placeholder="e.g. NLP, Computer Vision, Smart Contracts"
-              placeholderTextColor={colors.subText}
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-            />
-          </View>
-        </View>
 
         {/* Submit Button */}
         <TouchableOpacity

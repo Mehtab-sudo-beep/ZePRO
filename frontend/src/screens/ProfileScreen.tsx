@@ -32,76 +32,21 @@ import * as ImagePicker from 'expo-image-picker';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import DocumentCard from '../components/DocumentCard';
 
-// ✅ OUTSIDE
 const InfoItem = ({ label, value, editKey, onEdit, isLink, colors, user }: any) => {
-  const displayValue = isLink && value ? "View Document" : (value || '-');
-  
-  const handlePress = async () => {
-    if (isLink && value) {
-      const url = value.startsWith('http') ? value : `${BASE_URL}${value.startsWith('/') ? '' : '/'}${value}`;
-      
-      try {
-        const filename = encodeURIComponent(value.split('/').pop() || 'document.pdf');
-        const fileUri = `${FileSystem.documentDirectory}${filename}`;
-        
-        console.log('[ProfileScreen] Downloading:', url, 'to:', fileUri);
-
-        const options: any = {};
-        if (user && user.token) {
-          options.headers = { Authorization: `Bearer ${user.token}` };
-        }
-
-        const downloadedFile = await FileSystem.downloadAsync(url, fileUri, options);
-        
-        console.log('[ProfileScreen] Download Status:', downloadedFile.status);
-
-        if (downloadedFile.status === 200) {
-          if (Platform.OS === 'android') {
-            try {
-              const contentUri = await FileSystem.getContentUriAsync(downloadedFile.uri);
-              await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-                data: contentUri,
-                flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
-                type: 'application/pdf',
-              });
-            } catch (err: any) {
-              // Fallback to sharing if no PDF viewer exists
-              if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(downloadedFile.uri, { mimeType: 'application/pdf' });
-              }
-            }
-          } else {
-            // iOS handles PDF perfectly via share sheet's QuickLook
-            if (await Sharing.isAvailableAsync()) {
-              await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
-            } else {
-              Alert.alert('Error', 'No application available to open this format.');
-            }
-          }
-        } else {
-          Alert.alert('Error', `Server returned status: ${downloadedFile.status}`);
-        }
-      } catch (err: any) {
-        console.log('[ProfileScreen] Error downloading file:', err);
-        Alert.alert('Error', `Unable to fetch file: ${err.message || JSON.stringify(err)}`);
-      }
-    }
-  };
+  const displayValue = value || '-';
 
   return (
     <View style={[styles.item, { borderColor: colors.border }]}>
       <View style={{ flex: 1 }}>
         <Text style={[styles.label, { color: colors.subText }]}>{label}</Text>
-        <TouchableOpacity onPress={handlePress} disabled={!isLink}>
-          <Text style={[
-            styles.value, 
-            { color: isLink ? colors.primary : colors.text },
-            isLink && { textDecorationLine: 'underline' }
-          ]}>
-            {displayValue}
-          </Text>
-        </TouchableOpacity>
+        <Text style={[
+          styles.value, 
+          { color: colors.text }
+        ]}>
+          {displayValue}
+        </Text>
       </View>
 
       {editKey && (
@@ -301,24 +246,20 @@ const ProfileScreen: React.FC = () => {
             user={user}
           />
 
-          <InfoItem
+          <DocumentCard
             label="Resume Document"
             value={profile.resumeLink}
-            editKey="resumeLink"
-            onEdit={openEdit}
-            isLink={true}
             colors={colors}
             user={user}
+            onEdit={() => openEdit("resumeLink", "Resume Document", profile.resumeLink)}
           />
 
-          <InfoItem
+          <DocumentCard
             label="Marksheet Document"
             value={profile.marksheetLink}
-            editKey="marksheetLink"
-            onEdit={openEdit}
-            isLink={true}
             colors={colors}
             user={user}
+            onEdit={() => openEdit("marksheetLink", "Marksheet Document", profile.marksheetLink)}
           />
         </ScrollView>
 

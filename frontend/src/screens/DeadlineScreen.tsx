@@ -11,6 +11,7 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -359,7 +360,7 @@ const DeadlineScreen: React.FC = () => {
     if (!user?.token) return;
     try {
       setLoading(true);
-      const data = await getDeadlines(user.token);
+      const data = await getDeadlines();
       setDeadlines(data || []);
     } catch (err: any) {
       showAlert('Error', err?.response?.data?.error || 'Failed to load deadlines');
@@ -406,8 +407,7 @@ const DeadlineScreen: React.FC = () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     if (!hasPickedDate) { showAlert('Validation', 'Please select a deadline date and time'); return; }
     try {
-      if (!user?.token) return;
-      await createDeadline({ title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), isAutomatic: true, roleSpecificity: form.roleSpecificity }, user.token);
+      await createDeadline({ title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), isAutomatic: true, roleSpecificity: form.roleSpecificity });
       showAlert('Success', 'Deadline created successfully');
       closeCreate();
       loadDeadlines();
@@ -419,8 +419,8 @@ const DeadlineScreen: React.FC = () => {
   const handleUpdate = useCallback(async () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     try {
-      if (!user?.token || !selectedDeadline) return;
-      await updateDeadline(selectedDeadline.deadlineId, { title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), roleSpecificity: form.roleSpecificity }, user.token);
+      if (!selectedDeadline) return;
+      await updateDeadline(selectedDeadline.deadlineId, { title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), roleSpecificity: form.roleSpecificity });
       showAlert('Success', 'Deadline updated successfully');
       closeEdit();
       loadDeadlines();
@@ -434,8 +434,7 @@ const DeadlineScreen: React.FC = () => {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try {
-          if (!user?.token) return;
-          await deleteDeadline(deadline.deadlineId, user.token);
+          await deleteDeadline(deadline.deadlineId);
           showAlert('Success', 'Deadline deleted');
           loadDeadlines();
         } catch (err: any) {
@@ -447,8 +446,7 @@ const DeadlineScreen: React.FC = () => {
 
   const handleToggle = useCallback(async (deadline: DeadlineItem) => {
     try {
-      if (!user?.token) return;
-      await toggleActiveDeadline(deadline.deadlineId, user.token);
+      await toggleActiveDeadline(deadline.deadlineId);
       loadDeadlines();
     } catch (err: any) {
       showAlert('Error', err?.response?.data?.error || 'Failed to toggle deadline');
@@ -488,6 +486,7 @@ const DeadlineScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
           <Image source={isDark ? Icons.backWhite : Icons.back} style={[styles.headerIcon, { tintColor: colors.text }]} />

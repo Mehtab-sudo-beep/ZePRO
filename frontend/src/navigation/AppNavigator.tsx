@@ -4,7 +4,7 @@ import LoginScreen from '../screens/LoginScreen';
 import StudentHomeScreen from '../screens/StudentHomeScreen';
 import ViewProjectsScreen from '../screens/ViewProjectsScreen';
 import ScheduledMeetingsScreen from '../screens/ScheduledMeetingsScreen';
-import MeetingDetailsScreen from '../screens/MeetingDeatialsScreen';
+import MeetingDetailsScreen from '../screens/MeetingDetailsScreen';
 import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
 import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
@@ -12,7 +12,7 @@ import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
 
-import AuditLogsScreen from '../screens/LogsScreen';
+
 import AdminMoreScreen from '../screens/AdminMoreScreen';
 import FacultyCoordinatorDashboard from '../screens/FacultyCoordinatorScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
@@ -34,6 +34,8 @@ import InstituteListScreen from '../screens/InstituteListScreen';
 import DepartmentListScreen from '../screens/DepartmentListScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import VerifyOTPScreen from '../screens/VerifyOTPScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import FacultyCreateMenuScreen from '../screens/FacultyCreateMenuScreen';
 import CreateDomainScreen from '../screens/CreateDomainScreen';
@@ -45,6 +47,9 @@ import DepartmentDetailsScreen from '../screens/DepartmentDetailsScreen';
 import CompleteProfileScreen from '../screens/CompleteProfileScreen';
 import CompleteFacultyProfileScreen from '../screens/CompleteFacultyProfileScreen';
 import ProjectDetailsScreen from '../screens/ProjectDetailsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import OAuthSignupScreen from '../screens/OAuthSignupScreen';
+import AddUserScreen from '../screens/AddUserScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -89,6 +94,8 @@ export type RootStackParamList = {
   DepartmentList: { instituteId: string; instituteName: string };
   Register: undefined;
   ForgotPassword: undefined;
+  VerifyOTP: { email: string };
+  ResetPassword: { email: string, otp: string };
   CreateProject: undefined;
   ProjectDetails: { project: any, isRequested?: boolean };
   FacultyCreateMenu: undefined;
@@ -105,6 +112,14 @@ export type RootStackParamList = {
   };
   CompleteProfile: undefined;
   CompleteFacultyProfile: undefined;
+  Notifications: undefined;
+  OAuthSignup: undefined;
+  AddUser: {
+    departmentId: string;
+    departmentName: string;
+    instituteId: string;
+    instituteName: string;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -126,7 +141,6 @@ const AppNavigator = () => {
       <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
       <Stack.Screen name="More" component={MoreScreen} />
       <Stack.Screen name="DepartmentDetails" component={DepartmentDetailsScreen} />
-      <Stack.Screen name="Logs" component={AuditLogsScreen} />
       <Stack.Screen name="AdminMore" component={AdminMoreScreen} />
       <Stack.Screen
         name="FacultyCoordinatorDashboard"
@@ -164,6 +178,8 @@ const AppNavigator = () => {
       <Stack.Screen name="AdminHome" component={DepartmentDetailsScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
       <Stack.Screen
         name="FacultyCreateMenu"
@@ -189,6 +205,9 @@ const AppNavigator = () => {
         component={ProjectDetailsScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="OAuthSignup" component={OAuthSignupScreen} />
+      <Stack.Screen name="AddUser" component={AddUserScreen} />
     </Stack.Navigator>
   );
 };

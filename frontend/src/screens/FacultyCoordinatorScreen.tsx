@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Modal, Image,
   StyleSheet, StatusBar, TextInput, ActivityIndicator, Platform
@@ -83,7 +83,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     if (!user?.token) return;
     try {
       console.log('[FacultyCoordinatorDashboard] 🔄 Fetching student and team details...');
-      const data = await coordinatorApi.getStudentAndTeamDetails(user.token);
+      const data = await coordinatorApi.getStudentAndTeamDetails();
       setStudentTeamData(data);
       console.log('[FacultyCoordinatorDashboard] ✅ Student and team data loaded');
     } catch (err: any) {
@@ -96,7 +96,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     if (!user?.token) return;
     try {
       console.log('[FacultyCoordinatorDashboard] 🔄 Fetching available teams to join...');
-      const data = await coordinatorApi.getAvailableTeamsToJoin(user.token);
+      const data = await coordinatorApi.getAvailableTeamsToJoin();
       setAvailableTeamsToJoin(data || []);
       console.log('[FacultyCoordinatorDashboard] ✅ Available teams loaded:', data?.length || 0);
     } catch (err: any) {
@@ -116,23 +116,23 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       console.log('[FacultyCoordinatorDashboard] 🔄 Fetching all data...');
 
       const [s, f, st, t, r] = await Promise.all([
-        coordinatorApi.getDashboardStats(user.token).catch(e => {
+        coordinatorApi.getDashboardStats().catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Stats error:', e);
           return null;
         }),
-        coordinatorApi.getAllFaculties(user.token).catch(e => {
+        coordinatorApi.getAllFaculties().catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Faculties error:', e);
           return null;
         }),
-        coordinatorApi.getAllStudents(user.token).catch(e => {
+        coordinatorApi.getAllStudents().catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Students error:', e);
           return null;
         }),
-        coordinatorApi.getAllTeams(user.token).catch(e => {
+        coordinatorApi.getAllTeams().catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Teams error:', e);
           return null;
         }),
-        coordinatorApi.getRules(user.token).catch(e => {
+        coordinatorApi.getRules().catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Rules error:', e);
           return null;
         }),
@@ -160,7 +160,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         setTempRules(r);
       }
 
-      showLocalMsg("Data loaded successfully!", "success");
+
     } catch (err: any) {
       console.log('[FacultyCoordinatorDashboard] ❌ Error:', err);
       showLocalMsg("Failed to load data", "error");
@@ -195,7 +195,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const studentId = selectedStudent.id || selectedStudent.studentId;
       console.log('[FacultyCoordinatorDashboard] 🆕 Creating team:', newTeamName);
 
-      const result = await coordinatorApi.createTeam(newTeamName, String(studentId), user!.token);
+      const result = await coordinatorApi.createTeam(newTeamName, String(studentId));
       showLocalMsg("Team created successfully!", "success");
       setNewTeamName('');
       setShowCreateTeamModal(false);
@@ -221,7 +221,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const teamId = team.teamId;
       console.log('[FacultyCoordinatorDashboard] 👥 Joining team:', teamId);
 
-      const result = await coordinatorApi.joinTeam(String(studentId), String(teamId), user!.token);
+      const result = await coordinatorApi.joinTeam(String(studentId), String(teamId));
       showLocalMsg("Student joined team successfully!", "success");
       setShowJoinTeamModal(false);
       setSelectedStudentForJoin(null);
@@ -242,7 +242,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         maxStudentsPerFaculty: tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
       };
 
-      await coordinatorApi.saveRules(computedRules, user!.token);
+      await coordinatorApi.saveRules(computedRules);
 
       setRules(computedRules);
       showLocalMsg("Rules updated successfully!", "success");
@@ -283,7 +283,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       if (Platform.OS === 'android') {
         const { StorageAccessFramework } = FileSystem;
         const permissions = await StorageAccessFramework.requestDirectoryPermissionsAsync();
-        
+
         if (permissions.granted) {
           try {
             const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
@@ -291,7 +291,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
             await FileSystem.writeAsStringAsync(savedUri, base64, { encoding: FileSystem.EncodingType.Base64 });
             showLocalMsg("Report successfully saved to your chosen folder!", "success");
           } catch (e: any) {
-             showLocalMsg("Failed to write file to folder.", "error");
+            showLocalMsg("Failed to write file to folder.", "error");
           }
         } else {
           showLocalMsg("Folder permission was denied.", "error");
@@ -323,7 +323,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     }
     try {
       console.log('[FacultyCoordinatorDashboard] 🔍 Searching faculties:', query);
-      const results = await coordinatorApi.searchFaculties(query, user!.token);
+      const results = await coordinatorApi.searchFaculties(query);
       setFaculties(results.map((item: any) => ({ ...item, id: String(item.facultyId) })));
     } catch (err) {
       console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
@@ -338,7 +338,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     }
     try {
       console.log('[FacultyCoordinatorDashboard] 🔍 Searching students:', query);
-      const results = await coordinatorApi.searchStudents(query, user!.token);
+      const results = await coordinatorApi.searchStudents(query);
       setStudents(results.map((item: any) => ({ ...item, id: String(item.studentId) })));
     } catch (err) {
       console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
@@ -636,7 +636,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         onPress={handleDownloadReport}
         disabled={loading}
       >
-        <Icon name="download" size={20} />
+
         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
           {loading ? 'Downloading...' : 'Download Report'}
         </Text>
@@ -644,7 +644,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     </Card>
   );
 
-  const renderRules = () => (
+  const renderedRules = React.useMemo(() => (
     <View style={{ gap: 16 }}>
       <Card>
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 16 }}>Allocation Rules</Text>
@@ -681,7 +681,9 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         </TouchableOpacity>
       </Card>
     </View>
-  );
+  ), [tempRules, colors]); // tempRules is needed for typing to work
+
+  const renderRules = () => renderedRules;
 
   // ✅ NEW: Create Team Modal
   const renderCreateTeamModal = () => (
@@ -844,7 +846,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 onPress={async () => {
                   setSelectedFacultyId(f.id);
                   try {
-                    const projects = await coordinatorApi.getFacultyProjects(f.id, user!.token);
+                    const projects = await coordinatorApi.getFacultyProjects(f.id);
                     setFacultyProjectsForTeam(projects.map((p: any) => ({ ...p, id: String(p.projectId) })));
                   } catch (err) {
                     showLocalMsg("Failed to load projects", "error");
@@ -899,8 +901,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                   await coordinatorApi.allocateTeamToFaculty(
                     String(selectedTeamForAllocation.teamId),
                     selectedFacultyId,
-                    selectedProject.id,
-                    user!.token
+                    selectedProject.id
                   );
                   showLocalMsg("Team allocated successfully!", "success");
                   fetchStudentTeamData();
@@ -942,7 +943,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
         <SectionLabel label="Quick Menu" />
         <Card>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
             {['overview', 'faculties', 'students', 'download', 'rules'].map(tab => (
               <TouchableOpacity
                 key={tab}
@@ -952,7 +953,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 <View style={[styles.iconWrap, { backgroundColor: activeTab === tab ? colors.primary : accentSoft }]}>
                   <Icon name={tab === 'faculties' ? 'faculty' : tab} size={16} />
                 </View>
-                <Text style={{ fontSize: 10, fontWeight: '700', color: activeTab === tab ? colors.primary : colors.subText, marginTop: 4 }}>
+                <Text
+                  style={{ fontSize: 9, fontWeight: '700', color: activeTab === tab ? colors.primary : colors.subText, marginTop: 4 }}
+                  numberOfLines={1}
+                >
                   {tab.toUpperCase()}
                 </Text>
               </TouchableOpacity>
@@ -983,9 +987,9 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           style={styles.tabItem}
           onPress={() => navigation.navigate('DeadlineManagement')}
         >
-          <Image 
-            source={isDark ? require('../assets/dd-color.png') : require('../assets/dd.png')} 
-            style={styles.tabIcon} 
+          <Image
+            source={isDark ? require('../assets/dd-white.png') : require('../assets/dd.png')}
+            style={styles.tabIcon}
           />
           <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500', marginTop: 2 }}>Deadlines</Text>
         </TouchableOpacity>
@@ -994,7 +998,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
           style={styles.tabItem}
           onPress={() => navigation.navigate('FacultyCoordinatorMore')}
         >
-          <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+          <Image
+            source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+            style={styles.tabIcon}
+          />
           <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '500', marginTop: 2 }}>More</Text>
         </TouchableOpacity>
       </View>

@@ -243,28 +243,14 @@ const FacultyProfileScreen: React.FC = () => {
           <InfoRow label="Full Name" value={profile.name} editKey="name"
             onEdit={openEdit} colors={colors} isDark={isDark} />
 
-          <InfoRow label="Email" value={profile.email} editKey="email"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
+          <InfoRow label="Email" value={profile.email}
+             colors={colors} isDark={isDark} />
 
           <InfoRow label="Phone" value={profile.phone} editKey="phone"
             onEdit={openEdit} colors={colors} isDark={isDark} />
         </View>
 
-        {/* Areas of Expertise */}
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Areas of Expertise
-          </Text>
 
-          <InfoRow label="Domains" value={profile.domains} editKey="domains"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
-
-          <InfoRow label="Sub-Domains" value={profile.subDomains} editKey="subDomains"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
-
-          <InfoRow label="Problem Statement Link" value={profile.problemStatementLink} editKey="problemStatementLink"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
-        </View>
 
         {/* Academic */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>

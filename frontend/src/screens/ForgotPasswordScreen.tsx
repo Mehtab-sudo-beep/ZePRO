@@ -18,34 +18,22 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleResetLink = async () => {
+  const handleSendOTP = async () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
-
+    
     try {
       setLoading(true);
       await forgotPassword({ email });
-
-      Alert.alert(
-        'Reset Link Sent',
-        'If the email exists, a password reset link has been sent.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+      Alert.alert('OTP Sent', 'Please check your email for the OTP.');
+      navigation.navigate('VerifyOTP', { email });
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Something went wrong. Please try again later.');
+      Alert.alert('Error', error.response?.data?.error || 'Failed to send OTP.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOTP = () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-    Alert.alert('Notice', 'OTP verification will be rolling out in an upcoming update! Please use the reset link option for now.');
   };
 
   return (
@@ -70,22 +58,14 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
             style={[styles.actionBtn, { backgroundColor: '#3b82f6' }]} 
-            onPress={handleResetLink}
+            onPress={handleSendOTP}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.btnText}>Reset Using Link</Text>
+              <Text style={styles.btnText}>Send OTP</Text>
             )}
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: '#10b981', marginTop: 10 }]} 
-            onPress={handleOTP}
-            disabled={loading}
-          >
-            <Text style={styles.btnText}>OTP To Mail</Text>
           </TouchableOpacity>
         </View>
 

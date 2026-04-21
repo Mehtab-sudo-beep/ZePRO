@@ -17,6 +17,7 @@ public class AdminService {
     private final UserRepository usersRepository;
     private final StudentRepository studentRepository;
     private final FacultyRepository facultyRepository;
+    private final ProjectRepository projectRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AdminService(InstituteRepository instituteRepository,
@@ -24,6 +25,7 @@ public class AdminService {
                         UserRepository usersRepository,
                         StudentRepository studentRepository,
                         FacultyRepository facultyRepository,
+                        ProjectRepository projectRepository,
                         PasswordEncoder passwordEncoder) {
 
         this.instituteRepository = instituteRepository;
@@ -31,6 +33,7 @@ public class AdminService {
         this.usersRepository = usersRepository;
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
+        this.projectRepository = projectRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -211,7 +214,8 @@ public class AdminService {
                     student.getUser().getUserId(),
                     student.getUser().getName(),
                     student.getUser().getEmail(),
-                    student.getUser().getRole()
+                    student.getUser().getRole(),
+                    student.getRollNumber()
             ));
         });
 
@@ -221,7 +225,8 @@ public class AdminService {
                     faculty.getUser().getUserId(),
                     faculty.getUser().getName(),
                     faculty.getUser().getEmail(),
-                    faculty.getUser().getRole()
+                    faculty.getUser().getRole(),
+                    faculty.getEmployeeId()
             );
             users.add(resp);
         });
@@ -306,11 +311,31 @@ public class AdminService {
                         f.getUser().getUserId(),  // ✅ USE userId FOR FRONTEND
                         f.getUser().getName(),
                         f.getUser().getEmail(),
-                        f.getUser().getRole()
+                        f.getUser().getRole(),
+                        f.getEmployeeId()
                 ))
                 .toList();
         
         System.out.println("[AdminService] ✅ Found " + response.size() + " faculty members");
+        return response;
+    }
+
+    // ✅ GET STUDENTS BY DEPARTMENT
+    public List<UserResponse> getStudentsByDepartment(Long departmentId) {
+        System.out.println("[AdminService] 📡 Fetching students for department: " + departmentId);
+        
+        List<UserResponse> response = studentRepository.findByDepartment_DepartmentId(departmentId)
+                .stream()
+                .map(s -> new UserResponse(
+                        s.getUser().getUserId(),
+                        s.getUser().getName(),
+                        s.getUser().getEmail(),
+                        s.getUser().getRole(),
+                        s.getRollNumber()
+                ))
+                .toList();
+        
+        System.out.println("[AdminService] ✅ Found " + response.size() + " students");
         return response;
     }
 
@@ -386,15 +411,18 @@ public class AdminService {
         
         // Count faculty in this department
         long facultyCount = facultyRepository.countByDepartment_DepartmentId(departmentId);
+
+        // Count projects in this department
+        long projectCount = projectRepository.countByFaculty_Department_DepartmentId(departmentId);
         
-        System.out.println("[AdminService] ✅ Students: " + studentCount + ", Faculty: " + facultyCount);
+        System.out.println("[AdminService] ✅ Students: " + studentCount + ", Faculty: " + facultyCount + ", Projects: " + projectCount);
         
         return new DepartmentStatsResponse(
                 departmentId,
                 department.getDepartmentName(),
                 studentCount,
                 facultyCount,
-                0  // projects count (can be added later)
+                projectCount
         );
     }
 

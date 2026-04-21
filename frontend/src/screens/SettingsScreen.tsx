@@ -28,12 +28,11 @@ const SettingsScreen: React.FC = () => {
 
   const [editNameVisible, setEditNameVisible] = useState(false);
   const [editPasswordVisible, setEditPasswordVisible] = useState(false);
-  const [editEmailVisible, setEditEmailVisible] = useState(false);
   const [editPhoneVisible, setEditPhoneVisible] = useState(false);
   const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
 
   const [newName, setNewName] = useState(user?.name || '');
-  const [newEmail, setNewEmail] = useState(user?.email || '');
+
   const [newPhone, setNewPhone] = useState(user?.phone || '');
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -64,22 +63,7 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const saveEmail = async () => {
-    if (!user) return;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      showAlert('Error', 'Please enter a valid email address.');
-      return;
-    }
-    try {
-      await API.put('/auth/update-profile', { name: user.name, email: newEmail.trim(), phone: user.phone || '' });
-      setUser({ ...user, email: newEmail.trim() });
-      setEditEmailVisible(false);
-      showAlert('Success', 'Email updated successfully.');
-    } catch (e: any) {
-      showAlert('Error', 'Failed to update email. ' + (e.response?.data?.message || ''));
-    }
-  };
+
 
   const savePassword = async () => {
     if (!user) return;
@@ -162,10 +146,7 @@ const SettingsScreen: React.FC = () => {
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={card} onPress={() => setEditEmailVisible(true)}>
-            <Text style={txt}>Change Email</Text>
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
+
 
           <TouchableOpacity style={card} onPress={() => setEditPhoneVisible(true)}>
             <Text style={txt}>Change Phone Number</Text>
@@ -286,32 +267,7 @@ const SettingsScreen: React.FC = () => {
           </View>
         </Modal>
 
-        {/* ════ CHANGE EMAIL MODAL ════ */}
-        <Modal visible={editEmailVisible} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={modalBox}>
-              <Text style={modalTitle}>Change Email</Text>
-              <Text style={[styles.inputLabel, isDark && styles.darkSubText]}>New Email</Text>
-              <TextInput
-                value={newEmail}
-                onChangeText={setNewEmail}
-                style={inputStyle}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="Enter new email"
-                placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-              />
-              <View style={styles.modalBtns}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditEmailVisible(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveBtn} onPress={saveEmail}>
-                  <Text style={styles.saveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+
 
         {/* ════ CHANGE PHONE MODAL ════ */}
         <Modal visible={editPhoneVisible} transparent animationType="slide">

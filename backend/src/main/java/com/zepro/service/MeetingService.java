@@ -47,6 +47,7 @@ public class MeetingService {
     private final EmailService emailService;
     private final FacultyRepository facultyRepository;
     private final ProjectRequestRepository projectRequestRepository;
+    private final NotificationService notificationService;
 
     public MeetingService(MeetingRepository meetingRepository,
             ProjectRequestRepository requestRepository,
@@ -60,7 +61,8 @@ public class MeetingService {
             com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository,
             EmailService emailService,
             FacultyRepository facultyRepository,
-            ProjectRequestRepository projectRequestRepository) {
+            ProjectRequestRepository projectRequestRepository,
+            NotificationService notificationService) {
         this.meetingRepository = meetingRepository;
         this.requestRepository = requestRepository;
         this.projectRepository = projectRepository;
@@ -74,6 +76,7 @@ public class MeetingService {
         this.emailService = emailService;
         this.facultyRepository = facultyRepository;
         this.projectRequestRepository = projectRequestRepository;
+        this.notificationService = notificationService;
     }
 
     // ------------------------------------------------
@@ -150,6 +153,21 @@ public class MeetingService {
             
             facultyService.updateMaximumSlotsReached(projectRequest.getProject().getProjectId(), teamSize);
             System.out.println("[MeetingService] 📊 Updated max slots for project: " + teamSize);
+
+            // Notify team members
+            if (projectRequest.getTeam().getMembers() != null) {
+                for (Student student : projectRequest.getTeam().getMembers()) {
+                    if (student.getUser() != null) {
+                        notificationService.createAndSendNotification(
+                            student.getUser(),
+                            "Meeting Scheduled",
+                            "A new meeting has been scheduled for project: " + project.getTitle(),
+                            "MeetingDetails",
+                            meeting.getRequest().getRequestId().toString()
+                        );
+                    }
+                }
+            }
         }
 
         System.out.println("[MeetingService] ✅ Meeting scheduled successfully");
@@ -191,6 +209,21 @@ public class MeetingService {
             request.setStatus(RequestStatus.CANCELLED);
             requestRepository.save(request);            
             System.out.println("[MeetingService] 🔄 Request reverted to CANCELLED");
+            
+            // Notify team members
+            if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+                for (Student student : request.getTeam().getMembers()) {
+                    if (student.getUser() != null) {
+                        notificationService.createAndSendNotification(
+                            student.getUser(),
+                            "Meeting Cancelled",
+                            "The meeting for project " + project.getTitle() + " was cancelled.",
+                            "ScheduledMeetings",
+                            null
+                        );
+                    }
+                }
+            }
         }
 
         return mapToResponse(meeting);
@@ -369,6 +402,19 @@ public class MeetingService {
             String projectName = project.getTitle() != null ? project.getTitle() : "Project";
 
             emailService.sendProjectAcceptanceEmail(studentEmails, projectName, facultyName);
+
+            // Notify team members via push
+            for (Student student : request.getTeam().getMembers()) {
+                if (student.getUser() != null) {
+                    notificationService.createAndSendNotification(
+                        student.getUser(),
+                        "Project Accepted! 🎉",
+                        "Your request for project '" + project.getTitle() + "' was accepted by " + facultyName,
+                        "AllocatedProject",
+                        null
+                    );
+                }
+            }
         }
 
         System.out.println("[MeetingService] ✅ Project ACCEPTED and ASSIGNED");
@@ -399,6 +445,21 @@ public class MeetingService {
         requestRepository.save(request);
 
         System.out.println("[MeetingService] ✅ Project REJECTED with reason: " + rejectionReason);
+        
+        // Notify team members
+        if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+            for (Student student : request.getTeam().getMembers()) {
+                if (student.getUser() != null) {
+                    notificationService.createAndSendNotification(
+                        student.getUser(),
+                        "Project Request Rejected",
+                        "Your request for project '" + project.getTitle() + "' was rejected. Reason: " + rejectionReason,
+                        "TeamProjectRequests",
+                        null
+                    );
+                }
+            }
+        }
     }
 
     // ✅ RESCHEDULE MEETING (WITH PROJECT STATUS VALIDATION)
@@ -440,6 +501,21 @@ public class MeetingService {
         meetingRepository.save(meeting);
 
         System.out.println("[MeetingService] ✅ Meeting RESCHEDULED successfully");
+
+        // Notify team members
+        if (meeting.getRequest().getTeam() != null && meeting.getRequest().getTeam().getMembers() != null) {
+            for (Student student : meeting.getRequest().getTeam().getMembers()) {
+                if (student.getUser() != null) {
+                    notificationService.createAndSendNotification(
+                        student.getUser(),
+                        "Meeting Rescheduled",
+                        "The meeting for project '" + project.getTitle() + "' was rescheduled to " + meeting.getMeetingTime().toString(),
+                        "MeetingDetails",
+                        meeting.getRequest().getRequestId().toString()
+                    );
+                }
+            }
+        }
 
         return mapToResponse(meeting);
     }

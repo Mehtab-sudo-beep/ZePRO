@@ -20,6 +20,7 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser, loading } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
 
   // ── Refresh user from AsyncStorage on every screen focus ─────────────────
   useFocusEffect(
@@ -164,7 +165,10 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             style={styles.bottomTabItem}
             onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
           >
-            <Image source={require('../assets/home.png')} style={styles.bottomTabIcon} />
+            <Image
+              source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
+              style={styles.bottomTabIcon}
+            />
             <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>Home</Text>
           </TouchableOpacity>
 
@@ -172,9 +176,9 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             style={styles.bottomTabItem}
             onPress={() => navigation.navigate('DeadlineManagement')}
           >
-            <Image 
-              source={colors.background === '#111827' ? require('../assets/dd-color.png') : require('../assets/dd.png')} 
-              style={styles.bottomTabIcon} 
+            <Image
+              source={isDark ? require('../assets/dd-white.png') : require('../assets/dd.png')}
+              style={styles.bottomTabIcon}
             />
             <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>Deadlines</Text>
           </TouchableOpacity>

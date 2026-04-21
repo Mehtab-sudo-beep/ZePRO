@@ -11,9 +11,7 @@ public class FacultyProfileResponse {
     private String qualification;
     private String cabinNo;
     private String phone;
-    private String problemStatementLink;
-    private String domains;
-    private String subDomains;
+
     private Long departmentId;
     private String departmentName;
     private Long instituteId;
@@ -33,9 +31,6 @@ public class FacultyProfileResponse {
             String qualification,
             String cabinNo,
             String phone,
-            String problemStatementLink,
-            String domains,
-            String subDomains,
             Long departmentId,
             String departmentName,
             Long instituteId,
@@ -51,9 +46,6 @@ public class FacultyProfileResponse {
         this.qualification = qualification;
         this.cabinNo = cabinNo;
         this.phone = phone;
-        this.problemStatementLink = problemStatementLink;
-        this.domains = domains;
-        this.subDomains = subDomains;
         this.departmentId = departmentId;
         this.departmentName = departmentName;
         this.instituteId = instituteId;
@@ -92,14 +84,7 @@ public class FacultyProfileResponse {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
-    public String getProblemStatementLink() { return problemStatementLink; }
-    public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
 
-    public String getDomains() { return domains; }
-    public void setDomains(String domains) { this.domains = domains; }
-
-    public String getSubDomains() { return subDomains; }
-    public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
 
     public Long getDepartmentId() { return departmentId; }
     public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }

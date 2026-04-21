@@ -106,6 +106,7 @@ const ActionRow = ({
 const FacultyHomeScreen: React.FC = () => {
   const { user } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
   const navigation = useNavigation<NavProp>();
 
   const [requests, setRequests] = useState<any[]>([]);
@@ -153,7 +154,6 @@ const FacultyHomeScreen: React.FC = () => {
       );
   }
 
-  const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
   const divider = isDark ? '#374151' : '#E5E7EB';
 
@@ -260,7 +260,10 @@ const FacultyHomeScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyCreateMenu')}
           >
-            <Image source={require('../assets/create.png')} style={styles.tabIcon} />
+            <Image
+              source={isDark ? require('../assets/create-white.png') : require('../assets/create.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>Create</Text>
           </TouchableOpacity>
 
@@ -268,7 +271,10 @@ const FacultyHomeScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('FacultyMore')}
           >
-            <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+            <Image
+              source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
           </TouchableOpacity>
         </View>

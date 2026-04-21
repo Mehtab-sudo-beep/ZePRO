@@ -6,6 +6,7 @@ target/
 /src/main/resources/application.properties
 backend\src\main\resources\application.properties
 /src/main/resources/application.properties
+/src/main/resources/firebase-adminsdk.json
 ### STS ###
 .apt_generated
 .classpath

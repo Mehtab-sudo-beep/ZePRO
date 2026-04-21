@@ -22,3 +22,11 @@ export const uploadProfilePicture = (data: FormData) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const verifyOtp = (data: any) => {
+  return API.post<{ valid: boolean }>('/auth/verify-otp', data);
+};
+
+export const resetPasswordOtp = (data: any) => {
+  return API.post<{ message: string }>('/auth/reset-password-otp', data);
+};

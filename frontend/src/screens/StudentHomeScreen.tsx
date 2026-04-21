@@ -20,6 +20,8 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { getProjectRequestsStatus, getAssignedProject, getTeamInfo, getDepartmentDeadlines, leaveTeam, assignTeamLeader } from '../api/studentApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { getUnreadCount } from '../api/notificationApi';
 
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -190,6 +192,10 @@ const StudentHomeScreen: React.FC = () => {
   const [teamLoaded, setTeamLoaded] = useState(false);
   const [deadlines, setDeadlines] = useState<any>(null);
   const [isTeamFormationLocked, setIsTeamFormationLocked] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Initialize Push Notifications
+  usePushNotifications();
 
   useFocusEffect(
     useCallback(() => {
@@ -249,7 +255,17 @@ const StudentHomeScreen: React.FC = () => {
         }
       };
 
+      const loadUnreadCount = async () => {
+        try {
+          const res = await getUnreadCount();
+          setUnreadCount(res.data);
+        } catch (e) {
+          console.log('Unread count fetch error:', e);
+        }
+      };
+
       loadTeam();
+      loadUnreadCount();
 
       return () => {
         isActive = false;
@@ -479,14 +495,39 @@ const StudentHomeScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* RIGHT SIDE (PROFILE BUTTON) */}
+          {/* RIGHT SIDE (NOTIFICATIONS / BELL BUTTON) */}
           <TouchableOpacity
-            style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
-            onPress={() => navigation.navigate('Profile')}
+            style={[styles.avatarBadge, { backgroundColor: accentSoft, padding: 8 }]}
+            onPress={() => navigation.navigate('Notifications')}
           >
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {(studentUser.name ?? 'S').charAt(0).toUpperCase()}
-            </Text>
+            <Image
+              source={require('../assets/bell.png')}
+              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+            />
+            {unreadCount > 0 && (
+              <View
+                style={[
+                  styles.unreadBadge,
+                  {
+                    backgroundColor: '#ef4444',
+                    position: 'absolute',
+                    top: -2,
+                    right: -2,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.card,
+                  },
+                ]}
+              >
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -774,7 +815,10 @@ const StudentHomeScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('ScheduledMeetings')}
           >
-            <Image source={require('../assets/meeting.png')} style={styles.tabIcon} />
+            <Image
+              source={isDark ? require('../assets/meeting-white.png') : require('../assets/meeting.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>Meetings</Text>
           </TouchableOpacity>
 
@@ -782,7 +826,10 @@ const StudentHomeScreen: React.FC = () => {
             style={styles.tabItem}
             onPress={() => navigation.navigate('More')}
           >
-            <Image source={require('../assets/more.png')} style={styles.tabIcon} />
+            <Image
+              source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+              style={styles.tabIcon}
+            />
             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
           </TouchableOpacity>
         </View>
@@ -1022,6 +1069,10 @@ const styles = StyleSheet.create({
   tab: { fontSize: 11, marginTop: 3 },
   tabActive: { fontSize: 11, fontWeight: '700', marginTop: 3 },
   tabIcon: { width: 22, height: 22, marginBottom: 3, resizeMode: 'contain' },
+  unreadBadge: {
+    paddingHorizontal: 4,
+    borderWidth: 2,
+  },
   //   headerGreeting: {
   //   fontSize: 13,
   //   fontWeight: '500',

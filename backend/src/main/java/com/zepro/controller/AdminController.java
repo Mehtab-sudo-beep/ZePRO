@@ -291,6 +291,28 @@ public class AdminController {
         }
     }
 
+    // ✅ GET STUDENTS BY DEPARTMENT
+    @GetMapping("/department/{departmentId}/students")
+    public ResponseEntity<?> getStudentsByDepartment(
+            @PathVariable Long departmentId,
+            Authentication authentication) {
+
+        System.out.println("\n========== GET STUDENTS BY DEPARTMENT ==========");
+        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/students");
+
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only ADMIN can view students"));
+        }
+
+        try {
+            List<UserResponse> students = adminService.getStudentsByDepartment(departmentId);
+            return ResponseEntity.ok(students);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch students: " + e.getMessage()));
+        }
+    }
+
     // ✅ ASSIGN FACULTY COORDINATOR
     @PostMapping("/department/{departmentId}/coordinator")
     public ResponseEntity<?> assignFacultyCoordinator(

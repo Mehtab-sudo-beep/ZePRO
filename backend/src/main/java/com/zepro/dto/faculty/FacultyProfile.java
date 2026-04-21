@@ -20,9 +20,7 @@ public class FacultyProfile {
     private String cabinNo;
     private Institute institute;
 
-    private String problemStatementLink;
-    private String domains;
-    private String subDomains;
+
     private int totalCreatedSlots;
     private int allocatedStudents;
     private int maxStudentsPerFaculty;
@@ -74,14 +72,7 @@ public class FacultyProfile {
     public Institute getInstitute() { return institute; }
     public void setInstitute(Institute institute) { this.institute = institute; }
 
-    public String getProblemStatementLink() { return problemStatementLink; }
-    public void setProblemStatementLink(String problemStatementLink) { this.problemStatementLink = problemStatementLink; }
 
-    public String getDomains() { return domains; }
-    public void setDomains(String domains) { this.domains = domains; }
-
-    public String getSubDomains() { return subDomains; }
-    public void setSubDomains(String subDomains) { this.subDomains = subDomains; }
 
     public int getTotalCreatedSlots() { return totalCreatedSlots; }
     public void setTotalCreatedSlots(int totalCreatedSlots) { this.totalCreatedSlots = totalCreatedSlots; }

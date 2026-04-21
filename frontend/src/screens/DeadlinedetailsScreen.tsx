@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -188,8 +189,7 @@ const DeadlineDetailScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              if (!user?.token) return;
-              await deleteDeadline(deadline.deadlineId, user.token);
+              await deleteDeadline(deadline.deadlineId);
               showAlert('Success', 'Deadline deleted');
               onUpdate?.();
               navigation.goBack();
@@ -204,8 +204,7 @@ const DeadlineDetailScreen: React.FC = () => {
 
   const handleSendEmail = async () => {
     try {
-      if (!user?.token) return;
-      await sendDeadlineEmailManually(deadline.deadlineId, user.token);
+      await sendDeadlineEmailManually(deadline.deadlineId);
       showAlert('Success', 'Deadline reminder email has been sent to users.');
     } catch (err: any) {
       showAlert('Error', err?.response?.data?.error || 'Failed to send email');
@@ -214,8 +213,7 @@ const DeadlineDetailScreen: React.FC = () => {
 
   const handleToggle = async () => {
     try {
-      if (!user?.token) return;
-      await toggleActiveDeadline(deadline.deadlineId, user.token);
+      await toggleActiveDeadline(deadline.deadlineId);
       showAlert('Success', deadline.isActive ? 'Deadline deactivated' : 'Deadline activated');
       onUpdate?.();
       navigation.goBack();
@@ -233,6 +231,7 @@ const DeadlineDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
