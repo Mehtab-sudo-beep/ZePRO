@@ -59,7 +59,7 @@ const TeamProjectRequestsScreen: React.FC = () => {
     if (status === 'SCHEDULED' || status === 'REJECTED' || status === 'COMPLETED' || status === 'ASSIGNED') {
       navigation.navigate('MeetingDetails', { requestId: item.requestId });
     } else {
-      navigation.navigate('ProjectDetails', { projectId: item.projectId });
+      navigation.navigate('ProjectDetails', { projectId: item.projectId, hideRequestButton: true });
     }
   };
 

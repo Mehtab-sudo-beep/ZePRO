@@ -100,13 +100,13 @@ export type RootStackParamList = {
   VerifyOTP: { email: string };
   ResetPassword: { email: string, otp: string };
   CreateProject: undefined;
-  ProjectDetails: { project?: any, isRequested?: boolean, projectId?: number };
+  ProjectDetails: { project?: any, isRequested?: boolean, projectId?: number, hideRequestButton?: boolean };
   FacultyCreateMenu: undefined;
   CreateDomain: undefined;
   CreateSubDomain: undefined;
   TeamProjectRequests: undefined;
   AllocatedProject: undefined;
-  DeadlineDetail: { deadlineId: number };
+  DeadlineDetail: { deadline: any, onUpdate?: () => void };
   AdminHome: {
     departmentId: string;
     departmentName: string;

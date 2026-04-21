@@ -30,6 +30,7 @@ import {
   cancelRequest,
   scheduleMeeting,
 } from '../api/facultyApi';
+import { coordinatorApi } from '../api/coordinatorApi';
 
 const FacultyRequestsScreen = () => {
   const { user } = useContext(AuthContext);
@@ -104,16 +105,40 @@ const FacultyRequestsScreen = () => {
 
   const loadDeadlines = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/api/deadlines`, {
+      // 1. Fetch predefined department deadlines (the "source of truth" for rules)
+      const ruleRes = await coordinatorApi.getDeadlines(selectedDegree);
+      let scheduleLimit: Date | undefined = undefined;
+
+      if (ruleRes.meetingSchedulingDeadline) {
+        scheduleLimit = new Date(ruleRes.meetingSchedulingDeadline);
+        console.log(`[FacultyRequestsScreen] Found Predefined Scheduling Deadline for ${selectedDegree}:`, scheduleLimit);
+      }
+
+      // 2. Fetch custom ad-hoc deadlines (secondary check)
+      const customRes = await axios.get(`${BASE_URL}/api/deadlines?degree=${selectedDegree}`, {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
-      const deadlines = res.data;
-      const meetingDeadline = deadlines.find((d: any) =>
-        d.title.toLowerCase().includes('meeting') ||
-        d.title.toLowerCase().includes('schedule')
+      const customDeadlines = customRes.data;
+
+      const customMeetingDeadline = customDeadlines.find((d: any) =>
+        d.isActive && (
+          d.title.toLowerCase().includes('meeting') ||
+          d.title.toLowerCase().includes('schedule')
+        )
       );
-      if (meetingDeadline && isMounted.current) {
-        setMaxDate(new Date(meetingDeadline.deadlineDate));
+
+      if (customMeetingDeadline) {
+        const customDate = new Date(customMeetingDeadline.deadlineDate);
+        console.log(`[FacultyRequestsScreen] Found Custom Scheduling Deadline for ${selectedDegree}:`, customDate);
+        
+        // Take the more restrictive (earlier) date if both exist
+        if (!scheduleLimit || customDate < scheduleLimit) {
+          scheduleLimit = customDate;
+        }
+      }
+
+      if (isMounted.current) {
+        setMaxDate(scheduleLimit);
       }
     } catch (e) {
       console.log('[FacultyRequestsScreen] Error loading deadlines:', e);

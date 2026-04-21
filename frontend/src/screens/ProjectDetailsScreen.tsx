@@ -29,7 +29,7 @@ const ProjectDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  const { project: initialProject, isRequested: initialIsRequested, projectId: passedProjectId } = route.params || {};
+  const { project: initialProject, isRequested: initialIsRequested, projectId: passedProjectId, hideRequestButton } = route.params || {};
   const [project, setProject] = useState<any>(initialProject || null);
   const [loadingProject, setLoadingProject] = useState(!initialProject && !!passedProjectId);
 
@@ -193,40 +193,42 @@ const ProjectDetailsScreen = () => {
       </ScrollView>
 
       {/* FIXED BOTTOM BUTTON */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: isDark ? '#374151' : '#E5E7EB' }]}>
-        {loadingDeadline ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              {
-                backgroundColor: isRequested
-                  ? '#6B7280'
-                  : (!isTeamLead || !deadlinePassed)
-                    ? '#9CA3AF'
-                    : colors.primary,
-              },
-            ]}
-            onPress={handleSendRequest}
-            disabled={!isTeamLead || isRequested || isSending || !deadlinePassed}
-          >
-            {isSending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.btnText}>
-                {isRequested
-                  ? "✓ Requested"
-                  : !isTeamLead
-                    ? "Team Lead Only"
-                    : !deadlinePassed
-                      ? "Deadline Active (Wait)"
-                      : "Send Request"}
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+      {!hideRequestButton && (
+        <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: isDark ? '#374151' : '#E5E7EB' }]}>
+          {loadingDeadline ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor: isRequested
+                    ? '#6B7280'
+                    : (!isTeamLead || !deadlinePassed)
+                      ? '#9CA3AF'
+                      : colors.primary,
+                },
+              ]}
+              onPress={handleSendRequest}
+              disabled={!isTeamLead || isRequested || isSending || !deadlinePassed}
+            >
+              {isSending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.btnText}>
+                  {isRequested
+                    ? "✓ Requested"
+                    : !isTeamLead
+                      ? "Team Lead Only"
+                      : !deadlinePassed
+                        ? "Deadline Active (Wait)"
+                        : "Send Request"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 };

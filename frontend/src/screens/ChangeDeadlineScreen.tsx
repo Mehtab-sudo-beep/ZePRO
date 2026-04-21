@@ -115,20 +115,18 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    // ✅ Remove strict validation: allow saving even one deadline
-    /*
-    const fields: { key: keyof Deadlines; label: string }[] = [
-      { key: 'teamFormationDeadline', label: 'Team Formation Deadline' },
-      { key: 'projectRequestDeadline', label: 'Project Request Deadline' },
-      { key: 'meetingSchedulingDeadline', label: 'Meeting Scheduling Deadline' },
-    ];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today for comparison
 
-    fields.forEach(({ key, label }) => {
-      if (!deadlines[key]) {
-        newErrors[key] = `${label} is required`;
-      }
-    });
-    */
+    if (deadlines.teamFormationDeadline && deadlines.teamFormationDeadline < now) {
+      newErrors.teamFormationDeadline = 'Deadline cannot be in the past';
+    }
+    if (deadlines.projectRequestDeadline && deadlines.projectRequestDeadline < now) {
+      newErrors.projectRequestDeadline = 'Deadline cannot be in the past';
+    }
+    if (deadlines.meetingSchedulingDeadline && deadlines.meetingSchedulingDeadline < now) {
+      newErrors.meetingSchedulingDeadline = 'Deadline cannot be in the past';
+    }
 
     return newErrors;
   };
@@ -203,7 +201,10 @@ const ChangeDeadlinesScreen: React.FC = () => {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Image source={require('../assets/angle.png')} style={[styles.backIcon, { tintColor: colors.text }]} />
+          <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 8 }}>
           <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>

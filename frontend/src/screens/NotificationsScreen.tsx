@@ -132,7 +132,10 @@ const NotificationsScreen: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={{ color: colors.primary, fontSize: 18 }}>Back</Text>
+          <Image
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+            style={styles.backIcon}
+          />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
         <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllButton}>
@@ -180,7 +183,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   backButton: {
-    minWidth: 60,
+    minWidth: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
   markAllButton: {
     minWidth: 80,

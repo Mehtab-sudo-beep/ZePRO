@@ -15,6 +15,7 @@ public class DeadlineResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String degree;
+    private Boolean isPassed;
 
     public DeadlineResponse() {}
 
@@ -32,6 +33,7 @@ public class DeadlineResponse {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.degree = degree;
+        this.isPassed = deadlineDate != null && deadlineDate.isBefore(LocalDateTime.now());
     }
 
     // Getters and Setters
@@ -67,4 +69,7 @@ public class DeadlineResponse {
 
     public String getDegree() { return degree; }
     public void setDegree(String degree) { this.degree = degree; }
-}
+
+    public Boolean getIsPassed() { return isPassed; }
+    public void setIsPassed(Boolean isPassed) { this.isPassed = isPassed; }
+}
