@@ -36,6 +36,7 @@ public class FacultyService {
     private final MeetingRepository meetingRepository;
     private final DeactivatedProjectRequestRepository deactivatedProjectRequestRepository;
     private final DeactivatedMeetingRepository deactivatedMeetingRepository;
+    private final NotificationService notificationService;
 
     public FacultyService(ProjectRepository projectRepository,
             FacultyRepository facultyRepository,
@@ -52,7 +53,8 @@ public class FacultyService {
             InstituteRepository instituteRepository,
             MeetingRepository meetingRepository,
             DeactivatedProjectRequestRepository deactivatedProjectRequestRepository,
-            DeactivatedMeetingRepository deactivatedMeetingRepository) {
+            DeactivatedMeetingRepository deactivatedMeetingRepository,
+            NotificationService notificationService) {
 
         this.projectRepository = projectRepository;
         this.facultyRepository = facultyRepository;
@@ -70,6 +72,7 @@ public class FacultyService {
         this.meetingRepository = meetingRepository;
         this.deactivatedProjectRequestRepository = deactivatedProjectRequestRepository;
         this.deactivatedMeetingRepository = deactivatedMeetingRepository;
+        this.notificationService = notificationService;
     }
 
     public AllocationRules getAllocationRulesForFaculty(Faculty faculty) {
@@ -368,6 +371,20 @@ public class FacultyService {
                     request.setStatus(RequestStatus.REJECTED);
                     request.setRejectionReason(rejectionReason);
                     projectRequestRepository.save(request);
+
+                    // Notify team members
+                    if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+                        for (Student student : request.getTeam().getMembers()) {
+                            if (student.getUser() != null) {
+                                notificationService.createAndSendNotification(
+                                        student.getUser(),
+                                        "Project Request Rejected",
+                                        "Your request for project '" + project.getTitle() + "' was rejected because the project was closed by the faculty.",
+                                        "TeamProjectRequests",
+                                        null);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -413,6 +430,21 @@ public class FacultyService {
                     request.setStatus(RequestStatus.REJECTED);
                     request.setRejectionReason(rejectionReason);
                     projectRequestRepository.save(request);
+
+                    // Notify team members
+                    if (request.getTeam() != null && request.getTeam().getMembers() != null) {
+                        for (Student student : request.getTeam().getMembers()) {
+                            if (student.getUser() != null) {
+                                notificationService.createAndSendNotification(
+                                        student.getUser(),
+                                        "Project Request Rejected",
+                                        "Your request for project '" + project.getTitle() + "' was rejected because the project was closed by the faculty.",
+                                        "TeamProjectRequests",
+                                        null);
+                            }
+                        }
+                    }
+
                 }
             }
         }

@@ -370,6 +370,20 @@ public class MeetingService {
                     meeting.setStatus(MeetingStatus.CANCELLED);
                     meetingRepository.save(meeting);
                 });
+
+                // Notify team members
+                if (other.getTeam() != null && other.getTeam().getMembers() != null) {
+                    for (Student student : other.getTeam().getMembers()) {
+                        if (student.getUser() != null) {
+                            notificationService.createAndSendNotification(
+                                    student.getUser(),
+                                    "Project Request Rejected",
+                                    "Your request for project '" + project.getTitle() + "' was rejected. Reason: Allotted to other team",
+                                    "TeamProjectRequests",
+                                    null);
+                        }
+                    }
+                }
             }
         }
 
@@ -392,6 +406,20 @@ public class MeetingService {
                     meeting.setStatus(MeetingStatus.CANCELLED);
                     meetingRepository.save(meeting);
                 });
+
+                // Notify team members
+                if (other.getTeam() != null && other.getTeam().getMembers() != null) {
+                    for (Student student : other.getTeam().getMembers()) {
+                        if (student.getUser() != null) {
+                            notificationService.createAndSendNotification(
+                                    student.getUser(),
+                                    "Project Request Rejected",
+                                    "Your request for project '" + other.getProject().getTitle() + "' was rejected. Reason: One project is allowed per team",
+                                    "TeamProjectRequests",
+                                    null);
+                        }
+                    }
+                }
             }
         }
 

@@ -279,6 +279,23 @@ const FacultyHomeScreen: React.FC = () => {
               badge={meetings.filter(m => m.status === 'PENDING').length > 0 ? `${meetings.filter(m => m.status === 'PENDING').length}` : undefined}
             />
           </View>
+
+          {user?.isFC && (
+            <>
+              <SectionLabel label="Administration" colors={colors} />
+              <View style={[styles.card, { backgroundColor: colors.card }]}>
+                <ActionRow
+                  label="Faculty Coordinator"
+                  sublabel="Access coordinator dashboard"
+                  icon="info"
+                  colors={colors}
+                  accentSoft={isDark ? 'rgba(167,139,250,0.15)' : 'rgba(139,92,246,0.1)'}
+                  onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
+                />
+              </View>
+            </>
+          )}
+
           <View style={{ height: 16 }} />
         </ScrollView>
 

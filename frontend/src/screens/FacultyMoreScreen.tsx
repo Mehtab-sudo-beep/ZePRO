@@ -129,13 +129,7 @@ const FacultyMoreScreen: React.FC = () => {
             onPress={() => navigation.navigate('Settings')}
             colors={colors}
           />
-          {user?.isFC && (
-            <MenuItem
-              title="Activate Faculty Coordinator"
-              onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
-              colors={colors}
-            />
-          )}
+
           <MenuItem
             title="Log Out"
             danger

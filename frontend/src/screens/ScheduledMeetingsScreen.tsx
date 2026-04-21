@@ -206,7 +206,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
           <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="search" size={18} colors={colors} />
             <TextInput
-              placeholder="Search Meeting..."
+              placeholder=" Search Meeting"
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={[styles.searchInput, { color: colors.text }]}

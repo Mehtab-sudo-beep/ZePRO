@@ -1034,6 +1034,9 @@ public class StudentService {
             }
         }
 
+        team.getMembers().remove(student);
+        teamRepository.save(team);
+
         student.setTeam(null);
         student.setInTeam(false);
         student.setTeamLead(false);
