@@ -14,6 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { BASE_URL } from '../api/api';
 
 const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -99,7 +100,11 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={require('../assets/avatar.png')}
+            source={
+              user?.profilePictureUrl
+                ? { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` }
+                : require('../assets/avatar.png')
+            }
             style={[styles.profileImage, { borderColor: colors.border, backgroundColor: colors.card }]}
           />
           <View style={styles.profileInfo}>

@@ -54,7 +54,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const processLoginSession = async (data: any) => {
     const {
       token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, fc: isFC
+      email: resEmail, name, phone, fc: isFC, profilePictureUrl
     } = data;
 
     // Save basic info
@@ -70,7 +70,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     // Update Global Auth Context
     setUser({
       token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, isFC
+      email: resEmail, name, phone, isFC, profilePictureUrl
     });
 
     if (role === 'STUDENT') {

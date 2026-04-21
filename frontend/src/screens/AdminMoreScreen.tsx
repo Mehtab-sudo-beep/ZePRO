@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import { BASE_URL } from '../api/api';
 
 const AdminMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -60,7 +61,11 @@ const AdminMoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={require('../assets/avatar.png')}
+            source={
+              user?.profilePictureUrl
+                ? { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` }
+                : require('../assets/avatar.png')
+            }
             style={[
               styles.profileImage,
               {
