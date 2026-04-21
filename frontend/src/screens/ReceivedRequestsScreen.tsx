@@ -31,6 +31,10 @@ interface Request {
   status: string;
   rejectionReason?: string;
   studentEmail?: string;
+  studentRollNumber?: string;
+  cgpa?: number;
+  resumeLink?: string;
+  marksheetLink?: string;
 }
 
 const ReceivedRequestsScreen: React.FC = () => {
@@ -249,6 +253,38 @@ const ReceivedRequestsScreen: React.FC = () => {
                       <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Email: </Text>
                       <TouchableOpacity onPress={() => handleSendEmail(req.studentEmail)}>
                         <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>{req.studentEmail}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+
+                  {req.studentRollNumber ? (
+                    <View style={styles.detailRow}>
+                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Roll No: </Text>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{req.studentRollNumber}</Text>
+                    </View>
+                  ) : null}
+
+                  {req.cgpa ? (
+                    <View style={styles.detailRow}>
+                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>CGPA: </Text>
+                      <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{req.cgpa}</Text>
+                    </View>
+                  ) : null}
+
+                  {req.resumeLink && req.resumeLink !== "N/A" ? (
+                    <View style={styles.detailRow}>
+                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Resume: </Text>
+                      <TouchableOpacity onPress={() => Linking.openURL(req.resumeLink!)}>
+                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>View Document</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+
+                  {req.marksheetLink && req.marksheetLink !== "N/A" ? (
+                    <View style={styles.detailRow}>
+                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Marksheet: </Text>
+                      <TouchableOpacity onPress={() => Linking.openURL(req.marksheetLink!)}>
+                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>View Document</Text>
                       </TouchableOpacity>
                     </View>
                   ) : null}

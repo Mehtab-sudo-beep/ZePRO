@@ -15,11 +15,12 @@ public class ProjectResponse {
     private String facultyName;    // ✅ NEW
     private Long facultyId;        // ✅ NEW
     private java.util.List<String> documents;
+    private String degree; // UG or PG
 
     // ✅ Constructor with faculty fields
     public ProjectResponse(Long projectId, String title, String description, String status,
             String domain, String subdomain, boolean isActive, int projectAssigned,
-            int maxSlots, int remainingSlots, String facultyName, Long facultyId, java.util.List<String> documents) {
+            int maxSlots, int remainingSlots, String facultyName, Long facultyId, java.util.List<String> documents, String degree) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
@@ -33,6 +34,7 @@ public class ProjectResponse {
         this.facultyName = facultyName;
         this.facultyId = facultyId;
         this.documents = documents;
+        this.degree = degree;
     }
 
     // Old constructor (keep for backward compatibility)
@@ -40,7 +42,7 @@ public class ProjectResponse {
             String domain, String subdomain, boolean isActive, int projectAssigned,
             int maxSlots, int remainingSlots) {
         this(projectId, title, description, status, domain, subdomain, isActive,
-                projectAssigned, maxSlots, remainingSlots, "N/A", null, null);
+                projectAssigned, maxSlots, remainingSlots, "N/A", null, null, null);
     }
 
     public ProjectResponse() {}
@@ -84,4 +86,7 @@ public class ProjectResponse {
 
     public java.util.List<String> getDocuments() { return documents; }
     public void setDocuments(java.util.List<String> documents) { this.documents = documents; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

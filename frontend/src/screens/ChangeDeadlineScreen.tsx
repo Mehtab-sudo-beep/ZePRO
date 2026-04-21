@@ -12,10 +12,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { coordinatorApi } from '../api/coordinatorApi';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AuthContext } from '../context/AuthContext';
+import { useDegree } from '../context/DegreeContext';
+import DegreeSelector from '../components/DegreeSelector';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Deadlines {
   teamFormationDeadline: string;
@@ -27,7 +30,21 @@ const ChangeDeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { showAlert } = useContext(AlertContext);
   const { colors } = useContext(ThemeContext);
+  const { user } = useContext(AuthContext);
+  const { selectedDegree, setSelectedDegree } = useDegree();
   const isDark = colors.background === '#111827';
+
+  const showDegreeSelector = user?.role === 'ADMIN' || (user?.isUGCoordinator && user?.isPGCoordinator);
+
+  useEffect(() => {
+    if (user?.role === 'FACULTY') {
+      if (user?.isUGCoordinator && !user?.isPGCoordinator && selectedDegree !== 'UG') {
+        setSelectedDegree('UG');
+      } else if (!user?.isUGCoordinator && user?.isPGCoordinator && selectedDegree !== 'PG') {
+        setSelectedDegree('PG');
+      }
+    }
+  }, [user, selectedDegree, setSelectedDegree]);
 
   const [deadlines, setDeadlines] = useState<{
     teamFormationDeadline: Date | null;
@@ -48,7 +65,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
   useEffect(() => {
     fetchDeadlines();
-  }, []);
+  }, [selectedDegree]);
 
   const formatDateForFrontend = (date: Date | null) => {
     if (!date) return 'Not set';
@@ -66,8 +83,9 @@ const ChangeDeadlinesScreen: React.FC = () => {
   };
 
   const fetchDeadlines = async () => {
+    setFetching(true);
     try {
-      const data = await coordinatorApi.getDeadlines();
+      const data = await coordinatorApi.getDeadlines(selectedDegree);
       setDeadlines({
         teamFormationDeadline: data.teamFormationDeadline ? new Date(data.teamFormationDeadline) : null,
         projectRequestDeadline: data.projectRequestDeadline ? new Date(data.projectRequestDeadline) : null,
@@ -97,6 +115,8 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
+    // ✅ Remove strict validation: allow saving even one deadline
+    /*
     const fields: { key: keyof Deadlines; label: string }[] = [
       { key: 'teamFormationDeadline', label: 'Team Formation Deadline' },
       { key: 'projectRequestDeadline', label: 'Project Request Deadline' },
@@ -108,6 +128,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
         newErrors[key] = `${label} is required`;
       }
     });
+    */
 
     return newErrors;
   };
@@ -128,11 +149,11 @@ const ChangeDeadlinesScreen: React.FC = () => {
         meetingSchedulingDeadline: formatDateForBackend(deadlines.meetingSchedulingDeadline),
       };
 
-      await coordinatorApi.saveDeadlines(payload);
-      
+      await coordinatorApi.saveDeadlines(payload, selectedDegree);
+
       showAlert(
         '✅ Deadlines Updated',
-        'All deadlines have been successfully updated.',
+        `Deadlines for ${selectedDegree} have been successfully updated.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
@@ -145,7 +166,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
   const handleSendEmails = async () => {
     setEmailLoading(true);
     try {
-      const response = await coordinatorApi.sendDepartmentDeadlineEmail();
+      const response = await coordinatorApi.sendDepartmentDeadlineEmail(selectedDegree);
       showAlert('✅ Success', response.message || 'Emails sent successfully.');
     } catch (error: any) {
       showAlert('❌ Error', error.message || 'Failed to send emails. Make sure there are deadlines configured.');
@@ -181,9 +202,15 @@ const ChangeDeadlinesScreen: React.FC = () => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <View style={{ width: 40 }} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Deadline Management</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Image source={require('../assets/angle.png')} style={[styles.backIcon, { tintColor: colors.text }]} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+            Deadlines ({selectedDegree})
+          </Text>
+        </View>
+        {showDegreeSelector && <DegreeSelector />}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
@@ -328,9 +355,9 @@ const DeadlineField = ({
   return (
     <View style={fieldStyles.wrapper}>
       <Text style={[fieldStyles.label, { color: colors.text }]}>{label}</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
-          fieldStyles.inputRow, 
+          fieldStyles.inputRow,
           { backgroundColor: colors.background, borderColor: colors.border },
           error ? fieldStyles.inputRowError : null
         ]}
@@ -339,9 +366,9 @@ const DeadlineField = ({
         <Text style={[fieldStyles.input, { color: colors.text }, value === 'Not set' ? { color: '#9CA3AF' } : null]}>
           {value}
         </Text>
-        <Image 
-          source={require('../assets/deadlines/calendar.png')} 
-          style={{ width: 18, height: 18, tintColor: colors.primary }} 
+        <Image
+          source={require('../assets/deadlines/calendar.png')}
+          style={{ width: 18, height: 18, tintColor: colors.primary }}
         />
       </TouchableOpacity>
       {description && !error && (

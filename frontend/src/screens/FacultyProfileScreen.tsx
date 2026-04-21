@@ -25,6 +25,7 @@ import {
 import { uploadProfilePicture } from '../api/authApi';
 import * as ImagePicker from 'expo-image-picker';
 import { BASE_URL } from '../api/api';
+import { useDegree } from '../context/DegreeContext';
 
 // ✅ OUTSIDE COMPONENT
 const InfoRow = ({ label, value, editKey, onEdit, colors, isDark }: any) => (
@@ -57,6 +58,7 @@ const FacultyProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const { selectedDegree } = useDegree();
   const isDark = colors.background === '#111827';
 
   const [profile, setProfile] = useState<any>({});
@@ -111,7 +113,7 @@ const FacultyProfileScreen: React.FC = () => {
     const loadProfile = async () => {
       try {
         if (!user?.token) return;
-        const data = await getFacultyProfile(user.token);
+        const data = await getFacultyProfile(selectedDegree, user.token);
         setProfile(data);
       } catch (err) {
         console.log('❌ PROFILE ERROR:', err);
@@ -121,7 +123,7 @@ const FacultyProfileScreen: React.FC = () => {
       }
     };
     loadProfile();
-  }, [user]);
+  }, [user, selectedDegree]);
 
   const openEdit = (key: string, label: string, value: string) => {
     setEditField({ key, label });
@@ -144,7 +146,7 @@ const FacultyProfileScreen: React.FC = () => {
         [editField.key]: editValue.trim(),
       };
 
-      const data = await updateFacultyProfile(updated, user.token);
+      const data = await updateFacultyProfile(updated, selectedDegree, user.token);
       setProfile(data);
 
       if (editField.key === 'name') {

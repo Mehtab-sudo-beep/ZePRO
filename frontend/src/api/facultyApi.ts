@@ -43,22 +43,22 @@ export const completeFacultyProfile = (facultyId: number, data: {
   });
 };
 
-export const getPendingRequests = async (token: string) => {
-  const res = await axios.get(`${API}/faculty/pending-requests`, {
+export const getPendingRequests = async (degree: string, token: string) => {
+  const res = await axios.get(`${API}/faculty/pending-requests?degree=${degree}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
 };
 
-export const getFacultyProjects = async (token: string) => {
-  const res = await axios.get(`${API}/faculty/my-projects`, {
+export const getFacultyProjects = async (degree: string, token: string) => {
+  const res = await axios.get(`${API}/faculty/my-projects?degree=${degree}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
 };
 
-export const getAllocationRules = async (token: string) => {
-  const res = await axios.get(`${API}/faculty/allocation-rules`, {
+export const getAllocationRules = async (degree: string, token: string) => {
+  const res = await axios.get(`${API}/faculty/allocation-rules?degree=${degree}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
@@ -151,8 +151,8 @@ export const getSubDomains = async (domainId: number, token: string) => {
   return res.data;
 };
 
-export const getAllMeetings = async (token: string) => {
-  const res = await axios.get(`${API}/faculty/meetings`, {
+export const getAllMeetings = async (degree: string, token: string) => {
+  const res = await axios.get(`${API}/faculty/meetings?degree=${degree}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -202,16 +202,16 @@ export const cancelRequest = async (requestId: number, token: string) => {
   return res.data;
 };
 
-export const getFacultyProfile = async (token: string) => {
-  return axios.get(`${API}/faculty/profile`, {
+export const getFacultyProfile = async (degree: string, token: string) => {
+  return axios.get(`${API}/faculty/profile?degree=${degree}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   }).then(res => res.data);
 };
 
-export const updateFacultyProfile = async (data: any, token: string) => {
-  return axios.put(`${API}/faculty/profile`, data, {
+export const updateFacultyProfile = async (data: any, degree: string, token: string) => {
+  return axios.put(`${API}/faculty/profile?degree=${degree}`, data, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

@@ -31,6 +31,9 @@ public class AllocationRules {
     @JoinColumn(name = "institute_id")
     private Institute institute;
 
+    @Column(name = "degree")
+    private String degree; // UG or PG
+
     // ─── Getters & Setters ─────────────────────────────────
 
     public Long getId() {
@@ -84,5 +87,13 @@ public class AllocationRules {
 
     public void setInstitute(Institute institute) {
         this.institute = institute;
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

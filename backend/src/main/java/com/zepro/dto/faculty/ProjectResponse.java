@@ -11,6 +11,7 @@ public class ProjectResponse {
     private String description;
     private String status;
     private boolean isActive;
+    private String degree; // UG or PG
 
     private Long teamId;
     private String teamName;
@@ -38,7 +39,7 @@ public class ProjectResponse {
     // 🔥 Constructor for projects
     public ProjectResponse(Long projectId, String title, String description,
                            String status, String domain, String subdomain, boolean isActive, 
-                           int assignedStudents, int maxSlots,int presentSlots, List<String> documents) {
+                           int assignedStudents, int maxSlots,int presentSlots, List<String> documents, String degree) {
         this.projectId = projectId;
         this.title = title;
         this.description = description;
@@ -50,6 +51,7 @@ public class ProjectResponse {
         this.maxSlots = maxSlots;
         this.presentSlots = presentSlots;
         this.documents = documents;
+        this.degree = degree;
     }
 
     // 🔥 Optional full constructor
@@ -144,4 +146,7 @@ public class ProjectResponse {
 
     public List<String> getDocuments() { return documents; }
     public void setDocuments(List<String> documents) { this.documents = documents; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

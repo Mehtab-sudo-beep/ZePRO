@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { Meeting } from '../types/Meeting';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -62,7 +61,7 @@ export type RootStackParamList = {
   ViewProjects: undefined;
   ScheduledMeetings: undefined;
   MeetingDetails: {
-    meeting?: Meeting;
+    meeting?: any;
     requestId?: number;
   };
   FacultyHome: undefined;

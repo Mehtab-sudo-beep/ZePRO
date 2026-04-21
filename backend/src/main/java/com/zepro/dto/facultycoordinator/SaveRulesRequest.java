@@ -5,15 +5,17 @@ public class SaveRulesRequest {
     private int maxTeamSize;
     private int maxStudentsPerFaculty;
     private int maxProjectsPerFaculty;
+    private String degree;
 
     // Constructors
     public SaveRulesRequest() {}
 
-    public SaveRulesRequest(Long departmentId, int maxTeamSize, int maxStudentsPerFaculty, int maxProjectsPerFaculty) {
+    public SaveRulesRequest(Long departmentId, int maxTeamSize, int maxStudentsPerFaculty, int maxProjectsPerFaculty, String degree) {
         this.departmentId = departmentId;
         this.maxTeamSize = maxTeamSize;
         this.maxStudentsPerFaculty = maxStudentsPerFaculty;
         this.maxProjectsPerFaculty = maxProjectsPerFaculty;
+        this.degree = degree;
     }
 
     // Getters & Setters
@@ -43,5 +45,12 @@ public class SaveRulesRequest {
     }
     public void setMaxProjectsPerFaculty(int maxProjectsPerFaculty) { 
         this.maxProjectsPerFaculty = maxProjectsPerFaculty; 
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

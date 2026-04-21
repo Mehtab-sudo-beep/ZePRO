@@ -46,7 +46,7 @@ public class FacultyDeadlineController {
             if (user.getRole() == UserRole.FACULTY) {
                 var faculty = facultyRepository.findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Faculty record not found"));
-                return faculty.getIsFC() != null && faculty.getIsFC();
+                return (faculty.getIsUGCoordinator() != null && faculty.getIsUGCoordinator()) || (faculty.getIsPGCoordinator() != null && faculty.getIsPGCoordinator());
             }
             
             return false;
@@ -106,7 +106,7 @@ public class FacultyDeadlineController {
     
     // ✅ GET DEADLINES (Works for all users - FC gets all, students get role-specific)
     @GetMapping("")
-    public ResponseEntity<?> getDeadlines(Authentication authentication) {
+    public ResponseEntity<?> getDeadlines(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
         try {
             System.out.println("[FacultyDeadlineController] 📋 GET /api/deadlines");
             String email = authentication.getName();
@@ -115,13 +115,13 @@ public class FacultyDeadlineController {
             
             List<DeadlineResponse> deadlines;
             
-            // ✅ If Faculty Coordinator → Get all deadlines for their department
+            // ✅ If Faculty Coordinator → Get all deadlines for their department and degree
             if (isFacultyCoordinator(authentication)) {
                 Long departmentId = getCoordinatorDepartmentId(authentication);
-                System.out.println("[FacultyDeadlineController] 👨‍🏫 Fetching all deadlines for FC department: " + departmentId);
-                deadlines = deadlineService.getAllDeadlinesByDepartment(departmentId);
+                System.out.println("[FacultyDeadlineController] 👨‍🏫 Fetching all deadlines for FC department: " + departmentId + " degree: " + degree);
+                deadlines = deadlineService.getDeadlinesByDepartmentAndDegree(departmentId, degree);
             } 
-            // ✅ If Student → Get role-specific deadlines for their department
+            // ✅ If Student → Get ACTIVE role-specific deadlines using their OWN degree from DB
             else if (user.getRole() == UserRole.STUDENT) {
                 Long departmentId = getStudentDepartmentId(authentication);
                 
@@ -133,21 +133,26 @@ public class FacultyDeadlineController {
                     return ResponseEntity.status(HttpStatus.ACCEPTED).body(error);
                 }
                 
-                System.out.println("[FacultyDeadlineController] 👤 Fetching STUDENT deadlines for department: " + departmentId);
-                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(UserRole.STUDENT, departmentId);
+                // ✅ CRITICAL: Use student's own degree from DB — cannot be spoofed via query param
+                var student = studentRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
+                String studentDegree = student.getDegree() != null ? student.getDegree() : "UG";
+                
+                System.out.println("[FacultyDeadlineController] 👤 Fetching STUDENT deadlines for department: " + departmentId + " degree (from profile): " + studentDegree);
+                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(UserRole.STUDENT, departmentId, studentDegree);
             } 
-            // ✅ If Faculty (NOT Coordinator) → Get role-specific deadlines
+            // ✅ If Faculty (NOT Coordinator) → Get role-specific deadlines for their degree
             else if (user.getRole() == UserRole.FACULTY) {
                 Long departmentId = getCoordinatorDepartmentId(authentication);
-                System.out.println("[FacultyDeadlineController] 👨‍🏫 Fetching FACULTY deadlines for department: " + departmentId);
-                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(UserRole.FACULTY, departmentId);
+                System.out.println("[FacultyDeadlineController] 👨‍🏫 Fetching FACULTY deadlines for department: " + departmentId + " degree: " + degree);
+                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(UserRole.FACULTY, departmentId, degree);
             }
             // ✅ Default for other roles
             else {
                 Long departmentId = getCoordinatorDepartmentId(authentication);
-                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(user.getRole(), departmentId);
+                deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(user.getRole(), departmentId, degree);
             }
-            
+                
             System.out.println("[FacultyDeadlineController] ✅ Found " + deadlines.size() + " deadlines");
             return ResponseEntity.ok(deadlines);
         } catch (Exception e) {
@@ -162,7 +167,7 @@ public class FacultyDeadlineController {
     
     // ✅ CREATE DEADLINE (FC Only - Auto-binds to their department)
     @PostMapping("/create")
-    public ResponseEntity<?> createDeadline(@RequestBody CreateDeadlineRequest request, Authentication authentication) {
+    public ResponseEntity<?> createDeadline(@RequestBody CreateDeadlineRequest request, Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
         try {
             System.out.println("[FacultyDeadlineController] 📝 POST /api/deadlines/create");
             
@@ -182,6 +187,8 @@ public class FacultyDeadlineController {
             String coordinatorEmail = getCoordinatorEmail(authentication);
             System.out.println("[FacultyDeadlineController] 👨‍🏫 Creating deadline for coordinator: " + coordinatorEmail);
             
+            // Set degree in request if not present
+            request.setDegree(degree);
             DeadlineResponse response = deadlineService.createDeadline(request, coordinatorEmail);
             
             System.out.println("[FacultyDeadlineController] ✅ Deadline created successfully: " + response.getDeadlineId());
@@ -202,7 +209,7 @@ public class FacultyDeadlineController {
     
     // ✅ GET ALL DEADLINES FOR COORDINATOR'S DEPARTMENT
     @GetMapping("/coordinator/all")
-    public ResponseEntity<?> getCoordinatorAllDeadlines(Authentication authentication) {
+    public ResponseEntity<?> getCoordinatorAllDeadlines(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
         try {
             System.out.println("[FacultyDeadlineController] 📋 GET /api/deadlines/coordinator/all");
             
@@ -213,7 +220,8 @@ public class FacultyDeadlineController {
             }
             
             String coordinatorEmail = getCoordinatorEmail(authentication);
-            List<DeadlineResponse> deadlines = deadlineService.getCoordinatorDeadlines(coordinatorEmail);
+            List<DeadlineResponse> deadlines = deadlineService.getCoordinatorDeadlines(coordinatorEmail).stream()
+                    .filter(d -> degree.equalsIgnoreCase(d.getDegree())).toList();
             
             System.out.println("[FacultyDeadlineController] ✅ Found " + deadlines.size() + " deadlines");
             return ResponseEntity.ok(deadlines);
@@ -228,7 +236,7 @@ public class FacultyDeadlineController {
     
     // ✅ GET DEADLINES BY ROLE AND DEPARTMENT
     @GetMapping("/role/{role}")
-    public ResponseEntity<?> getDeadlinesByRole(@PathVariable String role, Authentication authentication) {
+    public ResponseEntity<?> getDeadlinesByRole(@PathVariable String role, Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
         try {
             System.out.println("[FacultyDeadlineController] 📋 GET /api/deadlines/role/" + role);
             
@@ -247,7 +255,7 @@ public class FacultyDeadlineController {
                 departmentId = getCoordinatorDepartmentId(authentication);
             }
             
-            List<DeadlineResponse> deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(roleEnum, departmentId);
+            List<DeadlineResponse> deadlines = deadlineService.getActiveDeadlinesByRoleAndDepartment(roleEnum, departmentId, degree);
             
             System.out.println("[FacultyDeadlineController] ✅ Found " + deadlines.size() + " deadlines for role: " + role);
             return ResponseEntity.ok(deadlines);

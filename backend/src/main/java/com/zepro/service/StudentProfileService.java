@@ -44,6 +44,7 @@ public class StudentProfileService {
         dto.setResumeLink(student.getResumeLink());
         dto.setMarksheetLink(student.getMarksheetLink());
         dto.setIsAllocated(student.isAllocated());
+        dto.setDegree(student.getDegree());
 
         return dto;
     }

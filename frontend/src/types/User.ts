@@ -9,5 +9,6 @@ export interface User {
   studentId?: number;
   isInTeam?: boolean;
   isTeamLead?: boolean;
-  isFC?: boolean;
+  isUGCoordinator?: boolean;
+  isPGCoordinator?: boolean;
 }

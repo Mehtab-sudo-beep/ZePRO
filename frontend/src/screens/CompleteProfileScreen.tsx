@@ -126,8 +126,8 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
-// ── Year options ──────────────────────────────────────────────────────────────
-const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+// ── Degree options ──────────────────────────────────────────────────────────────
+const DEGREE_OPTIONS = ['UG', 'PG'];
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
@@ -142,7 +142,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [phone, setPhone] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [cgpa, setCgpa] = useState('');
-  const [year, setYear] = useState('');
+  const [degree, setDegree] = useState('');
   const [resumeFile, setResumeFile] = useState<any>(null);
   const [marksheetFile, setMarksheetFile] = useState<any>(null);
 
@@ -155,7 +155,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   // Modal visibility
   const [showInstitutePicker, setShowInstitutePicker] = useState(false);
   const [showDepartmentPicker, setShowDepartmentPicker] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showDegreePicker, setShowDegreePicker] = useState(false);
 
   // UI state
   const [loadingInstitutes, setLoadingInstitutes] = useState(true);
@@ -179,7 +179,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           if (data.phone) setPhone(data.phone);
           if (data.rollNumber) setRollNumber(data.rollNumber);
           if (data.cgpa) setCgpa(data.cgpa.toString());
-          if (data.year) setYear(data.year);
+          if (data.degree) setDegree(data.degree);
 
           if (data.instituteId) {
             setSelectedInstitute({
@@ -283,7 +283,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
     const cgpaNum = parseFloat(cgpa);
     if (isNaN(cgpaNum) || cgpaNum < 0 || cgpaNum > 10)
       return 'CGPA must be a number between 0 and 10.';
-    if (!year) return 'Please select your year of study.';
+    if (!degree) return 'Please select your degree (UG/PG).';
     if (!selectedInstitute) return 'Please select your institute.';
     if (!selectedDepartment) return 'Please select your department.';
     if (!resumeFile) return 'Resume file is required.';
@@ -327,7 +327,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
       const payload = {
         rollNumber: rollNumber.trim(),
         cgpa: parseFloat(cgpa),
-        year,
+        degree,
         instituteId: selectedInstitute.instituteId,
         departmentId: selectedDepartment.departmentId,
         resumeFile: resumeFile,
@@ -467,15 +467,15 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Year */}
+          {/* Degree */}
           <View style={styles.fieldWrap}>
-            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Year of Study *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Degree (UG/PG) *</Text>
             <TouchableOpacity
               style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
-              onPress={() => setShowYearPicker(true)}
+              onPress={() => setShowDegreePicker(true)}
             >
-              <Text style={[styles.selectorText, { color: year ? colors.text : colors.subText }]}>
-                {year || 'Select year'}
+              <Text style={[styles.selectorText, { color: degree ? colors.text : colors.subText }]}>
+                {degree || 'Select degree'}
               </Text>
               <Text style={{ color: colors.subText, fontSize: 18 }}>›</Text>
             </TouchableOpacity>
@@ -613,28 +613,28 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         colors={colors}
       />
 
-      {/* Year Picker Modal */}
-      <Modal visible={showYearPicker} transparent animationType="slide">
+      {/* Degree Picker Modal */}
+      <Modal visible={showDegreePicker} transparent animationType="slide">
         <View style={pickerStyles.overlay}>
           <View style={[pickerStyles.sheet, { backgroundColor: colors.card }]}>
             <View style={pickerStyles.handle} />
-            <Text style={[pickerStyles.title, { color: colors.text }]}>Select Year</Text>
-            {YEAR_OPTIONS.map(y => (
+            <Text style={[pickerStyles.title, { color: colors.text }]}>Select Degree</Text>
+            {DEGREE_OPTIONS.map(d => (
               <TouchableOpacity
-                key={y}
+                key={d}
                 style={[pickerStyles.item, { borderBottomColor: colors.border }]}
                 onPress={() => {
-                  setYear(y);
-                  setShowYearPicker(false);
+                  setDegree(d);
+                  setShowDegreePicker(false);
                 }}
               >
-                <Text style={[pickerStyles.itemText, { color: colors.text }]}>{y}</Text>
-                {year === y && <Text style={{ color: colors.primary, fontWeight: '700' }}>✓</Text>}
+                <Text style={[pickerStyles.itemText, { color: colors.text }]}>{d}</Text>
+                {degree === d && <Text style={{ color: colors.primary, fontWeight: '700' }}>✓</Text>}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={[pickerStyles.cancelBtn, { borderColor: colors.border }]}
-              onPress={() => setShowYearPicker(false)}
+              onPress={() => setShowDegreePicker(false)}
             >
               <Text style={{ color: colors.subText, fontWeight: '600' }}>Cancel</Text>
             </TouchableOpacity>

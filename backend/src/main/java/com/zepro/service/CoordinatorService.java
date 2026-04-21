@@ -1,4 +1,5 @@
 package com.zepro.service;
+// refreshing IDE cache
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -52,25 +53,29 @@ public class CoordinatorService {
     }
 
     // ✅ GET ALLOCATION RULES BY DEPARTMENT
-    private AllocationRules getAllocationRulesByDepartment(Long departmentId) {
-        System.out.println("[CoordinatorService] 📋 Fetching allocation rules for department: " + departmentId);
-        return allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
+    private AllocationRules getAllocationRulesByDepartment(Long departmentId, String degree) {
+        System.out.println("[CoordinatorService] 📋 Fetching allocation rules for department: " + departmentId + ", degree: " + degree);
+        return allocationRulesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElseGet(() -> {
                     System.out.println(
-                            "[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
-                    AllocationRules defaults = new AllocationRules();
-                    defaults.setMaxTeamSize(4);
-                    defaults.setMaxStudentsPerFaculty(10);
-                    defaults.setMaxProjectsPerFaculty(3);
-                    return defaults;
+                            "[CoordinatorService] ⚠️  No rules found for dept " + departmentId + " and degree " + degree + ", trying default for dept...");
+                    return allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
+                        .stream().findFirst().orElseGet(() -> {
+                            System.out.println("[CoordinatorService] ⚠️  No rules found at all, using defaults");
+                            AllocationRules defaults = new AllocationRules();
+                            defaults.setMaxTeamSize(4);
+                            defaults.setMaxStudentsPerFaculty(10);
+                            defaults.setMaxProjectsPerFaculty(3);
+                            return defaults;
+                        });
                 });
     }
 
     // ✅ ADD THIS METHOD - GET RULES BY DEPARTMENT
-    public AllocationRulesResponse getRulesByDepartment(Long departmentId) {
-        System.out.println("[CoordinatorService] 📋 Fetching rules for department: " + departmentId);
+    public AllocationRulesResponse getRulesByDepartment(Long departmentId, String degree) {
+        System.out.println("[CoordinatorService] 📋 Fetching rules for department: " + departmentId + ", degree: " + degree);
 
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElseGet(() -> {
                     System.out.println(
                             "[CoordinatorService] ⚠️  No rules found for dept " + departmentId + ", using defaults");
@@ -78,6 +83,7 @@ public class CoordinatorService {
                     defaults.setMaxTeamSize(4);
                     defaults.setMaxStudentsPerFaculty(10);
                     defaults.setMaxProjectsPerFaculty(3);
+                    defaults.setDegree(degree);
                     return defaults;
                 });
 
@@ -96,12 +102,13 @@ public class CoordinatorService {
     // OVERVIEW TAB
     // =========================================================================
 
-    public DashboardStatsResponse getDashboardStats(Long departmentId) {
+    public DashboardStatsResponse getDashboardStats(Long departmentId, String degree) {
 
-        long totalStudents = studentRepository.countByDepartment_DepartmentId(departmentId);
-        long allocated = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentId(departmentId);
-        long unallocated = studentRepository.countByIsAllocatedFalseAndDepartment_DepartmentId(departmentId);
-        long totalTeams = teamRepository.countByDepartmentId(departmentId);
+        long totalStudents = studentRepository.countByDepartment_DepartmentIdAndDegree(departmentId, degree);
+        long allocated = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentIdAndDegree(departmentId, degree);
+        long unallocated = totalStudents - allocated;
+        long totalTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId).stream()
+                .filter(t -> degree.equalsIgnoreCase(t.getDegree())).count();
         long totalFaculty = facultyRepository.countByDepartment_DepartmentId(departmentId);
 
         List<Faculty> departmentFaculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
@@ -130,7 +137,7 @@ public class CoordinatorService {
 
         System.out.println("[CoordinatorService] 🎯 Total Active Slots Created: " + totalCreatedActiveSlots);
 
-        long totalUsedSlots = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentId(departmentId);
+        long totalUsedSlots = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentIdAndDegree(departmentId, degree);
         int availableSlots = (int) (totalCreatedActiveSlots - totalUsedSlots);
 
         return new DashboardStatsResponse(
@@ -142,13 +149,13 @@ public class CoordinatorService {
     // FACULTIES TAB
     // =========================================================================
 
-    public List<CoordinatorFacultyResponse> getAllFaculties(long departmentId) {
+    public List<CoordinatorFacultyResponse> getAllFaculties(long departmentId, String degree) {
         return facultyRepository.findByDepartment_DepartmentId(departmentId).stream()
-                .map(this::mapToFacultyResponse)
+                .map(f -> mapToFacultyResponse(f, degree))
                 .collect(Collectors.toList());
     }
 
-    public List<CoordinatorFacultyResponse> searchFaculties(String query, long departmentId) {
+    public List<CoordinatorFacultyResponse> searchFaculties(String query, long departmentId, String degree) {
         System.out.println("[CoordinatorService] 🔍 Searching faculties in department: " + departmentId);
         System.out.println("[CoordinatorService] Query: " + query);
 
@@ -159,7 +166,7 @@ public class CoordinatorService {
                 .filter(faculty -> faculty.getUser().getName().toLowerCase().contains(query.toLowerCase()) ||
                         faculty.getUser().getEmail().toLowerCase().contains(query.toLowerCase()) ||
                         faculty.getEmployeeId().toLowerCase().contains(query.toLowerCase()))
-                .map(this::mapToFacultyResponse)
+                .map(f -> mapToFacultyResponse(f, degree))
                 .collect(Collectors.toList());
 
         System.out.println("[CoordinatorService] ✅ Found " + results.size() + " matching faculties");
@@ -170,20 +177,23 @@ public class CoordinatorService {
     // STUDENTS TAB
     // =========================================================================
 
-    public List<CoordinatorStudentResponse> getAllStudents(long departmentId) {
+    public List<CoordinatorStudentResponse> getAllStudents(long departmentId, String degree) {
         return studentRepository.findByDepartment_DepartmentId(departmentId).stream()
+                .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
     }
 
-    public List<CoordinatorStudentResponse> searchStudents(String query, long departmentId) {
+    public List<CoordinatorStudentResponse> searchStudents(String query, long departmentId, String degree) {
         return studentRepository.searchStudents(query).stream()
+                .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
     }
 
-    public List<CoordinatorStudentResponse> getAllocatedStudents(long departmentId) {
+    public List<CoordinatorStudentResponse> getAllocatedStudents(long departmentId, String degree) {
         return studentRepository.findByIsAllocatedTrueAndDepartment_DepartmentId(departmentId).stream()
+                .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
     }
@@ -207,7 +217,7 @@ public class CoordinatorService {
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
 
         Long departmentId = faculty.getDepartment() != null ? faculty.getDepartment().getDepartmentId() : 1L;
-        AllocationRules rules = getAllocationRulesByDepartment(departmentId);
+        AllocationRules rules = getAllocationRulesByDepartment(departmentId, student.getDegree());
 
         System.out.println("[CoordinatorService] 📊 Allocation rules for dept " + departmentId + ": maxStudents="
                 + rules.getMaxStudentsPerFaculty());
@@ -258,7 +268,7 @@ public class CoordinatorService {
         }
 
         Long departmentId = newFaculty.getDepartment() != null ? newFaculty.getDepartment().getDepartmentId() : 1L;
-        AllocationRules rules = getAllocationRulesByDepartment(departmentId);
+        AllocationRules rules = getAllocationRulesByDepartment(departmentId, student.getDegree());
 
         System.out.println("[CoordinatorService] 📊 Override allocation rules for dept " + departmentId
                 + ": maxStudents=" + rules.getMaxStudentsPerFaculty());
@@ -295,9 +305,10 @@ public class CoordinatorService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public List<CoordinatorTeamResponse> getAllTeams(long departmentid) {
-        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentid);
-        System.out.println("[getAllTeams] Found " + allTeams.size() + " teams in DB");
+    public List<CoordinatorTeamResponse> getAllTeams(long departmentid, String degree) {
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentid)
+                .stream().filter(t -> degree.equalsIgnoreCase(t.getDegree())).collect(Collectors.toList());
+        System.out.println("[getAllTeams] Found " + allTeams.size() + " teams in DB for " + degree);
         return allTeams.stream()
                 .map(t -> {
                     try {
@@ -321,9 +332,10 @@ public class CoordinatorService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public AllTeamsReportResponse getAllTeamsReport(long departmentid) {
-        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentid);
-        System.out.println("[getAllTeamsReport] Found " + allTeams.size() + " teams in DB");
+    public AllTeamsReportResponse getAllTeamsReport(long departmentid, String degree) {
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentid)
+                .stream().filter(t -> degree.equalsIgnoreCase(t.getDegree())).collect(Collectors.toList());
+        System.out.println("[getAllTeamsReport] Found " + allTeams.size() + " teams in DB for " + degree);
         List<CoordinatorTeamResponse> teamList = allTeams.stream()
                 .map(t -> {
                     try {
@@ -349,14 +361,15 @@ public class CoordinatorService {
     // =========================================================================
 
     @Transactional(readOnly = true)
-    public byte[] generateAllTeamsReportPdf(long departmentId) {
+    public byte[] generateAllTeamsReportPdf(long departmentId, String degree) {
         try {
             Department department = departmentrepository.findById(departmentId)
                     .orElseThrow(() -> new RuntimeException("Department not found"));
-            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+            List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId)
+                    .stream().filter(t -> degree.equalsIgnoreCase(t.getDegree())).collect(Collectors.toList());
             
-            long allocated = studentRepository.countByIsAllocatedTrueAndDepartment_DepartmentId(departmentId);
-            long unallocated = studentRepository.countByIsAllocatedFalseAndDepartment_DepartmentId(departmentId);
+            long allocated = studentRepository.findByIsAllocatedTrueAndDepartment_DepartmentId(departmentId).stream().filter(s -> degree.equalsIgnoreCase(s.getDegree())).count();
+            long unallocated = studentRepository.findByDepartment_DepartmentIdAndIsAllocatedFalse(departmentId).stream().filter(s -> degree.equalsIgnoreCase(s.getDegree())).count();
             
             int totalMembersInTeams = allTeams.stream().mapToInt(t -> t.getMembers() == null ? 0 : t.getMembers().size()).sum();
 
@@ -387,7 +400,7 @@ public class CoordinatorService {
             contentStream.setNonStrokingColor(java.awt.Color.WHITE);
             drawCenteredText(contentStream, "ZePRO", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 28, pageWidth, yPosition - 40);
             drawCenteredText(contentStream, "Project Registration & Oversight System", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN, 12, pageWidth, yPosition - 60);
-            drawCenteredText(contentStream, "Teams Report", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 18, pageWidth, yPosition - 85);
+            drawCenteredText(contentStream, "Teams Report (" + degree + ")", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 18, pageWidth, yPosition - 85);
             
             yPosition -= 140;
 
@@ -644,6 +657,7 @@ public class CoordinatorService {
             throw new RuntimeException("Max projects per faculty must be greater than 0");
 
         Long departmentId = request.getDepartmentId();
+        String degree = request.getDegree() != null ? request.getDegree() : "UG";
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
 
@@ -651,8 +665,9 @@ public class CoordinatorService {
         System.out.println("[CoordinatorService] maxTeamSize: " + request.getMaxTeamSize());
         System.out.println("[CoordinatorService] maxStudentsPerFaculty: " + request.getMaxStudentsPerFaculty());
         System.out.println("[CoordinatorService] maxProjectsPerFaculty: " + request.getMaxProjectsPerFaculty());
+        System.out.println("[CoordinatorService] degree: " + degree);
 
-        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentId(departmentId)
+        AllocationRules rules = allocationRulesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElseGet(() -> {
                     System.out.println("[CoordinatorService] ⚠️  No existing rules found for department: "
                             + departmentId + ", creating new...");
@@ -660,6 +675,8 @@ public class CoordinatorService {
                     newRules.setMaxTeamSize(request.getMaxTeamSize());
                     newRules.setMaxStudentsPerFaculty(request.getMaxStudentsPerFaculty());
                     newRules.setMaxProjectsPerFaculty(request.getMaxProjectsPerFaculty());
+                    newRules.setDepartment(dept);
+                    newRules.setDegree(degree);
                     return newRules;
                 });
         rules.setMaxTeamSize(request.getMaxTeamSize());
@@ -689,41 +706,51 @@ public class CoordinatorService {
     // DEADLINES TAB
     // =========================================================================
 
-    public DepartmentDeadlinesDTO getDeadlines(Long departmentId) {
-        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+    public DepartmentDeadlinesDTO getDeadlines(Long departmentId, String degree) {
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElse(new DepartmentDeadlines());
 
         DepartmentDeadlinesDTO dto = new DepartmentDeadlinesDTO();
         dto.setTeamFormationDeadline(deadlines.getTeamFormationDeadline());
         dto.setProjectRequestDeadline(deadlines.getProjectRequestDeadline());
         dto.setMeetingSchedulingDeadline(deadlines.getMeetingSchedulingDeadline());
+        dto.setDegree(deadlines.getDegree());
         return dto;
     }
 
     @Transactional
-    public void saveDeadlines(Long departmentId, DepartmentDeadlinesDTO request) {
+    public void saveDeadlines(Long departmentId, DepartmentDeadlinesDTO request, String degree) {
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
 
-        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElseGet(() -> {
                     DepartmentDeadlines newObj = new DepartmentDeadlines();
                     newObj.setDepartment(dept);
+                    newObj.setDegree(degree);
                     return newObj;
                 });
 
-        deadlines.setTeamFormationDeadline(request.getTeamFormationDeadline());
-        deadlines.setProjectRequestDeadline(request.getProjectRequestDeadline());
-        deadlines.setMeetingSchedulingDeadline(request.getMeetingSchedulingDeadline());
+        // ✅ Support partial updates: only update if field is present in DTO
+        if (request.getTeamFormationDeadline() != null) {
+            deadlines.setTeamFormationDeadline(request.getTeamFormationDeadline());
+        }
+        if (request.getProjectRequestDeadline() != null) {
+            deadlines.setProjectRequestDeadline(request.getProjectRequestDeadline());
+        }
+        if (request.getMeetingSchedulingDeadline() != null) {
+            deadlines.setMeetingSchedulingDeadline(request.getMeetingSchedulingDeadline());
+        }
 
         departmentDeadlinesRepository.save(deadlines);
-        System.out.println("[CoordinatorService] ✅ Deadlines saved for department: " + departmentId);
+        System.out.println("[CoordinatorService] ✅ Deadlines saved for department: " + departmentId + " (" + degree + ")");
 
-        // ✅ ASYNC EMAIL DISPATCH
+        // ✅ ASYNC EMAIL DISPATCH (Filtered by degree)
         if (request.getTeamFormationDeadline() != null) {
             List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
                     .stream()
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                     .map(s -> s.getUser().getEmail())
                     .toList();
 
@@ -731,7 +758,7 @@ public class CoordinatorService {
                     studentEmails,
                     "Student",
                     "Team Formation Deadline",
-                    "The Faculty Coordinator has set a strict deadline for forming your teams.",
+                    "The Faculty Coordinator has set a strict deadline for forming your teams (" + degree + ").",
                     request.getTeamFormationDeadline());
         }
 
@@ -739,6 +766,7 @@ public class CoordinatorService {
             List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
                     .stream()
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                     .map(s -> s.getUser().getEmail())
                     .toList();
 
@@ -746,7 +774,7 @@ public class CoordinatorService {
                     studentEmails,
                     "Student",
                     "Project Request Deadline",
-                    "The Faculty Coordinator has set a strict deadline for sending project requests.",
+                    "The Faculty Coordinator has set a strict deadline for sending project requests (" + degree + ").",
                     request.getProjectRequestDeadline());
         }
 
@@ -761,14 +789,14 @@ public class CoordinatorService {
                     facultyEmails,
                     "Faculty",
                     "Meeting Scheduling Deadline",
-                    "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings.",
+                    "The Faculty Coordinator has updated the latest allowed date for scheduling student meetings (" + degree + ").",
                     request.getMeetingSchedulingDeadline());
         }
     }
 
-    public void sendDepartmentDeadlineEmailsManually(Long departmentId) {
-        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
-                .orElseThrow(() -> new RuntimeException("No department deadlines found to broadcast"));
+    public void sendDepartmentDeadlineEmailsManually(Long departmentId, String degree) {
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
+                .orElseThrow(() -> new RuntimeException("No department deadlines found for " + degree + " to broadcast"));
 
         boolean emailSent = false;
 
@@ -776,6 +804,7 @@ public class CoordinatorService {
             List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(departmentId)
                     .stream()
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
+                    .filter(s -> degree.equalsIgnoreCase(s.getDegree()))
                     .map(s -> s.getUser().getEmail())
                     .toList();
 
@@ -829,14 +858,17 @@ public class CoordinatorService {
     // PRIVATE MAPPERS
     // =========================================================================
 
-    private CoordinatorFacultyResponse mapToFacultyResponse(Faculty f) {
+    private CoordinatorFacultyResponse mapToFacultyResponse(Faculty f, String degree) {
         String deptName = (f.getDepartment() != null) ? f.getDepartment().getDepartmentName() : "N/A";
-        int allocatedCount = (int) studentRepository.countByAllocatedFaculty(f);
+        int allocatedCount = (int) studentRepository.countByAllocatedFacultyAndDegree(f, degree);
 
         Long departmentId = f.getDepartment() != null ? f.getDepartment().getDepartmentId() : 1L;
-        AllocationRules rules = getAllocationRulesByDepartment(departmentId);
+        AllocationRules rules = getAllocationRulesByDepartment(departmentId, degree);
 
-        int totalCreatedSlots = projectRepository.findByFacultyFacultyId(f.getFacultyId()).size()
+        int totalCreatedSlots = projectRepository.findByFacultyFacultyId(f.getFacultyId())
+                .stream()
+                .filter(p -> degree.equals(p.getDegree()))
+                .collect(Collectors.toList()).size()
                 * rules.getMaxTeamSize();
 
         return new CoordinatorFacultyResponse(f.getFacultyId(), f.getUser().getName(),
@@ -855,7 +887,7 @@ public class CoordinatorService {
         String deptName = (s.getDepartment() != null) ? s.getDepartment().getDepartmentName() : "N/A";
         return new CoordinatorStudentResponse(s.getStudentId(), s.getUser().getName(),
                 s.getRollNumber() != null ? s.getRollNumber() : "N/A", s.getUser().getEmail(),
-                deptName, s.getYear(), s.getCgpa(), s.isAllocated(),
+                deptName, s.getDegree(), s.getCgpa(), s.isAllocated(),
                 allocatedFacultyId, allocatedFacultyName, teamId);
     }
 
@@ -886,7 +918,7 @@ public class CoordinatorService {
             Long departmentId = faculty != null && faculty.getDepartment() != null
                     ? faculty.getDepartment().getDepartmentId()
                     : 1L;
-            AllocationRules rules = getAllocationRulesByDepartment(departmentId);
+            AllocationRules rules = getAllocationRulesByDepartment(departmentId, t.getDegree());
             int teamSlots = rules.getMaxTeamSize();
 
             return new CoordinatorTeamResponse(
@@ -916,11 +948,12 @@ public class CoordinatorService {
 
     // ✅ NEW: GET STUDENT AND TEAM DETAILS FOR DEPARTMENT
     @Transactional(readOnly = true)
-    public StudentTeamDetailsDTO getStudentAndTeamDetails(Long departmentId) {
-        System.out.println("[CoordinatorService] 📋 Fetching student and team details for department: " + departmentId);
+    public StudentTeamDetailsDTO getStudentAndTeamDetails(Long departmentId, String degree) {
+        System.out.println("[CoordinatorService] 📋 Fetching student and team details for department: " + departmentId + ", degree: " + degree);
 
         // Get all teams in department
-        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId)
+                .stream().filter(t -> degree.equalsIgnoreCase(t.getDegree())).collect(Collectors.toList());
         List<CoordinatorTeamDetailDTO> teamDetails = allTeams.stream()
                 .map(team -> {
                     Project project = projectRepository.findByTeam(team);
@@ -937,7 +970,7 @@ public class CoordinatorService {
                     Long deptId = faculty != null && faculty.getDepartment() != null
                             ? faculty.getDepartment().getDepartmentId()
                             : 1L;
-                    AllocationRules rules = getAllocationRulesByDepartment(deptId);
+                    AllocationRules rules = getAllocationRulesByDepartment(deptId, degree);
 
                     return new CoordinatorTeamDetailDTO(
                             team.getTeamId(),
@@ -955,6 +988,7 @@ public class CoordinatorService {
         List<CoordinatorStudentResponse> unallocatedStudents = studentRepository
                 .findByDepartment_DepartmentId(departmentId)
                 .stream()
+                .filter(student -> degree.equalsIgnoreCase(student.getDegree()))
                 .filter(student -> student.getTeam() == null)
                 .map(this::mapToStudentResponse)
                 .collect(Collectors.toList());
@@ -967,10 +1001,11 @@ public class CoordinatorService {
 
     // ✅ NEW: GET AVAILABLE TEAMS TO JOIN (NOT FULL)
     @Transactional(readOnly = true)
-    public List<CoordinatorTeamDetailDTO> getAvailableTeamsToJoin(Long departmentId) {
-        System.out.println("[CoordinatorService] 📋 Fetching available teams to join for department: " + departmentId);
+    public List<CoordinatorTeamDetailDTO> getAvailableTeamsToJoin(Long departmentId, String degree) {
+        System.out.println("[CoordinatorService] 📋 Fetching available teams to join for department: " + departmentId + ", degree: " + degree);
 
-        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId);
+        List<Team> allTeams = teamRepository.findAllwithDetailsandDepartment_DepartmentId(departmentId)
+                .stream().filter(t -> degree.equalsIgnoreCase(t.getDegree())).collect(Collectors.toList());
 
         List<CoordinatorTeamDetailDTO> availableTeams = allTeams.stream()
                 .filter(team -> team.getMembers() != null && !team.getMembers().isEmpty())
@@ -978,7 +1013,7 @@ public class CoordinatorService {
                     Long deptId = team.getFaculty() != null && team.getFaculty().getDepartment() != null
                             ? team.getFaculty().getDepartment().getDepartmentId()
                             : 1L;
-                    AllocationRules rules = getAllocationRulesByDepartment(deptId);
+                    AllocationRules rules = getAllocationRulesByDepartment(deptId, degree);
 
                     int memberCount = team.getMembers().size();
                     int maxSlots = rules.getMaxTeamSize();
@@ -1165,7 +1200,7 @@ public class CoordinatorService {
         String projectTitle = (project != null) ? project.getTitle() : "N/A";
 
         Long deptId = departmentId;
-        AllocationRules rules = getAllocationRulesByDepartment(deptId);
+        AllocationRules rules = getAllocationRulesByDepartment(deptId, student.getDegree());
 
         return new CoordinatorTeamDetailDTO(
                 savedTeam.getTeamId(),
@@ -1197,7 +1232,7 @@ public class CoordinatorService {
 
         // Check if team is full
         Long deptId = departmentId;
-        AllocationRules rules = getAllocationRulesByDepartment(deptId);
+        AllocationRules rules = getAllocationRulesByDepartment(deptId, student.getDegree());
 
         int currentMembers = team.getMembers() != null ? team.getMembers().size() : 0;
         if (currentMembers >= rules.getMaxTeamSize()) {

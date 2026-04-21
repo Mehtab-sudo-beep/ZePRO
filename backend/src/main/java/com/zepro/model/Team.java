@@ -14,6 +14,8 @@ public class Team {
     private String description;
 
     private String status = "pending";
+    
+    private String degree; // UG or PG
 
     @OneToOne
     private Student teamLead;
@@ -107,5 +109,13 @@ public class Team {
 
     public void setInstitute(Institute institute) {
         this.institute = institute;
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

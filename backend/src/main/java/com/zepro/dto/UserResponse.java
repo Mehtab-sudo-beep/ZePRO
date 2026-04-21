@@ -9,7 +9,7 @@ public class UserResponse {
     private String email;
     private UserRole role;
     private String rollNumber;
-    private Boolean isFC;
+    private String coordinatorType;
 
     public UserResponse(Long userId, String name, String email, UserRole role) {
         this.userId = userId;
@@ -26,13 +26,13 @@ public class UserResponse {
         this.rollNumber = rollNumber;
     }
 
-    public UserResponse(Long userId, String name, String email, UserRole role, String rollNumber, Boolean isFC) {
+    public UserResponse(Long userId, String name, String email, UserRole role, String rollNumber, String coordinatorType) {
         this.userId = userId;
         this.name = name;
         this.email = email;
         this.role = role;
         this.rollNumber = rollNumber;
-        this.isFC = isFC;
+        this.coordinatorType = coordinatorType;
     }
 
     public Long getUserId() {
@@ -55,11 +55,12 @@ public class UserResponse {
         return rollNumber;
     }
 
-    public Boolean getIsFC() {
-        return isFC;
+
+    public String getCoordinatorType() {
+        return coordinatorType;
     }
 
-    public void setIsFC(Boolean isFC) {
-        this.isFC = isFC;
+    public void setCoordinatorType(String coordinatorType) {
+        this.coordinatorType = coordinatorType;
     }
-}
+}

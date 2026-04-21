@@ -18,35 +18,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/api';
 import { useState, useEffect } from 'react';
 import { getFacultyProfile } from '../api/facultyApi';
+import { useDegree } from '../context/DegreeContext';
 
 const FacultyMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const { selectedDegree } = useDegree();
   const isDark = colors.background === '#111827';
   const [profile, setProfile] = useState<any>(null);
   const { showAlert } = useContext(AlertContext);
 
   useEffect(() => {
-  const loadProfile = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
+    const loadProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const data = await getFacultyProfile(selectedDegree, token!);
+        setProfile(data);
+      } catch (err) {
+        console.log("❌ MORE PROFILE ERROR:", err);
+      }
+    };
 
-      console.log("🔥 MORE SCREEN TOKEN:", token);
-
-      const data = await getFacultyProfile(token!);
-
-      console.log("✅ MORE PROFILE:", data);
-
-      setProfile(data);
-
-    } catch (err) {
-      console.log("❌ MORE PROFILE ERROR:", err);
-    }
-  };
-
-  loadProfile();
-}, []);
+    loadProfile();
+  }, [selectedDegree]);
 
   const handleLogout = () => {
     showAlert(
@@ -58,11 +53,13 @@ const FacultyMoreScreen: React.FC = () => {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
-            try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('role');
-            await AsyncStorage.removeItem('facultyId');
-            setUser(null);
+            try {
+              const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
+              await GoogleSignin.signOut();
+            } catch (e) { }
+
+            // setUser(null) now handles comprehensive AsyncStorage cleanup
+            await setUser(null);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },

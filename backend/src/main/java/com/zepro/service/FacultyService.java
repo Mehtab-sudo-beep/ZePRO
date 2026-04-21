@@ -22,13 +22,11 @@ public class FacultyService {
 
     private final ProjectRepository projectRepository;
     private final FacultyRepository facultyRepository;
-    private final TeamRepository teamRepository;
     private final DomainRepository domainRepository;
     private final SubDomainRepository subDomainRepository;
     private final ProjectRequestRepository projectRequestRepository;
     private final ProjectDomainRepository projectDomainRepository;
     private final ProjectSubDomainRepository projectSubDomainRepository;
-    private final StudentRepository studentRepository;
     private final AllocationRulesRepository allocationRulesRepository;
     private final UserRepository usersRepository;
     private final DepartmentRepository departmentRepository;
@@ -40,13 +38,11 @@ public class FacultyService {
 
     public FacultyService(ProjectRepository projectRepository,
             FacultyRepository facultyRepository,
-            TeamRepository teamRepository,
             DomainRepository domainRepository,
             SubDomainRepository subDomainRepository,
             ProjectRequestRepository projectRequestRepository,
             ProjectDomainRepository projectDomainRepository,
             ProjectSubDomainRepository projectSubDomainRepository,
-            StudentRepository studentRepository,
             AllocationRulesRepository allocationRulesRepository,
             UserRepository usersRepository,
             DepartmentRepository departmentRepository,
@@ -58,13 +54,11 @@ public class FacultyService {
 
         this.projectRepository = projectRepository;
         this.facultyRepository = facultyRepository;
-        this.teamRepository = teamRepository;
         this.domainRepository = domainRepository;
         this.subDomainRepository = subDomainRepository;
         this.projectRequestRepository = projectRequestRepository;
         this.projectDomainRepository = projectDomainRepository;
         this.projectSubDomainRepository = projectSubDomainRepository;
-        this.studentRepository = studentRepository;
         this.allocationRulesRepository = allocationRulesRepository;
         this.usersRepository = usersRepository;
         this.departmentRepository = departmentRepository;
@@ -75,12 +69,19 @@ public class FacultyService {
         this.notificationService = notificationService;
     }
 
-    public AllocationRules getAllocationRulesForFaculty(Faculty faculty) {
-        if (faculty.getDepartment() != null) {
+    public AllocationRules getAllocationRulesForFaculty(Faculty faculty, String degree) {
+        if (faculty.getDepartment() != null && degree != null) {
             Optional<AllocationRules> rulesOpt = allocationRulesRepository
-                    .findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId());
+                    .findByDepartment_DepartmentIdAndDegree(faculty.getDepartment().getDepartmentId(), degree);
             if (rulesOpt.isPresent()) {
                 return rulesOpt.get();
+            }
+        }
+        if (faculty.getDepartment() != null) {
+            List<AllocationRules> rulesOpt = allocationRulesRepository
+                    .findByDepartment_DepartmentId(faculty.getDepartment().getDepartmentId());
+            if (!rulesOpt.isEmpty()) {
+                return rulesOpt.get(0);
             }
         }
         return allocationRulesRepository.findByDepartmentIsNull()
@@ -94,16 +95,16 @@ public class FacultyService {
                 });
     }
 
-    public AllocationRules getAllocationRulesByEmail(String email) {
+    public AllocationRules getAllocationRulesByEmail(String email, String degree) {
         Faculty faculty = facultyRepository.findByUser_Email(email)
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
-        return getAllocationRulesForFaculty(faculty);
+        return getAllocationRulesForFaculty(faculty, degree);
     }
 
     public ProjectResponse createProject(CreateProjectRequest request, Faculty faculty) {
 
         // ✅ GET RULES
-        AllocationRules rules = getAllocationRulesForFaculty(faculty);
+        AllocationRules rules = getAllocationRulesForFaculty(faculty, request.getDegree());
 
         // ✅ VALIDATE SLOTS
         int slots = request.getStudentSlots() != null ? request.getStudentSlots() : 0;
@@ -123,6 +124,7 @@ public class FacultyService {
             project.setFaculty(faculty);
             project.setStudentSlots(slots); // ✅ SET SLOTS
             project.setStatus("CLOSE"); // ✅ Mark as REQUESTED
+            project.setDegree(request.getDegree()); // ✅ SET DEGREE
             project.setPreviousStatus(null);
             project.setPresentStatus("CLOSE");
             project.setMaximumSlotsReachedTillNow(0);
@@ -159,6 +161,7 @@ public class FacultyService {
             project.setFaculty(faculty);
             project.setStudentSlots(slots); // ✅ SET SLOTS
             project.setStatus("OPEN"); // ✅ First project is OPEN
+            project.setDegree(request.getDegree()); // ✅ SET DEGREE
             project.setPreviousStatus(null);
             project.setPresentStatus("OPEN");
             project.setIsActive(true);
@@ -196,7 +199,8 @@ public class FacultyService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = getAllocationRulesForFaculty(faculty);
+        AllocationRules rules = getAllocationRulesForFaculty(faculty,
+                request.getDegree() != null ? request.getDegree() : project.getDegree());
 
         if (request.getStudentSlots() != null) {
             int slots = request.getStudentSlots();
@@ -209,6 +213,9 @@ public class FacultyService {
 
         project.setTitle(request.getTitle());
         project.setDescription(request.getDescription());
+        if (request.getDegree() != null) {
+            project.setDegree(request.getDegree());
+        }
 
         Project saved = projectRepository.save(project);
 
@@ -246,18 +253,19 @@ public class FacultyService {
         return response;
     }
 
-    public List<ProjectResponse> getProjects(Long facultyId) {
+    public List<ProjectResponse> getProjects(Long facultyId, String degree) {
 
         List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId);
         return projects.stream()
+                .filter(p -> degree == null || degree.equals(p.getDegree()))
                 .map(project -> getProjectResponse(project, facultyRepository.findById(facultyId).orElseThrow()))
                 .collect(Collectors.toList());
     }
 
-    public List<ProjectResponse> getProjectsByEmail(String email) {
+    public List<ProjectResponse> getProjectsByEmail(String email, String degree) {
         Faculty faculty = facultyRepository.findByUser_Email(email)
                 .orElseThrow(() -> new RuntimeException("Faculty not found"));
-        return getProjects(faculty.getFacultyId());
+        return getProjects(faculty.getFacultyId(), degree);
     }
 
     public ProjectResponse activateProject(Long projectId, Faculty faculty) {
@@ -265,7 +273,7 @@ public class FacultyService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        AllocationRules rules = getAllocationRulesForFaculty(faculty);
+        AllocationRules rules = getAllocationRulesForFaculty(faculty, project.getDegree());
 
         List<Project> activeProjects = projectRepository
                 .findByFacultyFacultyIdAndStatus(project.getFaculty().getFacultyId(), "OPEN");
@@ -379,7 +387,8 @@ public class FacultyService {
                                 notificationService.createAndSendNotification(
                                         student.getUser(),
                                         "Project Request Rejected",
-                                        "Your request for project '" + project.getTitle() + "' was rejected because the project was closed by the faculty.",
+                                        "Your request for project '" + project.getTitle()
+                                                + "' was rejected because the project was closed by the faculty.",
                                         "TeamProjectRequests",
                                         null);
                             }
@@ -438,7 +447,8 @@ public class FacultyService {
                                 notificationService.createAndSendNotification(
                                         student.getUser(),
                                         "Project Request Rejected",
-                                        "Your request for project '" + project.getTitle() + "' was rejected because the project was closed by the faculty.",
+                                        "Your request for project '" + project.getTitle()
+                                                + "' was rejected because the project was closed by the faculty.",
                                         "TeamProjectRequests",
                                         null);
                             }
@@ -512,8 +522,7 @@ public class FacultyService {
         if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null)
             subdomainStr = pSubDomains.get(0).getSubDomain().getName();
 
-        AllocationRules rules = getAllocationRulesForFaculty(faculty);
-        int maxTeamSize = rules.getMaxTeamSize();
+        AllocationRules rules = getAllocationRulesForFaculty(faculty, p.getDegree());
 
         int projectAssigned = (p.getTeam() != null && p.getTeam().getMembers() != null)
                 ? p.getTeam().getMembers().size()
@@ -522,7 +531,8 @@ public class FacultyService {
         int remainingSlots = Math.max(0, maxSlots - projectAssigned);
 
         return new ProjectResponse(p.getProjectId(), p.getTitle(), p.getDescription(), p.getStatus(), domainStr,
-                subdomainStr, p.getIsActive(), projectAssigned, maxSlots, remainingSlots, p.getDocuments());
+                subdomainStr, p.getIsActive(), projectAssigned, maxSlots, remainingSlots, p.getDocuments(),
+                p.getDegree());
     }
 
     // @Transactional
@@ -567,7 +577,7 @@ public class FacultyService {
     // projectRequestRepository.save(request);
     // }
 
-    public List<ProjectResponse> getPendingRequests(Long facultyId) {
+    public List<ProjectResponse> getPendingRequests(Long facultyId, String degree) {
 
         List<ProjectRequest> requests = projectRequestRepository.findByStatusAndProjectFacultyFacultyId(
                 RequestStatus.PENDING,
@@ -579,6 +589,11 @@ public class FacultyService {
                     Project project = request.getProject();
                     boolean isNotClosed = project != null &&
                             !("CLOSE".equals(project.getStatus()));
+
+                    // ✅ FILTER: Match degree track
+                    if (isNotClosed && degree != null && !degree.equals(project.getDegree())) {
+                        isNotClosed = false;
+                    }
 
                     if (!isNotClosed) {
                         System.out.println("[FacultyService] 🚫 Filtering out request for closed project: "
@@ -896,8 +911,9 @@ public class FacultyService {
         System.out.println("\n[FacultyService] 📡 Fetching departments for institute ID: " + instituteId);
 
         try {
-            Institute institute = instituteRepository.findById(instituteId)
-                    .orElseThrow(() -> new RuntimeException("Institute not found with ID: " + instituteId));
+            if (!instituteRepository.existsById(instituteId)) {
+                throw new RuntimeException("Institute not found with ID: " + instituteId);
+            }
 
             List<Department> departments = departmentRepository.findByInstitute_InstituteId(instituteId);
 

@@ -21,9 +21,9 @@ public class Student {
     @Column(name = "cgpa")
     private double cgpa;
 
-    // Mirrors Student.year — e.g. "3rd Year"
-    @Column(name = "year")
-    private String year;
+    // Mirrors Student.degree — e.g. "UG" or "PG"
+    @Column(name = "degree")
+    private String degree;
 
     // Mirrors Student.isAllocated — drives Allocated/Unallocated badge
     
@@ -82,8 +82,8 @@ public class Student {
         return cgpa;
     }
 
-    public String getYear() {
-        return year;
+    public String getDegree() {
+        return degree;
     }
 
     public boolean isAllocated() {
@@ -145,8 +145,8 @@ public class Student {
         this.cgpa = cgpa;
     }
 
-    public void setYear(String year) {
-        this.year = year;
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 
     public void setAllocated(boolean allocated) {

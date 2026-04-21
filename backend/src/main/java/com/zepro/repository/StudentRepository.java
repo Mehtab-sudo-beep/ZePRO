@@ -17,9 +17,11 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     
     // ✅ ADD THIS
     long countByDepartment_DepartmentId(Long departmentId);
+    long countByDepartment_DepartmentIdAndDegree(Long departmentId, String degree);
 
     long countByIsAllocatedTrue();
     long countByIsAllocatedTrueAndDepartment_DepartmentId(Long departmentId);
+    long countByIsAllocatedTrueAndDepartment_DepartmentIdAndDegree(Long departmentId, String degree);
     long countByIsAllocatedFalseAndDepartment_DepartmentId(Long departmentId);
 
     long countByIsAllocatedFalse();
@@ -34,6 +36,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     List<Student> findByDepartment_DepartmentIdAndIsAllocatedFalse(Long departmentId);
     long countByAllocatedFaculty(Faculty faculty);
+    long countByAllocatedFacultyAndDegree(Faculty faculty, String degree);
 
     @Query("SELECT s FROM Student s WHERE " +
             "LOWER(s.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

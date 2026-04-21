@@ -16,11 +16,13 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import API from '../api/api';
 
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
+  const { setStudentUser } = useContext(StudentAuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
 
@@ -108,7 +110,9 @@ const SettingsScreen: React.FC = () => {
     }
     try {
       await API.delete('/auth/delete-account');
-      setUser(null);
+      // setUser(null) now handles comprehensive AsyncStorage cleanup
+      setStudentUser(null);
+      await setUser(null);
       navigation.replace('Login');
     } catch (e) {
       showAlert('Error', 'Failed to delete account');
@@ -292,7 +296,7 @@ const SettingsScreen: React.FC = () => {
                   onPress={async () => {
                     try {
                       await API.put('/auth/update-profile', { name: user?.name || '', email: user?.email || '', phone: newPhone.trim() });
-                      setUser({ ...user, phone: newPhone.trim() });
+                      if (user) setUser({ ...user, phone: newPhone.trim() });
                       setEditPhoneVisible(false);
                       showAlert('Success', 'Phone number updated.');
                     } catch (e: any) {

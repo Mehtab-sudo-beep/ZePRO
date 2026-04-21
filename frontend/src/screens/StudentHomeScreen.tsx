@@ -236,7 +236,7 @@ const StudentHomeScreen: React.FC = () => {
             const isLead = res.data.teamLeadId === Number(studentId);
 
             const updatedUser = {
-              ...studentUser,
+              ...storedUser,
               isInTeam: true,
               isTeamLead: isLead,
             };

@@ -11,12 +11,14 @@ interface User {
   isInTeam?: boolean;
   isTeamLead?: boolean;
   phone?: string;
-  isFC?: boolean;
   emailNotifications?: boolean;
   pushNotifications?: boolean;
   profilePictureUrl?: string;
   profileComplete?: boolean;
+  isUGCoordinator?: boolean;
+  isPGCoordinator?: boolean;
 }
+
 
 interface AuthContextType {
   user: User | null;
@@ -58,7 +60,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (newUser) {
         await AsyncStorage.setItem('user', JSON.stringify(newUser));
       } else {
-        await AsyncStorage.removeItem('user');
+        // ── Thorough cleanup on logout ─────────────────────────────────────────
+        const keys = [
+          'user',
+          'token',
+          'role',
+          'userEmail',
+          'userName',
+          'studentId',
+          'facultyId',
+          'profileIncomplete',
+          'oauthProvider'
+        ];
+        await AsyncStorage.multiRemove(keys);
       }
     } catch (e) {
       console.log('setUser storage error:', e);

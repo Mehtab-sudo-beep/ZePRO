@@ -12,7 +12,10 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { coordinatorApi } from '../api/coordinatorApi';
+import { getFacultyProfile } from '../api/facultyApi';
 import { BASE_URL } from '../api/api';
+import DegreeSelector from '../components/DegreeSelector';
+import { useDegree } from '../context/DegreeContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,6 +23,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
   const navigation = useNavigation<NavProp>();
+  const { selectedDegree } = useDegree();
 
   const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
@@ -51,6 +55,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'overview' | 'faculties' | 'students' | 'download' | 'rules'>('overview');
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+  const { setSelectedDegree } = useDegree();
 
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [selectedFacultyId, setSelectedFacultyId] = useState('');
@@ -82,8 +88,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const fetchStudentTeamData = async () => {
     if (!user?.token) return;
     try {
-      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching student and team details...');
-      const data = await coordinatorApi.getStudentAndTeamDetails();
+      console.log(`[FacultyCoordinatorDashboard] 🔄 Fetching student and team details for ${selectedDegree}...`);
+      const data = await coordinatorApi.getStudentAndTeamDetails(selectedDegree);
       setStudentTeamData(data);
       console.log('[FacultyCoordinatorDashboard] ✅ Student and team data loaded');
     } catch (err: any) {
@@ -95,8 +101,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const fetchAvailableTeamsToJoin = async () => {
     if (!user?.token) return;
     try {
-      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching available teams to join...');
-      const data = await coordinatorApi.getAvailableTeamsToJoin();
+      console.log(`[FacultyCoordinatorDashboard] 🔄 Fetching available teams to join for ${selectedDegree}...`);
+      const data = await coordinatorApi.getAvailableTeamsToJoin(selectedDegree);
       setAvailableTeamsToJoin(data || []);
       console.log('[FacultyCoordinatorDashboard] ✅ Available teams loaded:', data?.length || 0);
     } catch (err: any) {
@@ -113,27 +119,31 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
     setLoading(true);
     try {
-      console.log('[FacultyCoordinatorDashboard] 🔄 Fetching all data...');
+      console.log(`[FacultyCoordinatorDashboard] 🔄 Fetching all data for ${selectedDegree}...`);
 
-      const [s, f, st, t, r] = await Promise.all([
-        coordinatorApi.getDashboardStats().catch(e => {
+      const [s, f, st, t, r, p] = await Promise.all([
+        coordinatorApi.getDashboardStats(selectedDegree).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Stats error:', e);
           return null;
         }),
-        coordinatorApi.getAllFaculties().catch(e => {
+        coordinatorApi.getAllFaculties(selectedDegree).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Faculties error:', e);
           return null;
         }),
-        coordinatorApi.getAllStudents().catch(e => {
+        coordinatorApi.getAllStudents(selectedDegree).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Students error:', e);
           return null;
         }),
-        coordinatorApi.getAllTeams().catch(e => {
+        coordinatorApi.getAllTeams(selectedDegree).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Teams error:', e);
           return null;
         }),
-        coordinatorApi.getRules().catch(e => {
+        coordinatorApi.getRules(selectedDegree).catch(e => {
           console.log('[FacultyCoordinatorDashboard] ❌ Rules error:', e);
+          return null;
+        }),
+        getFacultyProfile(selectedDegree, user!.token).catch(e => {
+          console.log('[FacultyCoordinatorDashboard] ❌ Profile error:', e);
           return null;
         }),
       ]);
@@ -159,6 +169,15 @@ const FacultyCoordinatorDashboard: React.FC = () => {
         setRules(r);
         setTempRules(r);
       }
+      if (p) {
+        setProfile(p);
+        // ✅ AUTO-SWITCH DEGREE BASED ON COORDINATOR TYPE
+        if (p.isUGCoordinator && !p.isPGCoordinator && selectedDegree !== 'UG') {
+          setSelectedDegree('UG');
+        } else if (!p.isUGCoordinator && p.isPGCoordinator && selectedDegree !== 'PG') {
+          setSelectedDegree('PG');
+        }
+      }
 
 
     } catch (err: any) {
@@ -172,13 +191,13 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchAll();
-  }, [user?.token]);
+  }, [user?.token, selectedDegree]);
 
   useEffect(() => {
     if (activeTab === 'students' && user?.token) {
       fetchStudentTeamData();
     }
-  }, [activeTab, user?.token]);
+  }, [activeTab, user?.token, selectedDegree]);
 
   // ✅ NEW: Create Team Handler
   const handleCreateTeam = async () => {
@@ -239,7 +258,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     try {
       const computedRules = {
         ...tempRules,
-        maxStudentsPerFaculty: tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty
+        maxStudentsPerFaculty: tempRules.maxTeamSize * tempRules.maxProjectsPerFaculty,
+        degree: selectedDegree
       };
 
       await coordinatorApi.saveRules(computedRules);
@@ -266,7 +286,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const fileUri = FileSystem.documentDirectory + fileName;
 
       const { uri } = await FileSystem.downloadAsync(
-        `${BASE_URL}/api/coordinator/teams/report/pdf`,
+        `${BASE_URL}/api/coordinator/teams/report/pdf?degree=${selectedDegree}`,
         fileUri,
         {
           headers: {
@@ -322,8 +342,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       return;
     }
     try {
-      console.log('[FacultyCoordinatorDashboard] 🔍 Searching faculties:', query);
-      const results = await coordinatorApi.searchFaculties(query);
+      console.log(`[FacultyCoordinatorDashboard] 🔍 Searching faculties (${selectedDegree}):`, query);
+      const results = await coordinatorApi.searchFaculties(query, selectedDegree);
       setFaculties(results.map((item: any) => ({ ...item, id: String(item.facultyId) })));
     } catch (err) {
       console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
@@ -337,8 +357,8 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       return;
     }
     try {
-      console.log('[FacultyCoordinatorDashboard] 🔍 Searching students:', query);
-      const results = await coordinatorApi.searchStudents(query);
+      console.log(`[FacultyCoordinatorDashboard] 🔍 Searching students (${selectedDegree}):`, query);
+      const results = await coordinatorApi.searchStudents(query, selectedDegree);
       setStudents(results.map((item: any) => ({ ...item, id: String(item.studentId) })));
     } catch (err) {
       console.log('[FacultyCoordinatorDashboard] ❌ Search error:', err);
@@ -930,12 +950,15 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={{ color: colors.subText, fontSize: 12, fontWeight: '600' }}>DASHBOARD</Text>
           <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>
             Coordinator
           </Text>
         </View>
+        {profile?.isUGCoordinator && profile?.isPGCoordinator && (
+          <DegreeSelector />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
@@ -1016,7 +1039,9 @@ const styles = StyleSheet.create({
   header: {
     height: 80,
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
   },
   sectionLabel: {

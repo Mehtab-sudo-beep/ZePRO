@@ -47,7 +47,9 @@ public class FacultyMeetingController {
     }
 
     @GetMapping
-    public List<MeetingResponse> getAllMeetings(Authentication authentication) {
+    public List<MeetingResponse> getAllMeetings(
+            @RequestParam(required = false) String degree,
+            Authentication authentication) {
 
         String email = authentication.getName();
 
@@ -55,7 +57,7 @@ public class FacultyMeetingController {
                 .findByUser_Email(email)
                 .orElseThrow();
 
-        return meetingService.getAllMeetings(faculty.getFacultyId());
+        return meetingService.getAllMeetings(faculty.getFacultyId(), degree);
     }
 
     @PutMapping("/{meetingId}/complete")

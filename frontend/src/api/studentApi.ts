@@ -136,7 +136,7 @@ export const getProfileStatus = (studentId: number) => {
 export const completeStudentProfile = (studentId: number, data: {
   rollNumber: string;
   cgpa: number;
-  year: string;
+  degree: string;
   instituteId: number;
   departmentId: number;
   resumeFile: any;     // File object from DocumentPicker
@@ -149,7 +149,7 @@ export const completeStudentProfile = (studentId: number, data: {
   const formData = new FormData();
   formData.append('rollNumber', data.rollNumber);
   formData.append('cgpa', data.cgpa.toString());
-  formData.append('year', data.year);
+  formData.append('degree', data.degree);
   formData.append('instituteId', data.instituteId.toString());
   formData.append('departmentId', data.departmentId.toString());
   formData.append('phone', data.phone);

@@ -1,23 +1,23 @@
 import API from './api';
 
 // ✅ GET DEADLINES (Works for all users)
-export const getDeadlines = async () => {
-  return API.get('/api/deadlines').then(res => res.data);
+export const getDeadlines = async (degree: string = 'UG') => {
+  return API.get(`/api/deadlines?degree=${degree}`).then(res => res.data);
 };
 
 // ✅ CREATE DEADLINE (Faculty Coordinator only)
-export const createDeadline = async (data: any) => {
-  return API.post('/api/deadlines/create', data).then(res => res.data);
+export const createDeadline = async (data: any, degree: string = 'UG') => {
+  return API.post(`/api/deadlines/create?degree=${degree}`, data).then(res => res.data);
 };
 
 // ✅ GET ALL DEADLINES FOR COORDINATOR'S DEPARTMENT (Faculty Coordinator only)
-export const getCoordinatorAllDeadlines = async () => {
-  return API.get('/api/deadlines/coordinator/all').then(res => res.data);
+export const getCoordinatorAllDeadlines = async (degree: string = 'UG') => {
+  return API.get(`/api/deadlines/coordinator/all?degree=${degree}`).then(res => res.data);
 };
 
 // ✅ GET DEADLINES BY ROLE FOR COORDINATOR'S DEPARTMENT
-export const getDeadlinesByRole = async (role: string) => {
-  return API.get(`/api/deadlines/role/${role}`).then(res => res.data);
+export const getDeadlinesByRole = async (role: string, degree: string = 'UG') => {
+  return API.get(`/api/deadlines/role/${role}?degree=${degree}`).then(res => res.data);
 };
 
 // ✅ GET SINGLE DEADLINE BY ID

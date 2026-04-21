@@ -87,34 +87,34 @@ public class StudentService {
     // DEADLINE CHECKER
     // ------------------------------------------------
 
-    private void checkTeamFormationDeadline(Long departmentId) {
+    private void checkTeamFormationDeadline(Long departmentId, String degree) {
         if (departmentId == null)
             return;
 
-        departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+        departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .ifPresent(deadlines -> {
                     if (deadlines.getTeamFormationDeadline() != null &&
                             java.time.LocalDateTime.now().isAfter(deadlines.getTeamFormationDeadline())) {
-                        throw new RuntimeException("The deadline for team formations has passed in your department.");
+                        throw new RuntimeException("The deadline for team formations (" + degree + ") has passed in your department.");
                     }
                 });
     }
 
-    private void checkProjectRequestDeadline(Long departmentId) {
+    private void checkProjectRequestDeadline(Long departmentId, String degree) {
         if (departmentId == null)
             return;
 
-        departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+        departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .ifPresent(deadlines -> {
                     if (deadlines.getTeamFormationDeadline() != null &&
                             java.time.LocalDateTime.now().isBefore(deadlines.getTeamFormationDeadline())) {
                         throw new RuntimeException(
-                                "Project requests can only be sent after the team formation deadline has passed.");
+                                "Project requests can only be sent after the team formation deadline (" + degree + ") has passed.");
                     }
                     if (deadlines.getProjectRequestDeadline() != null &&
                             java.time.LocalDateTime.now().isAfter(deadlines.getProjectRequestDeadline())) {
                         throw new RuntimeException(
-                                "You cannot send a project request after the project requesting deadline has ended.");
+                                "You cannot send a project request after the project requesting deadline (" + degree + ") has ended.");
                     }
                 });
     }
@@ -145,7 +145,7 @@ public class StudentService {
         }
 
         // ✅ CHECK TEAM FORMATION DEADLINE
-        checkTeamFormationDeadline(student.getDepartment().getDepartmentId());
+        checkTeamFormationDeadline(student.getDepartment().getDepartmentId(), student.getDegree());
 
         if (student.getTeam() != null) {
             throw new RuntimeException("Student already belongs to a team");
@@ -165,9 +165,10 @@ public class StudentService {
         team.setDescription(request.getDescription());
         team.setTeamLead(student);
 
-        // ✅ SET DEPARTMENT & INSTITUTE FROM STUDENT
+        // ✅ SET DEPARTMENT & INSTITUTE & DEGREE FROM STUDENT
         team.setDepartment(student.getDepartment());
         team.setInstitute(student.getInstitute());
+        team.setDegree(student.getDegree());
 
         teamRepository.save(team);
 
@@ -203,7 +204,7 @@ public class StudentService {
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
         // ✅ CHECK TEAM FORMATION DEADLINE
-        checkTeamFormationDeadline(student.getDepartment().getDepartmentId());
+        checkTeamFormationDeadline(student.getDepartment().getDepartmentId(), student.getDegree());
 
         if (student.isInTeam()) {
             throw new RuntimeException("Student already in a team");
@@ -217,7 +218,7 @@ public class StudentService {
         Team team = teamRepository.findById(request.getTeamId())
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
-        // ✅ VALIDATE DEPARTMENT & INSTITUTE
+        // ✅ VALIDATE DEPARTMENT & INSTITUTE & DEGREE
         if (!team.getDepartment().getDepartmentId().equals(student.getDepartment().getDepartmentId())) {
             throw new RuntimeException("You are from a different department. Cannot join this team");
         }
@@ -226,10 +227,15 @@ public class StudentService {
             throw new RuntimeException("You are from a different institute. Cannot join this team");
         }
 
-        // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
+        if (team.getDegree() != null && !team.getDegree().equals(student.getDegree())) {
+            throw new RuntimeException("You are from a different degree track. Cannot join this team");
+        }
+
+        // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT & DEGREE
         com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
                 student.getDepartment().getDepartmentId(),
-                student.getInstitute().getInstituteId());
+                student.getInstitute().getInstituteId(),
+                student.getDegree());
 
         int maxTeamSize = rules.getMaxTeamSize();
         if (team.getMembers().size() >= maxTeamSize) {
@@ -258,11 +264,12 @@ public class StudentService {
             throw new RuntimeException("Please complete your profile first");
         }
 
-        // ✅ FILTER: Get only teams from same department & institute
+        // ✅ FILTER: Get only teams from same department & institute & degree
         List<Team> teams = teamRepository.findAll().stream()
                 .filter(team -> team.getDepartment() != null && team.getInstitute() != null &&
                         team.getDepartment().getDepartmentId().equals(student.getDepartment().getDepartmentId()) &&
-                        team.getInstitute().getInstituteId().equals(student.getInstitute().getInstituteId()))
+                        team.getInstitute().getInstituteId().equals(student.getInstitute().getInstituteId()) &&
+                        (team.getDegree() == null || team.getDegree().equals(student.getDegree())))
                 .toList();
 
         return teams.stream()
@@ -352,6 +359,11 @@ public class StudentService {
                         return false;
                     }
 
+                    // ✅ FILTER: Match student degree track
+                    if (p.getDegree() != null && !p.getDegree().equals(student.getDegree())) {
+                        return false;
+                    }
+
                     return true;
                 })
                 .map(project -> {
@@ -370,12 +382,12 @@ public class StudentService {
                         subdomainStr = pSubDomains.get(0).getSubDomain().getName();
                     }
 
-                    // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
-                    com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+                    // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT & DEGREE
+                    getAllocationRulesForDept(
                             student.getDepartment().getDepartmentId(),
-                            student.getInstitute().getInstituteId());
+                            student.getInstitute().getInstituteId(),
+                            student.getDegree());
 
-                    int maxTeamSize = rules.getMaxTeamSize();
                     int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null)
                             ? project.getTeam().getMembers().size()
                             : 0;
@@ -403,7 +415,8 @@ public class StudentService {
                             remainingSlots,
                             facultyName,
                             facultyId,
-                            project.getDocuments());
+                            project.getDocuments(),
+                            project.getDegree());
                 })
                 .toList();
     }
@@ -419,7 +432,7 @@ public class StudentService {
 
         // ✅ CHECK PROJECT REQUEST DEADLINE (Reverse check: only after team formation
         // deadline)
-        checkProjectRequestDeadline(student.getDepartment().getDepartmentId());
+        checkProjectRequestDeadline(student.getDepartment().getDepartmentId(), student.getDegree());
 
         if (!student.isTeamLead()) {
             throw new RuntimeException("Only team lead can send project request");
@@ -800,7 +813,7 @@ public class StudentService {
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
         // ✅ CHECK TEAM FORMATION DEADLINE
-        checkTeamFormationDeadline(student.getDepartment().getDepartmentId());
+        checkTeamFormationDeadline(student.getDepartment().getDepartmentId(), student.getDegree());
 
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
@@ -822,6 +835,13 @@ public class StudentService {
         request.setStudent(student);
         request.setTeam(team);
         request.setStatus("PENDING");
+        
+        // ✅ SNAPSHOT STUDENT DETAILS FOR TEAM LEAD
+        request.setStudentName(student.getName());
+        request.setStudentRollNumber(student.getRollNumber());
+        request.setCgpa(student.getCgpa());
+        request.setResumeLink(student.getResumeLink());
+        request.setMarksheetLink(student.getMarksheetLink());
 
         joinRequestRepository.save(request);
 
@@ -845,10 +865,14 @@ public class StudentService {
                 .map(req -> new JoinRequestResponse(
                         req.getRequestId(),
                         req.getStudent().getStudentId(),
-                        req.getStudent().getUser().getName(),
+                        req.getStudentName() != null ? req.getStudentName() : req.getStudent().getUser().getName(),
                         req.getStatus(),
                         req.getRejectionReason(),
-                        req.getStudent().getUser().getEmail()))
+                        req.getStudent().getUser().getEmail(),
+                        req.getStudentRollNumber() != null ? req.getStudentRollNumber() : req.getStudent().getRollNumber(),
+                        req.getCgpa() != 0.0 ? req.getCgpa() : req.getStudent().getCgpa(),
+                        req.getResumeLink() != null ? req.getResumeLink() : req.getStudent().getResumeLink(),
+                        req.getMarksheetLink() != null ? req.getMarksheetLink() : req.getStudent().getMarksheetLink()))
                 .toList();
     }
 
@@ -862,7 +886,7 @@ public class StudentService {
         Team team = request.getTeam();
 
         // ✅ CHECK TEAM FORMATION DEADLINE
-        checkTeamFormationDeadline(student.getDepartment().getDepartmentId());
+        checkTeamFormationDeadline(student.getDepartment().getDepartmentId(), student.getDegree());
 
         if (student.getTeam() != null) {
             throw new RuntimeException("Student already belongs to a team");
@@ -893,10 +917,11 @@ public class StudentService {
             throw new RuntimeException("You are from a different institute");
         }
 
-        // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT
+        // ✅ GET ALLOCATION RULES FOR THIS DEPARTMENT & DEGREE
         com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
                 team.getDepartment().getDepartmentId(),
-                team.getInstitute().getInstituteId());
+                team.getInstitute().getInstituteId(),
+                team.getDegree());
 
         int maxTeamSize = rules.getMaxTeamSize();
         if (team.getMembers().size() >= maxTeamSize) {
@@ -1083,12 +1108,13 @@ public class StudentService {
         return "Team lead role transferred successfully";
     }
 
-    // ✅ GET ALLOCATION RULES FOR DEPARTMENT & INSTITUTE
-    private com.zepro.model.AllocationRules getAllocationRulesForDept(Long departmentId, Long instituteId) {
+    // ✅ GET ALLOCATION RULES FOR DEPARTMENT & INSTITUTE & DEGREE
+    private com.zepro.model.AllocationRules getAllocationRulesForDept(Long departmentId, Long instituteId, String degree) {
         return allocationRulesRepository
-                .findByDepartment_DepartmentIdAndInstitute_InstituteId(departmentId, instituteId)
-                .orElse(allocationRulesRepository.findById(1L)
-                        .orElse(new com.zepro.model.AllocationRules()));
+                .findByDepartment_DepartmentIdAndInstitute_InstituteIdAndDegree(departmentId, instituteId, degree)
+                .orElse(allocationRulesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
+                        .orElse(allocationRulesRepository.findById(1L)
+                                .orElse(new com.zepro.model.AllocationRules())));
     }
 
     public List<SentRequestResponse> getSentRequests(Long studentId) {
@@ -1233,8 +1259,8 @@ public class StudentService {
         student.setCgpa(cgpaValue);
         System.out.println("[StudentService] 📊 CGPA set: " + cgpaValue);
 
-        student.setYear(request.getYear());
-        System.out.println("[StudentService] 📅 Year set: " + student.getYear());
+        student.setDegree(request.getDegree());
+        System.out.println("[StudentService] 📅 Degree set: " + student.getDegree());
 
         try {
             if (request.getResumeFile() != null && !request.getResumeFile().isEmpty()) {
@@ -1271,7 +1297,7 @@ public class StudentService {
                 savedStudent.getUser().getEmail(),
                 savedStudent.getRollNumber(),
                 savedStudent.getCgpa(),
-                savedStudent.getYear(),
+                savedStudent.getDegree(),
                 savedStudent.getDepartment() != null ? savedStudent.getDepartment().getDepartmentId() : null,
                 savedStudent.getDepartment() != null ? savedStudent.getDepartment().getDepartmentName() : null,
                 savedStudent.getResumeLink(),
@@ -1298,8 +1324,8 @@ public class StudentService {
         if (cgpa <= 0)
             return false;
 
-        String year = student.getYear();
-        if (year == null || year.trim().isEmpty())
+        String degree = student.getDegree();
+        if (degree == null || degree.trim().isEmpty())
             return false;
 
         if (student.getDepartment() == null)
@@ -1323,8 +1349,8 @@ public class StudentService {
             throw new RuntimeException("Roll number is required");
         if (request.getCgpa() == null || request.getCgpa() <= 0)
             throw new RuntimeException("Valid CGPA is required");
-        if (request.getYear() == null || request.getYear().trim().isEmpty())
-            throw new RuntimeException("Year is required");
+        if (request.getDegree() == null || request.getDegree().trim().isEmpty())
+            throw new RuntimeException("Degree track is required");
         if (request.getPhone() == null || request.getPhone().trim().isEmpty())
             throw new RuntimeException("Phone is required");
 
@@ -1349,7 +1375,7 @@ public class StudentService {
                 student.getUser() != null ? student.getUser().getEmail() : "",
                 student.getRollNumber(),
                 student.getCgpa(),
-                student.getYear(),
+                student.getDegree(),
                 student.getDepartment() != null ? student.getDepartment().getDepartmentId() : null,
                 student.getDepartment() != null ? student.getDepartment().getDepartmentName() : null,
                 student.getResumeLink(),
@@ -1418,7 +1444,7 @@ public class StudentService {
         System.out.println("\n[StudentService] 📡 Fetching departments for institute ID: " + instituteId);
 
         try {
-            Institute institute = instituteRepository.findById(instituteId)
+            instituteRepository.findById(instituteId)
                     .orElseThrow(() -> new RuntimeException("Institute not found with ID: " + instituteId));
 
             List<Department> departments = departmentRepository.findByInstitute_InstituteId(instituteId);
@@ -1502,9 +1528,10 @@ public class StudentService {
             subdomainStr = pSubDomains.get(0).getSubDomain().getName();
         }
 
-        com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+        getAllocationRulesForDept(
                 student.getDepartment().getDepartmentId(),
-                student.getInstitute().getInstituteId());
+                student.getInstitute().getInstituteId(),
+                student.getDegree());
 
         int maxSlots = project.getStudentSlots();
         int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null)
@@ -1533,7 +1560,8 @@ public class StudentService {
                 remainingSlots,
                 facultyName,
                 facultyId,
-                project.getDocuments());
+                project.getDocuments(),
+                project.getDegree());
     }
 
 } // ✅ CLOSING BRACE FOR CLASS

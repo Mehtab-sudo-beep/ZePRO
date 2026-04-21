@@ -192,4 +192,40 @@ public class AuthController {
     public String logout() {
         return "Logged out successfully";
     }
+
+    public static class UpdateProfileRequest {
+        private String name;
+        private String email;
+        private String phone;
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPhone() { return phone; }
+        public void setPhone(String phone) { this.phone = phone; }
+    }
+
+    @PutMapping("/update-profile")
+    public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request, Authentication authentication) {
+        String emailToUpdate = request.getEmail();
+        if ((emailToUpdate == null || emailToUpdate.isEmpty()) && authentication != null) {
+            emailToUpdate = authentication.getName();
+        }
+        if (emailToUpdate == null) {
+            return ResponseEntity.status(401).body(java.util.Collections.singletonMap("message", "Unauthorized"));
+        }
+        String msg = authService.updateProfile(emailToUpdate, request.getName(), request.getPhone());
+        return ResponseEntity.ok(java.util.Collections.singletonMap("message", msg));
+    }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(java.util.Collections.singletonMap("message", "Unauthorized"));
+        }
+        String email = authentication.getName();
+        String msg = authService.deleteAccount(email);
+        return ResponseEntity.ok(java.util.Collections.singletonMap("message", msg));
+    }
 }

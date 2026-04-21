@@ -24,6 +24,8 @@ public class FacultyProfile {
     private int totalCreatedSlots;
     private int allocatedStudents;
     private int maxStudentsPerFaculty;
+    private boolean isUGCoordinator;
+    private boolean isPGCoordinator;
 
     // ========== CONSTRUCTORS ==========
     public FacultyProfile() {}
@@ -82,4 +84,10 @@ public class FacultyProfile {
 
     public int getMaxStudentsPerFaculty() { return maxStudentsPerFaculty; }
     public void setMaxStudentsPerFaculty(int maxStudentsPerFaculty) { this.maxStudentsPerFaculty = maxStudentsPerFaculty; }
+
+    public boolean getIsUGCoordinator() { return isUGCoordinator; }
+    public void setIsUGCoordinator(boolean v) { this.isUGCoordinator = v; }
+
+    public boolean getIsPGCoordinator() { return isPGCoordinator; }
+    public void setIsPGCoordinator(boolean v) { this.isPGCoordinator = v; }
 }

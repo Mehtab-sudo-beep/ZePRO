@@ -82,7 +82,11 @@ public class AuthService {
         try {
             String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + request.getIdToken();
 
-            RestTemplate restTemplate = new RestTemplate();
+            org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(5000);
+            factory.setReadTimeout(10000);
+            RestTemplate restTemplate = new RestTemplate(factory);
+
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             Map body = response.getBody();
 
@@ -151,9 +155,10 @@ public class AuthService {
             Long facultyId = null;
             boolean isInTeam = false;
             boolean isTeamLead = false;
-            boolean isFC = false;
 
             boolean isProfileComplete = true;
+            boolean isUGCoordinator = false;
+            boolean isPGCoordinator = false;
 
             if (user.getRole() == UserRole.STUDENT) {
                 Student student = studentRepository
@@ -172,7 +177,8 @@ public class AuthService {
                         .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
 
                 facultyId = faculty.getFacultyId();
-                isFC = (faculty.getIsFC() != null && faculty.getIsFC());
+                isUGCoordinator = (faculty.getIsUGCoordinator() != null && faculty.getIsUGCoordinator());
+                isPGCoordinator = (faculty.getIsPGCoordinator() != null && faculty.getIsPGCoordinator());
                 isProfileComplete = facultyService.isFacultyProfileComplete(faculty);
             }
 
@@ -192,11 +198,12 @@ public class AuthService {
                     user.getEmail(),
                     user.getName(),
                     user.getPhone(),
-                    isFC,
                     user.isEmailNotifications(),
                     user.isPushNotifications(),
                     user.getProfilePictureUrl(),
-                    isProfileComplete);
+                    isProfileComplete,
+                    isUGCoordinator,
+                    isPGCoordinator);
         } catch (Exception e) {
             throw new RuntimeException("Google authentication failed: " + e.getMessage(), e);
         }
@@ -292,6 +299,8 @@ public class AuthService {
         boolean isInTeam = false;
         boolean isTeamLead = false;
         boolean isProfileComplete = true;
+        boolean isUGCoordinator = false;
+        boolean isPGCoordinator = false;
         if (user.getRole() == UserRole.STUDENT) {
             Student student = studentRepository
                     .findByUser(user)
@@ -301,13 +310,13 @@ public class AuthService {
             isTeamLead = student.isTeamLead();
             isProfileComplete = studentService.isProfileComplete(student);
         }
-        boolean isFC = false;
         if (user.getRole() == UserRole.FACULTY) {
             Faculty faculty = facultyRepository
                     .findByUser_Email(user.getEmail())
                     .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
             facultyId = faculty.getFacultyId();
-            isFC = (faculty.getIsFC() != null && faculty.getIsFC());
+            isUGCoordinator = (faculty.getIsUGCoordinator() != null && faculty.getIsUGCoordinator());
+            isPGCoordinator = (faculty.getIsPGCoordinator() != null && faculty.getIsPGCoordinator());
             isProfileComplete = facultyService.isFacultyProfileComplete(faculty);
         }
         if (user.getRole() == UserRole.ADMIN) {
@@ -325,11 +334,12 @@ public class AuthService {
                 user.getEmail(),
                 user.getName(),
                 user.getPhone(),
-                isFC,
                 user.isEmailNotifications(),
                 user.isPushNotifications(),
                 user.getProfilePictureUrl(),
-                isProfileComplete);
+                isProfileComplete,
+                isUGCoordinator,
+                isPGCoordinator);
     }
 
     // ------------------------------------------------

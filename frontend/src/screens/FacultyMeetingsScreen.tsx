@@ -43,14 +43,15 @@ const FacultyMeetingsScreen = () => {
 
   const [meetings, setMeetings] = useState<any[]>([]);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
+  const [selectedDegree, setSelectedDegree] = useState<'UG' | 'PG'>('UG');
 
   useEffect(() => {
     loadMeetings();
-  }, []);
+  }, [selectedDegree]);
 
   const loadMeetings = async () => {
     try {
-      const data = await getAllMeetings(user!.token);
+      const data = await getAllMeetings(selectedDegree, user!.token);
       setMeetings(data || []);
     } catch (err) {
       console.log('Load meetings error:', err);
@@ -96,6 +97,22 @@ const FacultyMeetingsScreen = () => {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Meetings</Text>
         <View style={{ width: 30 }} />
+      </View>
+
+      {/* UG/PG Toggle */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity 
+          style={[styles.degreeBtn, selectedDegree === 'UG' && { backgroundColor: colors.primary }, { borderColor: colors.primary }]}
+          onPress={() => setSelectedDegree('UG')}
+        >
+          <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'UG' && { color: '#FFF' }]}>UG Meetings</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.degreeBtn, selectedDegree === 'PG' && { backgroundColor: colors.primary }, { borderColor: colors.primary }]}
+          onPress={() => setSelectedDegree('PG')}
+        >
+          <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'PG' && { color: '#FFF' }]}>PG Meetings</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -206,6 +223,24 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     resizeMode: 'contain',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  degreeText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   content: {
     padding: 16,

@@ -17,33 +17,36 @@ public class FacultyProfileController {
 
     // ✅ GET PROFILE (FROM TOKEN)
     @GetMapping
-public ResponseEntity<FacultyProfile> getProfile(Authentication auth) {
+    public ResponseEntity<FacultyProfile> getProfile(
+            Authentication auth,
+            @RequestParam(required = false, defaultValue = "UG") String degree) {
 
-    String email = auth.getName();
-    System.out.println("🔥 [GET PROFILE] Email: " + email);
+        String email = auth.getName();
+        System.out.println("🔥 [GET PROFILE] Email: " + email + ", Degree: " + degree);
 
-    FacultyProfile profile = service.getProfile(email);
+        FacultyProfile profile = service.getProfile(email, degree);
 
-    System.out.println("✅ [GET PROFILE SUCCESS] Name: " + profile.getName());
+        System.out.println("✅ [GET PROFILE SUCCESS] Name: " + profile.getName() + ", Slots: " + profile.getTotalCreatedSlots());
 
-    return ResponseEntity.ok(profile);
-}
+        return ResponseEntity.ok(profile);
+    }
 
     // ✅ UPDATE PROFILE (FROM TOKEN)
     @PutMapping
-public ResponseEntity<FacultyProfile> updateProfile(
-        Authentication auth,
-        @RequestBody FacultyProfile dto) {
+    public ResponseEntity<FacultyProfile> updateProfile(
+            Authentication auth,
+            @RequestBody FacultyProfile dto,
+            @RequestParam(required = false, defaultValue = "UG") String degree) {
 
-    String email = auth.getName();
+        String email = auth.getName();
 
-    System.out.println("🔥 [UPDATE PROFILE] Email: " + email);
-    System.out.println("Incoming Data: " + dto);
+        System.out.println("🔥 [UPDATE PROFILE] Email: " + email + ", Degree: " + degree);
+        System.out.println("Incoming Data: " + dto);
 
-    FacultyProfile updated = service.updateProfile(email, dto);
+        FacultyProfile updated = service.updateProfile(email, dto, degree);
 
-    System.out.println("✅ [PROFILE UPDATED] Name: " + updated.getName());
+        System.out.println("✅ [PROFILE UPDATED] Name: " + updated.getName());
 
-    return ResponseEntity.ok(updated);
-}
+        return ResponseEntity.ok(updated);
+    }
 }

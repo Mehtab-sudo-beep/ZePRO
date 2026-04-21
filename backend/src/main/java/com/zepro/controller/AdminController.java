@@ -2,7 +2,6 @@ package com.zepro.controller;
 
 import com.zepro.dto.*;
 import com.zepro.service.AdminService;
-import com.zepro.model.UserRole;
 import com.zepro.repository.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +21,7 @@ public class AdminController {
 
     private final AdminService adminService;
 
-    @Autowired
-    private UserRepository userRepository;
+
 
     public AdminController(AdminService adminService) {
         this.adminService = adminService;
@@ -281,10 +279,11 @@ public class AdminController {
     @GetMapping("/department/{departmentId}/faculty")
     public ResponseEntity<?> getFacultyByDepartment(
             @PathVariable Long departmentId,
+            @RequestParam(required = false) String degree,
             Authentication authentication) {
 
         System.out.println("\n========== GET FACULTY BY DEPARTMENT ==========");
-        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/faculty");
+        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/faculty" + (degree != null ? "?degree=" + degree : ""));
         System.out.println("[AdminController] 🔐 Authentication: " + authentication);
 
         if (authentication == null) {
@@ -302,7 +301,7 @@ public class AdminController {
         }
 
         try {
-            List<UserResponse> faculty = adminService.getFacultyByDepartment(departmentId);
+            List<UserResponse> faculty = adminService.getFacultyByDepartment(departmentId, degree);
             System.out.println("[AdminController] ✅ Found " + faculty.size() + " faculty members");
             return ResponseEntity.ok(faculty);
         } catch (Exception e) {
@@ -319,17 +318,18 @@ public class AdminController {
     @GetMapping("/department/{departmentId}/students")
     public ResponseEntity<?> getStudentsByDepartment(
             @PathVariable Long departmentId,
+            @RequestParam(required = false) String degree,
             Authentication authentication) {
 
         System.out.println("\n========== GET STUDENTS BY DEPARTMENT ==========");
-        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/students");
+        System.out.println("[AdminController] 📡 GET /admin/department/" + departmentId + "/students" + (degree != null ? "?degree=" + degree : ""));
 
         if (!isAdmin(authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only ADMIN can view students"));
         }
 
         try {
-            List<UserResponse> students = adminService.getStudentsByDepartment(departmentId);
+            List<UserResponse> students = adminService.getStudentsByDepartment(departmentId, degree);
             return ResponseEntity.ok(students);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -369,7 +369,8 @@ public class AdminController {
 
             DepartmentResponse response = adminService.assignFacultyCoordinator(
                     request.getFacultyId(),
-                    departmentId);
+                    departmentId,
+                    request.getDegree());
 
             System.out.println("[AdminController] ✅ Success - Coordinator assigned");
             return ResponseEntity.ok(response);
@@ -429,10 +430,11 @@ public class AdminController {
     @GetMapping("/department/{departmentId}/stats")
     public ResponseEntity<?> getDepartmentStats(
             @PathVariable Long departmentId,
+            @RequestParam(required = false) String degree,
             Authentication authentication) {
 
         System.out.println("\n========== GET DEPARTMENT STATS ==========");
-        System.out.println("[AdminController] 📊 GET /admin/department/" + departmentId + "/stats");
+        System.out.println("[AdminController] 📊 GET /admin/department/" + departmentId + "/stats" + (degree != null ? "?degree=" + degree : ""));
 
         if (!isAdmin(authentication)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -440,7 +442,7 @@ public class AdminController {
         }
 
         try {
-            DepartmentStatsResponse stats = adminService.getDepartmentStats(departmentId);
+            DepartmentStatsResponse stats = adminService.getDepartmentStats(departmentId, degree);
             System.out.println("[AdminController] ✅ Stats fetched");
             return ResponseEntity.ok(stats);
         } catch (Exception e) {

@@ -6,7 +6,7 @@ public class StudentProfileResponse {
     private String email;
     private String rollNumber;
     private Double cgpa;
-    private String year;
+    private String degree;
     private Long departmentId;
     private String departmentName;
     private String resumeLink;
@@ -22,7 +22,7 @@ public class StudentProfileResponse {
             String email,
             String rollNumber,
             Double cgpa,
-            String year,
+            String degree,
             Long departmentId,
             String departmentName,
             String resumeLink,
@@ -34,7 +34,7 @@ public class StudentProfileResponse {
         this.email = email;
         this.rollNumber = rollNumber;
         this.cgpa = cgpa;
-        this.year = year;
+        this.degree = degree;
         this.departmentId = departmentId;
         this.departmentName = departmentName;
         this.resumeLink = resumeLink;
@@ -61,8 +61,8 @@ public class StudentProfileResponse {
     public Double getCgpa() { return cgpa; }
     public void setCgpa(Double cgpa) { this.cgpa = cgpa; }
 
-    public String getYear() { return year; }
-    public void setYear(String year) { this.year = year; }
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 
     public Long getDepartmentId() { return departmentId; }
     public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }

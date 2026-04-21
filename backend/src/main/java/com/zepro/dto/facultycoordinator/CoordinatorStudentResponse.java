@@ -6,7 +6,7 @@ public class CoordinatorStudentResponse {
     private String  rollNo;              // Student.rollNo
     private String  email;               // Student.user.email
     private String  department;          // Student.department.departmentName
-    private String  year;                // Student.year
+    private String  degree;              // Student.degree
     private double  cgpa;                // Student.cgpa
     private boolean isAllocated;         // Student.isAllocated
     private Long    allocatedFacultyId;  // Student.allocatedFaculty.facultyId (nullable)
@@ -16,7 +16,7 @@ public class CoordinatorStudentResponse {
     public CoordinatorStudentResponse() {}
  
     public  CoordinatorStudentResponse(Long studentId, String name, String rollNo,
-                                       String email, String department, String year,
+                                       String email, String department, String degree,
                                        double cgpa, boolean isAllocated,
                                        Long allocatedFacultyId, String allocatedFacultyName,
                                        Long teamId) {
@@ -25,7 +25,7 @@ public class CoordinatorStudentResponse {
         this.rollNo               = rollNo;
         this.email                = email;
         this.department           = department;
-        this.year                 = year;
+        this.degree               = degree;
         this.cgpa                 = cgpa;
         this.isAllocated          = isAllocated;
         this.allocatedFacultyId   = allocatedFacultyId;
@@ -38,7 +38,7 @@ public class CoordinatorStudentResponse {
     public String  getRollNo()                { return rollNo; }
     public String  getEmail()                 { return email; }
     public String  getDepartment()            { return department; }
-    public String  getYear()                  { return year; }
+    public String  getDegree()                { return degree; }
     public double  getCgpa()                  { return cgpa; }
     public boolean isAllocated()              { return isAllocated; }
     public Long    getAllocatedFacultyId()     { return allocatedFacultyId; }
@@ -50,7 +50,7 @@ public class CoordinatorStudentResponse {
     public void setRollNo(String v)               { this.rollNo = v; }
     public void setEmail(String v)                { this.email = v; }
     public void setDepartment(String v)           { this.department = v; }
-    public void setYear(String v)                 { this.year = v; }
+    public void setDegree(String v)               { this.degree = v; }
     public void setCgpa(double v)                 { this.cgpa = v; }
     public void setAllocated(boolean v)           { this.isAllocated = v; }
     public void setAllocatedFacultyId(Long v)     { this.allocatedFacultyId = v; }

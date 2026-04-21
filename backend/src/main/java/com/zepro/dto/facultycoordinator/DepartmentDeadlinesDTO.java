@@ -7,6 +7,7 @@ public class DepartmentDeadlinesDTO {
     private LocalDateTime teamFormationDeadline;
     private LocalDateTime projectRequestDeadline;
     private LocalDateTime meetingSchedulingDeadline;
+    private String degree;
 
     public LocalDateTime getTeamFormationDeadline() {
         return teamFormationDeadline;
@@ -30,5 +31,13 @@ public class DepartmentDeadlinesDTO {
 
     public void setMeetingSchedulingDeadline(LocalDateTime meetingSchedulingDeadline) {
         this.meetingSchedulingDeadline = meetingSchedulingDeadline;
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

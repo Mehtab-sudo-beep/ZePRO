@@ -28,6 +28,9 @@ public class Deadline {
     @Column(nullable = false)
     private UserRole roleSpecificity;
     
+    @Column(nullable = false)
+    private String degree = "UG";
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
@@ -53,12 +56,13 @@ public class Deadline {
     public Deadline() {}
 
     public Deadline(String title, String description, LocalDateTime deadlineDate, 
-                 UserRole roleSpecificity, Department department) {
+                 UserRole roleSpecificity, Department department, String degree) {
         this.title = title;
         this.description = description;
         this.deadlineDate = deadlineDate;
         this.roleSpecificity = roleSpecificity;
         this.department = department;
+        this.degree = degree;
         this.isActive = true;
     }
 
@@ -89,4 +93,7 @@ public class Deadline {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

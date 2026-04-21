@@ -88,7 +88,7 @@ public class HelpCenterController {
         if (departmentId != null) {
             // Find coordinator for this department
             List<Faculty> faculties = facultyRepository.findByDepartment_DepartmentId(departmentId);
-            Faculty coordinator = faculties.stream().filter(f -> f.getIsFC() != null && f.getIsFC()).findFirst().orElse(null);
+            Faculty coordinator = faculties.stream().filter(f -> (f.getIsUGCoordinator() != null && f.getIsUGCoordinator()) || (f.getIsPGCoordinator() != null && f.getIsPGCoordinator())).findFirst().orElse(null);
 
             if (coordinator != null) {
                 response.setCoordinatorName(coordinator.getUser().getName());

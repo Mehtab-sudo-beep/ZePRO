@@ -13,6 +13,7 @@ public class StudentProfile {
     private String resumeLink;
     private String marksheetLink;
     private Boolean isAllocated;
+    private String degree;
 
     // getters & setters
 
@@ -45,4 +46,7 @@ public class StudentProfile {
 
     public Boolean getIsAllocated() { return isAllocated; }
     public void setIsAllocated(Boolean isAllocated) { this.isAllocated = isAllocated; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

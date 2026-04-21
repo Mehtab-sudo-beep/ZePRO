@@ -43,6 +43,7 @@ const FacultyRequestsScreen = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
+  const [selectedDegree, setSelectedDegree] = useState<'UG' | 'PG'>('UG');
 
   const [meetingLink, setMeetingLink] = useState('');
   const [location, setLocation] = useState('');
@@ -61,12 +62,12 @@ const FacultyRequestsScreen = () => {
     loadRequests();
     loadDeadlines();
     return () => { isMounted.current = false; };
-  }, []);
+  }, [selectedDegree]);
 
   const loadRequests = async () => {
     try {
       setLoading(true);
-      const data = await getPendingRequests(user!.token);
+      const data = await getPendingRequests(selectedDegree, user!.token);
 
       // Group by projectId
       const grouped = data.reduce((acc: any, curr: any) => {
@@ -234,6 +235,22 @@ const FacultyRequestsScreen = () => {
           />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Pending Requests</Text>
+      </View>
+
+      {/* UG/PG Toggle */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity 
+          style={[styles.degreeBtn, selectedDegree === 'UG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+          onPress={() => setSelectedDegree('UG')}
+        >
+          <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'UG' && { color: '#FFF' }]}>UG Requests</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.degreeBtn, selectedDegree === 'PG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+          onPress={() => setSelectedDegree('PG')}
+        >
+          <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'PG' && { color: '#FFF' }]}>PG Requests</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Grouped View */}
@@ -465,6 +482,29 @@ const styles = StyleSheet.create({
   successText: { color: '#15803D', textAlign: 'center', fontWeight: '600' },
   emptyBox: { alignItems: 'center', marginTop: 100 },
   emptyText: { fontSize: 16, fontWeight: '600' },
+
+  // UG/PG Toggle
+  toggleContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  degreeBtnActive: {
+    backgroundColor: '#3B82F6',
+  },
+  degreeText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
   // Project Cards
   projectCard: {

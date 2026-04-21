@@ -48,6 +48,7 @@ interface DeadlineItem {
   isActive: boolean;
   isPassed: boolean;
   roleSpecificity: RoleOption;
+  degree?: 'UG' | 'PG';
   createdAt: string;
   updatedAt: string;
 }
@@ -171,7 +172,7 @@ const DeadlineDetailScreen: React.FC = () => {
   const isDark = theme === 'dark';
 
   const isFacultyCoordinator =
-    user?.isFC === true && (user?.role === 'FACULTY' || user?.role === 'ADMIN');
+    (user?.isUGCoordinator || user?.isPGCoordinator) || user?.role === 'ADMIN';
 
   const status = getStatus(deadline);
   const timeRemaining = getTimeRemaining(deadline.deadlineDate);
@@ -260,6 +261,13 @@ const DeadlineDetailScreen: React.FC = () => {
                   {deadline.roleSpecificity.replace(/_/g, ' ')}
                 </Text>
               </View>
+              {!!deadline.degree && (
+                <View style={[styles.rolePill, { backgroundColor: '#10B98118' }]}>
+                  <Text style={[styles.rolePillText, { color: '#10B981' }]}>
+                    {deadline.degree}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Title */}
@@ -346,6 +354,12 @@ const DeadlineDetailScreen: React.FC = () => {
               <Text style={[styles.metaCellLabel, { color: colors.subText }]}>Role</Text>
               <Text style={[styles.metaCellValue, { color: colors.primary }]}>
                 {deadline.roleSpecificity.replace(/_/g, ' ')}
+              </Text>
+            </View>
+            <View style={[styles.metaCell, { backgroundColor: colors.background, borderColor: colors.border }]}>
+              <Text style={[styles.metaCellLabel, { color: colors.subText }]}>Degree</Text>
+              <Text style={[styles.metaCellValue, { color: '#10B981' }]}>
+                {deadline.degree || 'UG'}
               </Text>
             </View>
           </View>

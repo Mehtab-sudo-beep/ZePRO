@@ -14,7 +14,8 @@ public class Faculty {
     @JoinColumn(name = "user_id")
     private Users user;
 
-    private Boolean isFC;
+    private Boolean isUGCoordinator = false;
+    private Boolean isPGCoordinator = false;
 
     @ManyToOne
     private Department department;
@@ -42,7 +43,8 @@ public class Faculty {
 
     public Long getFacultyId() { return facultyId; }
     public Users getUser() { return user; }
-    public Boolean getIsFC() { return isFC; }
+    public Boolean getIsUGCoordinator() { return isUGCoordinator; }
+    public Boolean getIsPGCoordinator() { return isPGCoordinator; }
     public Department getDepartment() { return department; }
     public List<Project> getProjects() { return projects; }
     public String getDesignation() { return designation; }
@@ -63,7 +65,8 @@ public class Faculty {
 
     public void setFacultyId(Long facultyId) { this.facultyId = facultyId; }
     public void setUser(Users user) { this.user = user; }
-    public void setIsFC(Boolean isFC) { this.isFC = isFC; }
+    public void setIsUGCoordinator(Boolean isUGCoordinator) { this.isUGCoordinator = isUGCoordinator; }
+    public void setIsPGCoordinator(Boolean isPGCoordinator) { this.isPGCoordinator = isPGCoordinator; }
     public void setDepartment(Department department) { this.department = department; }
     public void setProjects(List<Project> projects) { this.projects = projects; }
     public void setDesignation(String designation) { this.designation = designation; }

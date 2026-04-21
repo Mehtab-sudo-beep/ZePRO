@@ -57,7 +57,8 @@ public class DeadlineService {
                 request.getDescription(),
                 request.getDeadlineDate(),
                 request.getRoleSpecificity(),
-                department
+                department,
+                request.getDegree() != null ? request.getDegree() : "UG"
         );
 
         Deadline savedDeadline = deadlineRepository.save(deadline);
@@ -82,13 +83,13 @@ public class DeadlineService {
         return mapToResponse(deadline);
     }
 
-    // ✅ GET ALL DEADLINES BY DEPARTMENT AND ROLE
+    // ✅ GET ALL DEADLINES BY DEPARTMENT, ROLE AND DEGREE
     @Transactional(readOnly = true)
-    public List<DeadlineResponse> getDeadlinesByRoleAndDepartment(UserRole role, Long departmentId) {
-        System.out.println("[DeadlineService] 📋 Fetching deadlines for role: " + role + " and department: " + departmentId);
+    public List<DeadlineResponse> getDeadlinesByRoleAndDepartment(UserRole role, Long departmentId, String degree) {
+        System.out.println("[DeadlineService] 📋 Fetching deadlines for role: " + role + " department: " + departmentId + " degree: " + degree);
         
         List<Deadline> deadlines = deadlineRepository
-                .findByRoleSpecificityAndDepartment_DepartmentId(role, departmentId);
+                .findByRoleSpecificityAndDepartment_DepartmentIdAndDegree(role, departmentId, degree);
         
         System.out.println("[DeadlineService] ✅ Found " + deadlines.size() + " deadlines");
         
@@ -97,13 +98,13 @@ public class DeadlineService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ GET ACTIVE DEADLINES BY DEPARTMENT AND ROLE
+    // ✅ GET ACTIVE DEADLINES BY DEPARTMENT, ROLE AND DEGREE
     @Transactional(readOnly = true)
-    public List<DeadlineResponse> getActiveDeadlinesByRoleAndDepartment(UserRole role, Long departmentId) {
-        System.out.println("[DeadlineService] 📋 Fetching active deadlines for role: " + role + " and department: " + departmentId);
+    public List<DeadlineResponse> getActiveDeadlinesByRoleAndDepartment(UserRole role, Long departmentId, String degree) {
+        System.out.println("[DeadlineService] 📋 Fetching active deadlines for role: " + role + " department: " + departmentId + " degree: " + degree);
         
         List<Deadline> deadlines = deadlineRepository
-                .findByRoleSpecificityAndIsActiveTrueAndDepartment_DepartmentId(role, departmentId);
+                .findByRoleSpecificityAndIsActiveTrueAndDepartment_DepartmentIdAndDegree(role, departmentId, degree);
         
         System.out.println("[DeadlineService] ✅ Found " + deadlines.size() + " active deadlines");
         
@@ -112,15 +113,30 @@ public class DeadlineService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ GET ALL ACTIVE DEADLINES BY DEPARTMENT
+    // ✅ GET ALL ACTIVE DEADLINES BY DEPARTMENT AND DEGREE
     @Transactional(readOnly = true)
-    public List<DeadlineResponse> getActiveDeadlinesByDepartment(Long departmentId) {
-        System.out.println("[DeadlineService] 📋 Fetching all active deadlines for department: " + departmentId);
+    public List<DeadlineResponse> getActiveDeadlinesByDepartment(Long departmentId, String degree) {
+        System.out.println("[DeadlineService] 📋 Fetching all active deadlines for department: " + departmentId + " degree: " + degree);
         
         List<Deadline> deadlines = deadlineRepository
-                .findByIsActiveTrueAndDepartment_DepartmentId(departmentId);
+                .findByIsActiveTrueAndDepartment_DepartmentIdAndDegree(departmentId, degree);
         
         System.out.println("[DeadlineService] ✅ Found " + deadlines.size() + " active deadlines");
+        
+        return deadlines.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ GET ALL DEADLINES BY DEPARTMENT AND DEGREE (for coordinators — all statuses)
+    @Transactional(readOnly = true)
+    public List<DeadlineResponse> getDeadlinesByDepartmentAndDegree(Long departmentId, String degree) {
+        System.out.println("[DeadlineService] 📋 Fetching all deadlines for department: " + departmentId + " degree: " + degree);
+        
+        List<Deadline> deadlines = deadlineRepository
+                .findByDepartment_DepartmentIdAndDegree(departmentId, degree);
+        
+        System.out.println("[DeadlineService] ✅ Found " + deadlines.size() + " deadlines");
         
         return deadlines.stream()
                 .map(this::mapToResponse)
@@ -193,6 +209,9 @@ public class DeadlineService {
         if (request.getRoleSpecificity() != null) {
             deadline.setRoleSpecificity(request.getRoleSpecificity());
         }
+        if (request.getDegree() != null) {
+            deadline.setDegree(request.getDegree());
+        }
 
         Deadline updatedDeadline = deadlineRepository.save(deadline);
         
@@ -260,7 +279,8 @@ public class DeadlineService {
                 deadline.getDepartment().getDepartmentId(),
                 deadline.getDepartment().getDepartmentName(),
                 deadline.getCreatedAt(),
-                deadline.getUpdatedAt()
+                deadline.getUpdatedAt(),
+                deadline.getDegree()
         );
     }
 
@@ -271,6 +291,7 @@ public class DeadlineService {
         if (deadline.getRoleSpecificity() == UserRole.STUDENT) {
             List<String> studentEmails = studentRepository.findByDepartment_DepartmentId(deptId)
                     .stream()
+                    .filter(s -> deadline.getDegree().equalsIgnoreCase(s.getDegree()))
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
                     .map(s -> s.getUser().getEmail())
                     .toList();

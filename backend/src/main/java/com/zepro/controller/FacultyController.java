@@ -167,11 +167,13 @@ public class FacultyController {
     // ✅ EXISTING ENDPOINTS BELOW (KEEP ALL)
 
     @GetMapping("/allocation-rules")
-    public ResponseEntity<?> getAllocationRules(Authentication authentication) {
-        System.out.println("[FacultyController] 📡 GET /faculty/allocation-rules");
+    public ResponseEntity<?> getAllocationRules(
+            @RequestParam(required = false) String degree,
+            Authentication authentication) {
+        System.out.println("[FacultyController] 📡 GET /faculty/allocation-rules?degree=" + degree);
         try {
             String email = authentication.getName();
-            com.zepro.model.AllocationRules rules = facultyService.getAllocationRulesByEmail(email);
+            com.zepro.model.AllocationRules rules = facultyService.getAllocationRulesByEmail(email, degree);
             return ResponseEntity.ok(Map.of(
                 "maxTeamSize", rules.getMaxTeamSize(),
                 "maxStudentsPerFaculty", rules.getMaxStudentsPerFaculty(),
@@ -214,9 +216,11 @@ public class FacultyController {
     }
 
     @GetMapping("/my-projects")
-    public List<ProjectResponse> getMyProjects(Authentication authentication) {
+    public List<ProjectResponse> getMyProjects(
+            @RequestParam(required = false) String degree,
+            Authentication authentication) {
         String email = authentication.getName();
-        return facultyService.getProjectsByEmail(email);
+        return facultyService.getProjectsByEmail(email, degree);
     }
 
     @PostMapping("/project/{projectId}/activate")
@@ -275,7 +279,9 @@ public class FacultyController {
 
 
     @GetMapping("/pending-requests")
-    public List<ProjectResponse> getPendingRequests(Authentication authentication) {
+    public List<ProjectResponse> getPendingRequests(
+            @RequestParam(required = false) String degree,
+            Authentication authentication) {
 
         String email = authentication.getName();
 
@@ -283,7 +289,7 @@ public class FacultyController {
                 .findByUser_Email(email)
                 .orElseThrow();
 
-        return facultyService.getPendingRequests(faculty.getFacultyId());
+        return facultyService.getPendingRequests(faculty.getFacultyId(), degree);
     }
 
     @PostMapping("/assign-project")

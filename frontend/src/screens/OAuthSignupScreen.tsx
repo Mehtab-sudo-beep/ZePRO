@@ -75,7 +75,8 @@ const OAuthSignupScreen: React.FC<Props> = ({ navigation }) => {
         isTeamLead,
         email: resEmail,
         name,
-        isFC,
+        isUGCoordinator,
+        isPGCoordinator,
       } = loginRes.data;
 
       // Save to AsyncStorage
@@ -83,7 +84,8 @@ const OAuthSignupScreen: React.FC<Props> = ({ navigation }) => {
       await AsyncStorage.setItem('role', role);
       await AsyncStorage.setItem('userEmail', resEmail || '');
       await AsyncStorage.setItem('userName', name || '');
-      await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
+      await AsyncStorage.setItem('isUGCoordinator', isUGCoordinator ? 'true' : 'false');
+      await AsyncStorage.setItem('isPGCoordinator', isPGCoordinator ? 'true' : 'false');
       await AsyncStorage.setItem('oauthProvider', 'google');
 
       if (studentId) {
@@ -102,7 +104,8 @@ const OAuthSignupScreen: React.FC<Props> = ({ navigation }) => {
         isTeamLead,
         email: resEmail,
         name,
-        isFC,
+        isUGCoordinator,
+        isPGCoordinator,
       });
 
       showAlert('Success', `Registered as ${role} via Google`);

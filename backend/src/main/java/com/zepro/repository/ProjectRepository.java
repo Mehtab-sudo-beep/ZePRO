@@ -37,4 +37,5 @@ public interface ProjectRepository extends JpaRepository<Project,Long>{
     List<ProjectRequest> findByProjectAndTeam(@Param("project") Project project, @Param("team") Team team);
 
     long countByFaculty_Department_DepartmentId(Long departmentId);
+    long countByFaculty_Department_DepartmentIdAndDegree(Long departmentId, String degree);
 }

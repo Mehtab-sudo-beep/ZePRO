@@ -35,11 +35,9 @@ const AdminMoreScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
-            await import('@react-native-async-storage/async-storage').then(m => {
-              m.default.removeItem('token');
-              m.default.removeItem('studentId');
-            });
-            setUser(null);
+            
+            // setUser(null) now handles comprehensive AsyncStorage cleanup
+            await setUser(null);
             navigation.replace('Login');
           },
         },

@@ -1,4 +1,4 @@
-import React, { useContext, useState, useCallback } from 'react';
+import React, { useContext, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,8 @@ import {
   updateDeadline,
   toggleActiveDeadline,
 } from '../api/deadlineApi';
+import DegreeSelector from '../components/DegreeSelector';
+import { useDegree } from '../context/DegreeContext';
 
 const Icons = {
   back: require('../assets/deadlines/back.png'),
@@ -67,6 +69,7 @@ interface FormState {
   description: string;
   deadlineDate: Date;
   roleSpecificity: RoleOption;
+  degree: 'UG' | 'PG';
 }
 
 interface Colors {
@@ -85,6 +88,7 @@ const EMPTY_FORM: FormState = {
   description: '',
   deadlineDate: new Date(),
   roleSpecificity: 'STUDENT',
+  degree: 'UG',
 };
 
 const formatLocalDate = (date: Date): string =>
@@ -144,6 +148,7 @@ interface FormModalProps {
   showDatePicker: boolean;
   showTimePicker: boolean;
   showRolePicker: boolean;
+  isBothCoordinator: boolean;
   onClose: () => void;
   onSubmit: () => void;
   onChangeForm: React.Dispatch<React.SetStateAction<FormState>>;
@@ -154,17 +159,18 @@ interface FormModalProps {
   onHideTimePicker: () => void;
   onHideRolePicker: () => void;
   onSelectRole: (role: RoleOption) => void;
+  onSelectDegree: (degree: 'UG' | 'PG') => void;
   onPickDate: (date: Date) => void;
   onPickTime: (date: Date) => void;
 }
 
 const FormModal: React.FC<FormModalProps> = ({
   visible, isEdit, form, hasPickedDate, isDark, colors,
-  showDatePicker, showTimePicker, showRolePicker,
+  showDatePicker, showTimePicker, showRolePicker, isBothCoordinator,
   onClose, onSubmit, onChangeForm,
   onShowDatePicker, onShowTimePicker, onShowRolePicker,
   onHideDatePicker, onHideTimePicker, onHideRolePicker,
-  onSelectRole, onPickDate, onPickTime,
+  onSelectRole, onSelectDegree, onPickDate, onPickTime,
 }) => (
   <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <View style={styles.modalBackdrop}>
@@ -205,6 +211,32 @@ const FormModal: React.FC<FormModalProps> = ({
               <Text style={[styles.pickerRowText, { color: colors.text }]}>{form.roleSpecificity.replace(/_/g, ' ')}</Text>
               <Image source={isDark ? Icons.chevronDownWhite : Icons.chevronDown} style={styles.pickerIcon} />
             </TouchableOpacity>
+          </View>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.subText }]}>Degree Track *</Text>
+            {isBothCoordinator ? (
+              // Both-degree coordinator: can pick UG or PG
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {(['UG', 'PG'] as const).map((d) => (
+                  <TouchableOpacity
+                    key={d}
+                    onPress={() => onSelectDegree(d)}
+                    style={[
+                      styles.degreeOption,
+                      { backgroundColor: colors.background, borderColor: form.degree === d ? colors.primary : colors.border },
+                      form.degree === d && { backgroundColor: colors.primary + '15' }
+                    ]}
+                  >
+                    <Text style={[styles.degreeOptionText, { color: form.degree === d ? colors.primary : colors.text }]}>{d}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              // Single-degree coordinator: degree is fixed, show read-only badge
+              <View style={[styles.degreeOption, { backgroundColor: colors.primary + '15', borderColor: colors.primary, alignSelf: 'flex-start', paddingHorizontal: 20 }]}>
+                <Text style={[styles.degreeOptionText, { color: colors.primary }]}>{form.degree}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Deadline Date *</Text>
@@ -279,8 +311,13 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({
         <View style={styles.cardTopRow}>
           <View style={{ flex: 1, marginRight: 8 }}>
             <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
-            <View style={[styles.rolePill, { backgroundColor: colors.primary + '18' }]}>
-              <Text style={[styles.rolePillText, { color: colors.primary }]}>{item.roleSpecificity.replace(/_/g, ' ')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={[styles.rolePill, { backgroundColor: colors.primary + '18' }]}>
+                <Text style={[styles.rolePillText, { color: colors.primary }]}>{item.roleSpecificity.replace(/_/g, ' ')}</Text>
+              </View>
+              <View style={[styles.rolePill, { backgroundColor: '#8B5CF618' }]}>
+                <Text style={[styles.rolePillText, { color: '#8B5CF6' }]}>{(item as any).degree || 'UG'}</Text>
+              </View>
             </View>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
@@ -342,6 +379,7 @@ const DeadlineScreen: React.FC = () => {
   const { user } = useContext(AuthContext);
   const { showAlert } = useContext(AlertContext);
   const navigation = useNavigation<any>();
+  const { selectedDegree, setSelectedDegree } = useDegree();
 
   const isDark = theme === 'dark';
 
@@ -356,36 +394,64 @@ const DeadlineScreen: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
 
-  const isFacultyCoordinator = user?.isFC === true && (user?.role === 'FACULTY' || user?.role === 'ADMIN');
+  // ── Coordinator role flags ──────────────────────────────────────────────────
+  const isUGCoord = user?.isUGCoordinator === true;
+  const isPGCoord = user?.isPGCoordinator === true;
+  const isBothCoordinator = isUGCoord && isPGCoord;
+  // Any coordinator (UG-only, PG-only, both, or admin) can create/edit deadlines
+  const isAnyCoordinator = isUGCoord || isPGCoord || user?.role === 'ADMIN';
+  // For card action buttons: is this user a coordinator for the CURRENTLY SELECTED degree?
+  const isFacultyCoordinator = isAnyCoordinator && (
+    user?.role === 'ADMIN' ||
+    (selectedDegree === 'UG' && isUGCoord) ||
+    (selectedDegree === 'PG' && isPGCoord)
+  );
+  const isStudent = user?.role === 'STUDENT';
+  // Degree toggle in header: only if coordinator manages BOTH tracks or admin
+  const showDegreeSelector = !isStudent && (user?.role === 'ADMIN' || isBothCoordinator);
+  // The fixed degree for a single-track coordinator
+  const fixedDegree: 'UG' | 'PG' = isUGCoord && !isPGCoord ? 'UG' : 'PG';
+
+  useEffect(() => {
+    if (user?.role === 'FACULTY') {
+      if (user?.isUGCoordinator && !user?.isPGCoordinator && selectedDegree !== 'UG') {
+        setSelectedDegree('UG');
+      } else if (!user?.isUGCoordinator && user?.isPGCoordinator && selectedDegree !== 'PG') {
+        setSelectedDegree('PG');
+      }
+    }
+  }, [user, selectedDegree, setSelectedDegree]);
 
   const loadDeadlines = useCallback(async () => {
     if (!user?.token) return;
     try {
       setLoading(true);
-      const data = await getDeadlines();
+      const data = await getDeadlines(selectedDegree);
       setDeadlines(data || []);
     } catch (err: any) {
       showAlert('Error', err?.response?.data?.error || 'Failed to load deadlines');
     } finally {
       setLoading(false);
     }
-  }, [user?.token, showAlert]);
+  }, [user?.token, showAlert, selectedDegree]);
 
   useFocusEffect(useCallback(() => { loadDeadlines(); }, [loadDeadlines]));
 
   const resetForm = useCallback(() => {
-    setForm({ ...EMPTY_FORM, deadlineDate: new Date() });
+    // For both-degree coordinators → use selectedDegree; for single → use their fixed track
+    const defaultDegree = isBothCoordinator ? selectedDegree : fixedDegree;
+    setForm({ ...EMPTY_FORM, deadlineDate: new Date(), degree: defaultDegree });
     setHasPickedDate(false);
     setShowRolePicker(false);
     setShowDatePicker(false);
     setShowTimePicker(false);
-  }, []);
+  }, [selectedDegree, isBothCoordinator, fixedDegree]);
 
   const openCreate = useCallback(() => { resetForm(); setShowCreateModal(true); }, [resetForm]);
 
   const openEdit = useCallback((deadline: DeadlineItem) => {
     setSelectedDeadline(deadline);
-    setForm({ title: deadline.title, description: deadline.description || '', deadlineDate: new Date(deadline.deadlineDate), roleSpecificity: deadline.roleSpecificity });
+    setForm({ title: deadline.title, description: deadline.description || '', deadlineDate: new Date(deadline.deadlineDate), roleSpecificity: deadline.roleSpecificity, degree: (deadline as any).degree || 'UG' });
     setHasPickedDate(true);
     setShowRolePicker(false);
     setShowDatePicker(false);
@@ -402,6 +468,7 @@ const DeadlineScreen: React.FC = () => {
   }, [navigation]);
 
   const handleSelectRole = useCallback((role: RoleOption) => { setForm((f) => ({ ...f, roleSpecificity: role })); setShowRolePicker(false); }, []);
+  const handleSelectDegree = useCallback((degree: 'UG' | 'PG') => { setForm((f) => ({ ...f, degree })); }, []);
   const handlePickDate = useCallback((d: Date) => { setForm((f) => ({ ...f, deadlineDate: d })); setHasPickedDate(true); }, []);
   const handlePickTime = useCallback((d: Date) => { setForm((f) => ({ ...f, deadlineDate: d })); setHasPickedDate(true); }, []);
 
@@ -409,7 +476,14 @@ const DeadlineScreen: React.FC = () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     if (!hasPickedDate) { showAlert('Validation', 'Please select a deadline date and time'); return; }
     try {
-      await createDeadline({ title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), isAutomatic: true, roleSpecificity: form.roleSpecificity });
+      await createDeadline({ 
+        title: form.title.trim(), 
+        description: form.description.trim(), 
+        deadlineDate: toLocalDateTimeString(form.deadlineDate), 
+        isAutomatic: true, 
+        roleSpecificity: form.roleSpecificity,
+        degree: form.degree
+      }, form.degree);
       showAlert('Success', 'Deadline created successfully');
       closeCreate();
       loadDeadlines();
@@ -422,7 +496,13 @@ const DeadlineScreen: React.FC = () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     try {
       if (!selectedDeadline) return;
-      await updateDeadline(selectedDeadline.deadlineId, { title: form.title.trim(), description: form.description.trim(), deadlineDate: toLocalDateTimeString(form.deadlineDate), roleSpecificity: form.roleSpecificity });
+      await updateDeadline(selectedDeadline.deadlineId, { 
+        title: form.title.trim(), 
+        description: form.description.trim(), 
+        deadlineDate: toLocalDateTimeString(form.deadlineDate), 
+        roleSpecificity: form.roleSpecificity,
+        degree: form.degree
+      });
       showAlert('Success', 'Deadline updated successfully');
       closeEdit();
       loadDeadlines();
@@ -482,6 +562,7 @@ const DeadlineScreen: React.FC = () => {
     onHideTimePicker: () => setShowTimePicker(false),
     onHideRolePicker: () => setShowRolePicker(false),
     onSelectRole: handleSelectRole,
+    onSelectDegree: handleSelectDegree,
     onPickDate: handlePickDate,
     onPickTime: handlePickTime,
   };
@@ -493,8 +574,13 @@ const DeadlineScreen: React.FC = () => {
         <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
           <Image source={isDark ? Icons.backWhite : Icons.back} style={[styles.headerIcon, { tintColor: colors.text }]} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Deadlines</Text>
-        {isFacultyCoordinator && (
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Deadlines{!isStudent ? ` (${selectedDegree})` : ''}
+        </Text>
+        {/* Degree toggle: only for both-degree coordinators / admin */}
+        {showDegreeSelector && <DegreeSelector />}
+        {/* Add button: any coordinator can add, students cannot */}
+        {isAnyCoordinator && (
           <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={openCreate} activeOpacity={0.85}>
             <Image source={isDark ? Icons.addWhite : Icons.add} style={[styles.addIcon, { tintColor: '#FFFFFF' }]} />
             <Text style={styles.addBtnText}>Add</Text>
@@ -525,8 +611,8 @@ const DeadlineScreen: React.FC = () => {
         />
       )}
 
-      <FormModal {...sharedModalProps} visible={showCreateModal} isEdit={false} onClose={closeCreate} onSubmit={handleCreate} />
-      <FormModal {...sharedModalProps} visible={showEditModal} isEdit={true} onClose={closeEdit} onSubmit={handleUpdate} />
+      <FormModal {...sharedModalProps} visible={showCreateModal} isEdit={false} isBothCoordinator={isBothCoordinator} onClose={closeCreate} onSubmit={handleCreate} />
+      <FormModal {...sharedModalProps} visible={showEditModal} isEdit={true} isBothCoordinator={isBothCoordinator} onClose={closeEdit} onSubmit={handleUpdate} />
     </SafeAreaView>
   );
 };
@@ -589,4 +675,15 @@ const styles = StyleSheet.create({
   roleOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 13, borderRadius: 10 },
   roleOptionText: { fontSize: 14, fontWeight: '500' },
   roleCheck: { width: 8, height: 8, borderRadius: 4 },
+  degreeOption: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  degreeOptionText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

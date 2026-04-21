@@ -15,12 +15,14 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AlertContext } from '../context/AlertContext';
+import { StudentAuthContext } from '../context/StudentAuthContext';
 import { BASE_URL } from '../api/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
+  const { setStudentUser } = useContext(StudentAuthContext);
   const { colors } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
   const isDark = colors.background === '#111827';
@@ -41,8 +43,8 @@ const MoreScreen: React.FC = () => {
             } catch (e) {
               // Ignore if not signed in with Google
             }
-            await AsyncStorage.removeItem("token");
-            await AsyncStorage.removeItem("studentId");
+            // setUser(null) now handles comprehensive AsyncStorage cleanup
+            setStudentUser(null);
             await setUser(null);
             navigation.replace("Login");
           },

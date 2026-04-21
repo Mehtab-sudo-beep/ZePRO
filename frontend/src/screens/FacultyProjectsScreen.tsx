@@ -20,6 +20,8 @@ import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
+import { useDegree } from '../context/DegreeContext';
+import DegreeSelector from '../components/DegreeSelector';
 
 import {
   getFacultyProjects,
@@ -56,6 +58,7 @@ const FacultyProjectsScreen = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<any>(null);
+  const { selectedDegree } = useDegree();
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
@@ -63,6 +66,7 @@ const FacultyProjectsScreen = () => {
   const [editDesc, setEditDesc] = useState('');
   const [editSlots, setEditSlots] = useState('');
   const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [editDegree, setEditDegree] = useState<'UG'|'PG'>('UG');
 
   const [domains, setDomains] = useState<any[]>([]);
   const [subDomains, setSubDomains] = useState<any[]>([]);
@@ -77,13 +81,18 @@ const FacultyProjectsScreen = () => {
   useEffect(() => {
     if (user?.token) {
       getDomains(user.token).then(d => setDomains(d || [])).catch(() => { });
-      getAllocationRules(user.token).then(rules => {
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.token) {
+      getAllocationRules(editDegree, user.token).then(rules => {
         if (rules && rules.maxTeamSize) {
           setMaxTeamSize(rules.maxTeamSize);
         }
       }).catch(() => {});
     }
-  }, [user]);
+  }, [user, editDegree]);
 
   useEffect(() => {
     if (editDomainId && user?.token) {
@@ -94,13 +103,13 @@ const FacultyProjectsScreen = () => {
   useFocusEffect(
     useCallback(() => {
       if (user?.token) loadProjects();
-    }, [user])
+    }, [user, selectedDegree])
   );
 
   const loadProjects = async () => {
     try {
       setLoading(true);
-      const data: any = await getFacultyProjects(user!.token);
+      const data: any = await getFacultyProjects(selectedDegree, user!.token);
       if (Array.isArray(data)) setProjects(data);
       else if (data?.projects) setProjects(data.projects);
       else setProjects([]);
@@ -121,6 +130,7 @@ const FacultyProjectsScreen = () => {
     setEditSubDomainId(project.subDomainId || null);
     setEditDomainName(project.domain || '');
     setEditSubDomainName(project.subdomain || '');
+    setEditDegree(project.degree || 'UG');
     setEditModalVisible(true);
   };
 
@@ -134,7 +144,7 @@ const FacultyProjectsScreen = () => {
       setProcessingId(editingProject.projectId);
       await updateProject(
         editingProject.projectId,
-        { title: editTitle, description: editDesc, studentSlots: slotCount, domainId: editDomainId, subDomainId: editSubDomainId },
+        { title: editTitle, description: editDesc, studentSlots: slotCount, domainId: editDomainId, subDomainId: editSubDomainId, degree: editDegree },
         user!.token
       );
       setEditModalVisible(false);
@@ -222,7 +232,7 @@ const FacultyProjectsScreen = () => {
         showAlert('Success', 'Documents uploaded successfully');
         
         // Refresh project data to show new docs
-        const data: any = await getFacultyProjects(user!.token);
+        const data: any = await getFacultyProjects(selectedDegree, user!.token);
         const updatedProjects = Array.isArray(data) ? data : (data?.projects || []);
         setProjects(updatedProjects);
         const updatedEditing = updatedProjects.find((p: any) => p.projectId === editingProject.projectId);
@@ -252,7 +262,7 @@ const FacultyProjectsScreen = () => {
               showAlert('Success', 'All documents deleted');
               
               // Refresh
-              const data: any = await getFacultyProjects(user!.token);
+              const data: any = await getFacultyProjects(selectedDegree, user!.token);
               const updatedProjects = Array.isArray(data) ? data : (data?.projects || []);
               setProjects(updatedProjects);
               const updatedEditing = updatedProjects.find((p: any) => p.projectId === editingProject.projectId);
@@ -292,8 +302,9 @@ const FacultyProjectsScreen = () => {
             <Text style={[styles.headerTitle, { color: colors.text }]}>My Projects</Text>
             <Text style={{ color: colors.subText, fontSize: 12 }}>{projects.length} Total Projects</Text>
           </View>
-          <View style={{ width: 40 }} />
+          <DegreeSelector />
         </View>
+
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {loading && projects.length === 0 ? (
@@ -407,8 +418,24 @@ const FacultyProjectsScreen = () => {
                 keyboardType="numeric"
               />
 
+              <Text style={[styles.label, { color: colors.subText, marginTop: 12 }]}>DEGREE LEVEL</Text>
+              <View style={styles.toggleContainer}>
+                <TouchableOpacity 
+                  style={[styles.degreeBtn, editDegree === 'UG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+                  onPress={() => setEditDegree('UG')}
+                >
+                  <Text style={[styles.degreeText, { color: colors.text }, editDegree === 'UG' && { color: '#FFF' }]}>UG Project</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.degreeBtn, editDegree === 'PG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+                  onPress={() => setEditDegree('PG')}
+                >
+                  <Text style={[styles.degreeText, { color: colors.text }, editDegree === 'PG' && { color: '#FFF' }]}>PG Project</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Domain Pickers */}
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16, marginTop: 16 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.label, { color: colors.subText }]}>DOMAIN</Text>
                   <TouchableOpacity 
@@ -567,6 +594,29 @@ const styles = StyleSheet.create({
   emptyWrap: { marginTop: 100, alignItems: 'center' },
   emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySubtitle: { fontSize: 14, textAlign: 'center' },
+
+  // UG/PG Toggle
+  toggleContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  degreeBtnActive: {
+    backgroundColor: '#3B82F6', // Using a default active color, could use colors.primary
+  },
+  degreeText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
   // Project Card
   projectCard: {

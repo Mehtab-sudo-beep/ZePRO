@@ -17,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { AlertContext } from '../context/AlertContext';
+import { useDegree } from '../context/DegreeContext';
+import DegreeSelector from '../components/DegreeSelector';
 import { BASE_URL } from '../api/api';
 
 import {
@@ -88,7 +90,7 @@ const ActionRow = ({
 }) => (
   <TouchableOpacity style={styles.actionRow} onPress={onPress} activeOpacity={0.65}>
     <View style={[styles.actionIconWrap, { backgroundColor: accentSoft }]}>
-      <Icon name={icon} size={17}  />
+      <Icon name={icon} size={17} />
     </View>
     <View style={styles.actionRowText}>
       <Text style={[styles.actionRowLabel, { color: colors.text }]}>{label}</Text>
@@ -118,6 +120,7 @@ const FacultyHomeScreen: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const { selectedDegree, setSelectedDegree } = useDegree();
   const { showAlert } = useContext(AlertContext);
 
   const handleLogout = () => {
@@ -130,13 +133,10 @@ const FacultyHomeScreen: React.FC = () => {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
-            try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
-            await import('@react-native-async-storage/async-storage').then(m => {
-              m.default.removeItem('token');
-              m.default.removeItem('role');
-              m.default.removeItem('facultyId');
-            });
-            setUser(null);
+            try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) { }
+
+            // setUser(null) now handles comprehensive AsyncStorage cleanup
+            await setUser(null);
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
@@ -149,22 +149,25 @@ const FacultyHomeScreen: React.FC = () => {
       if (user?.token && user?.facultyId) {
         loadData();
       }
-    }, [user])
+    }, [user, selectedDegree])
   );
 
   const loadData = async () => {
     try {
       setLoading(true);
       console.log('🔥 [HOME] Fetching profile & projects...');
-      const req = await getPendingRequests(user!.token);
-      const prof = await getFacultyProfile(user!.token);
-      const proj = await getFacultyProjects(user!.token);
-      const meet = await getAllMeetings(user!.token);
+      const req = await getPendingRequests(selectedDegree, user!.token);
+      const prof = await getFacultyProfile(selectedDegree, user!.token);
+      setProfile(prof);
+
+
+
+      const proj = await getFacultyProjects(selectedDegree, user!.token);
+      const meet = await getAllMeetings(selectedDegree, user!.token);
 
       console.log('✅ [HOME] Data fetched. Rules Max Slots:', prof?.maxStudentsPerFaculty);
 
       setRequests(req || []);
-      setProfile(prof);
       setProjects(proj || []);
       setMeetings(meet || []);
     } catch (err: any) {
@@ -176,11 +179,11 @@ const FacultyHomeScreen: React.FC = () => {
 
   if (!user) return null;
   if (user.role !== 'FACULTY') {
-      return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-          <Text style={{ color: colors.text, padding: 20 }}>Loading...</Text>
-        </SafeAreaView>
-      );
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <Text style={{ color: colors.text, padding: 20 }}>Loading...</Text>
+      </SafeAreaView>
+    );
   }
 
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
@@ -196,7 +199,7 @@ const FacultyHomeScreen: React.FC = () => {
             { backgroundColor: colors.card, borderBottomColor: divider },
           ]}
         >
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.headerGreeting, { color: colors.subText }]}>
               Welcome back,
             </Text>
@@ -204,6 +207,7 @@ const FacultyHomeScreen: React.FC = () => {
               {user.name ?? 'Faculty'}
             </Text>
           </View>
+          <DegreeSelector />
           <TouchableOpacity
             style={[styles.avatarBadge, { backgroundColor: accentSoft, overflow: 'hidden' }]}
             onPress={() => setShowMenu(true)}
@@ -222,7 +226,7 @@ const FacultyHomeScreen: React.FC = () => {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          
+
           {/* Quick Stats Summary */}
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
             <View style={[styles.card, { backgroundColor: colors.card, flex: 1, padding: 16 }]}>
@@ -235,11 +239,11 @@ const FacultyHomeScreen: React.FC = () => {
               </View>
             </View>
             <View style={[styles.card, { backgroundColor: colors.card, flex: 1, padding: 16 }]}>
-               <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ACTIVE PROJECTS</Text>
-               <Text style={{ color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4 }}>
-                 {projects.filter(p => p.isActive).length}
-               </Text>
-               <Text style={{ color: colors.subText, fontSize: 10, marginTop: 4 }}>Out of {projects.length} total</Text>
+              <Text style={{ color: colors.subText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>ACTIVE PROJECTS</Text>
+              <Text style={{ color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4 }}>
+                {projects.filter(p => p.isActive).length}
+              </Text>
+              <Text style={{ color: colors.subText, fontSize: 10, marginTop: 4 }}>Out of {projects.length} total</Text>
             </View>
           </View>
 
@@ -280,19 +284,39 @@ const FacultyHomeScreen: React.FC = () => {
             />
           </View>
 
-          {user?.isFC && (
+          {(profile?.isUGCoordinator || profile?.isPGCoordinator) && (
             <>
               <SectionLabel label="Administration" colors={colors} />
-              <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <ActionRow
-                  label="Faculty Coordinator"
-                  sublabel="Access coordinator dashboard"
-                  icon="info"
-                  colors={colors}
-                  accentSoft={isDark ? 'rgba(167,139,250,0.15)' : 'rgba(139,92,246,0.1)'}
-                  onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
-                />
-              </View>
+              {profile?.isUGCoordinator && (
+                <View style={[styles.card, { backgroundColor: colors.card, marginBottom: 12 }]}>
+                  <ActionRow
+                    label="UG Coordinator Activation"
+                    sublabel="Access UG coordinator dashboard"
+                    icon="info"
+                    colors={colors}
+                    accentSoft={isDark ? 'rgba(167,139,250,0.15)' : 'rgba(139,92,246,0.1)'}
+                    onPress={() => {
+                      setSelectedDegree('UG');
+                      navigation.navigate('FacultyCoordinatorDashboard');
+                    }}
+                  />
+                </View>
+              )}
+              {profile?.isPGCoordinator && (
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                  <ActionRow
+                    label="PG Coordinator Activation"
+                    sublabel="Access PG coordinator dashboard"
+                    icon="info"
+                    colors={colors}
+                    accentSoft={isDark ? 'rgba(167,139,250,0.15)' : 'rgba(139,92,246,0.1)'}
+                    onPress={() => {
+                      setSelectedDegree('PG');
+                      navigation.navigate('FacultyCoordinatorDashboard');
+                    }}
+                  />
+                </View>
+              )}
             </>
           )}
 
@@ -345,23 +369,23 @@ const FacultyHomeScreen: React.FC = () => {
             onPress={() => setShowMenu(false)}
           >
             <View style={[styles.menuContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-               <TouchableOpacity 
-                 style={styles.menuItem} 
-                 onPress={() => { setShowMenu(false); navigation.navigate('FacultyProfile'); }}
-               >
-                 <Image source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} style={styles.menuIcon} />
-                 <Text style={[styles.menuText, { color: colors.text }]}>Profile</Text>
-               </TouchableOpacity>
-               
-               <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
-               
-               <TouchableOpacity 
-                 style={styles.menuItem} 
-                 onPress={() => { setShowMenu(false); handleLogout(); }}
-               >
-                 <Image source={require('../assets/leave.png')} style={[styles.menuIcon, { tintColor: '#ef4444' }]} />
-                 <Text style={[styles.menuText, { color: '#ef4444' }]}>Logout</Text>
-               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => { setShowMenu(false); navigation.navigate('FacultyProfile'); }}
+              >
+                <Image source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} style={styles.menuIcon} />
+                <Text style={[styles.menuText, { color: colors.text }]}>Profile</Text>
+              </TouchableOpacity>
+
+              <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => { setShowMenu(false); handleLogout(); }}
+              >
+                <Image source={require('../assets/leave.png')} style={[styles.menuIcon, { tintColor: '#ef4444' }]} />
+                <Text style={[styles.menuText, { color: '#ef4444' }]}>Logout</Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </Modal>
@@ -408,6 +432,23 @@ const styles = StyleSheet.create({
   },
 
   content: { padding: 16, paddingBottom: 8 },
+
+  toggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 12,
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  degreeText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
 
   sectionLabel: {
     fontSize: 11,

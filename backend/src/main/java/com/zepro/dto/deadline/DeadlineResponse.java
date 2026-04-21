@@ -14,12 +14,13 @@ public class DeadlineResponse {
     private String departmentName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String degree;
 
     public DeadlineResponse() {}
 
     public DeadlineResponse(Long deadlineId, String title, String description, LocalDateTime deadlineDate,
                           Boolean isActive, UserRole roleSpecificity, Long departmentId, String departmentName,
-                          LocalDateTime createdAt, LocalDateTime updatedAt) {
+                          LocalDateTime createdAt, LocalDateTime updatedAt, String degree) {
         this.deadlineId = deadlineId;
         this.title = title;
         this.description = description;
@@ -30,6 +31,7 @@ public class DeadlineResponse {
         this.departmentName = departmentName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.degree = degree;
     }
 
     // Getters and Setters
@@ -62,4 +64,7 @@ public class DeadlineResponse {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

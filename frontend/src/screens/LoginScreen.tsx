@@ -38,24 +38,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   const isDark = colors.background === '#111827';
 
-  // --- AUTO LOGIN EFFECT ---
-  useEffect(() => {
-    if (!authLoading && user) {
-      // Restore user state locally to process directly into the app
-      processLoginSession({
-        ...user,
-        inTeam: user.isInTeam,
-        teamLead: user.isTeamLead,
-        fc: user.isFC
-      });
-    }
-  }, [authLoading, user]);
+  // Auto-login is now handled by AppNavigator's conditional routing based on AuthContext
 
   // --- HELPER: SAVE SESSION & NAVIGATE ---
   const processLoginSession = async (data: any) => {
     const {
       token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, fc: isFC, profilePictureUrl, profileComplete
+      email: resEmail, name, phone, isUGCoordinator, isPGCoordinator, profilePictureUrl, profileComplete
     } = data;
 
     // Save basic info
@@ -63,37 +52,24 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     await AsyncStorage.setItem('role', role);
     await AsyncStorage.setItem('userEmail', resEmail || '');
     await AsyncStorage.setItem('userName', name || '');
-    await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
+    await AsyncStorage.setItem('isUGCoordinator', isUGCoordinator ? 'true' : 'false');
+    await AsyncStorage.setItem('isPGCoordinator', isPGCoordinator ? 'true' : 'false');
 
     if (studentId) await AsyncStorage.setItem('studentId', studentId.toString());
     if (facultyId) await AsyncStorage.setItem('facultyId', facultyId.toString());
 
-    // Update Global Auth Context
-    setUser({
-      token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, isFC, profilePictureUrl, profileComplete
-    });
-
     if (role === 'STUDENT') {
-      const studentData = { ...data, isInTeam: data.inTeam, isTeamLead: data.teamLead };
+      const studentData = { ...data, isInTeam: data.isInTeam ?? data.inTeam, isTeamLead: data.isTeamLead ?? data.teamLead };
       await AsyncStorage.setItem('user', JSON.stringify(studentData));
       setStudentUser(studentData);
+    }
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: profileComplete ? 'StudentHome' : 'CompleteProfile' as any }],
-      });
-    }
-    else if (role === 'FACULTY') {
-      if (profileComplete) {
-        navigation.replace('FacultyHome');
-      } else {
-        navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
-      }
-    }
-    else if (role === 'ADMIN') {
-      navigation.replace('InstituteList');
-    }
+    // Update Global Auth Context LAST to prevent AppNavigator from unmounting Login prematurely.
+    // AppNavigator will AUTOMATICALLY route the user to the correct screen based on their role and profile status.
+    setUser({
+      token, role, studentId, facultyId, isInTeam: data.isInTeam ?? data.inTeam, isTeamLead: data.isTeamLead ?? data.teamLead,
+      email: resEmail, name, phone, isUGCoordinator, isPGCoordinator, profilePictureUrl, profileComplete
+    });
   };
 
   // --- HANDLER: STANDARD LOGIN ---
@@ -128,8 +104,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       } catch (e) {
         // Ignore if not previously signed in
       }
+
+      // Ensure clean state before Google login
+      await setUser(null);
+      setStudentUser(null);
       
       const userInfo = await GoogleSignin.signIn();
+      console.log("[Google Sign-In] Raw UserInfo Response:", JSON.stringify(userInfo, null, 2));
 
       let idToken = null;
       if (userInfo && userInfo.data && userInfo.data.idToken) {

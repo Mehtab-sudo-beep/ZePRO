@@ -6,6 +6,15 @@ public class CreateProjectRequest {
     private Long domainId;
     private Long subDomainId;
     private Integer studentSlots; // ✅ NEW
+    private String degree; // UG or PG
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
+    }
     
 
     public String getTitle() {

@@ -5,7 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class CompleteStudentProfileRequest {
     private String rollNumber;
     private Double cgpa;
-    private String year;
+    private String degree;
     private Long instituteId;
     private Long departmentId;
     private MultipartFile resumeFile;
@@ -19,7 +19,7 @@ public class CompleteStudentProfileRequest {
     public CompleteStudentProfileRequest(
             String rollNumber,
             Double cgpa,
-            String year,
+            String degree,
             Long instituteId,
             Long departmentId,
             MultipartFile resumeFile,
@@ -27,7 +27,7 @@ public class CompleteStudentProfileRequest {
             String phone) {
         this.rollNumber = rollNumber;
         this.cgpa = cgpa;
-        this.year = year;
+        this.degree = degree;
         this.instituteId = instituteId;
         this.departmentId = departmentId;
         this.resumeFile = resumeFile;
@@ -42,8 +42,8 @@ public class CompleteStudentProfileRequest {
     public Double getCgpa() { return cgpa; }
     public void setCgpa(Double cgpa) { this.cgpa = cgpa; }
 
-    public String getYear() { return year; }
-    public void setYear(String year) { this.year = year; }
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 
     public Long getInstituteId() { return instituteId; }
     public void setInstituteId(Long instituteId) { this.instituteId = instituteId; }

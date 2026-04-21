@@ -8,16 +8,30 @@ public class JoinRequestResponse {
     private String status;
     private String rejectionReason;
     private String studentEmail;
+    private String studentRollNumber;
+    private double cgpa;
+    private String resumeLink;
+    private String marksheetLink;
 
     public JoinRequestResponse(Long requestId, Long studentId, String studentName, String status,
-            String rejectionReason, String studentEmail) {
+            String rejectionReason, String studentEmail, String studentRollNumber, double cgpa,
+            String resumeLink, String marksheetLink) {
         this.requestId = requestId;
         this.studentId = studentId;
         this.studentName = studentName;
         this.status = status;
         this.rejectionReason = rejectionReason;
         this.studentEmail = studentEmail;
+        this.studentRollNumber = studentRollNumber;
+        this.cgpa = cgpa;
+        this.resumeLink = resumeLink;
+        this.marksheetLink = marksheetLink;
     }
+
+    public String getStudentRollNumber() { return studentRollNumber; }
+    public double getCgpa() { return cgpa; }
+    public String getResumeLink() { return resumeLink; }
+    public String getMarksheetLink() { return marksheetLink; }
 
     public Long getRequestId() {
         return requestId;

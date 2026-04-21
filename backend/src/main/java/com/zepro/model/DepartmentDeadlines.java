@@ -24,6 +24,9 @@ public class DepartmentDeadlines {
     @Column(name = "meeting_scheduling_deadline")
     private LocalDateTime meetingSchedulingDeadline;
 
+    @Column(name = "degree", nullable = false)
+    private String degree = "UG";
+
     // Getters and Setters
 
     public Long getId() {
@@ -64,5 +67,13 @@ public class DepartmentDeadlines {
 
     public void setMeetingSchedulingDeadline(LocalDateTime meetingSchedulingDeadline) {
         this.meetingSchedulingDeadline = meetingSchedulingDeadline;
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

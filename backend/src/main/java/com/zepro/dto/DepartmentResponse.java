@@ -12,10 +12,20 @@ public class DepartmentResponse {
     private String coordinatorEmail;
     private String coordinatorPhone;
 
+    private String ugCoordinatorName;
+    private String ugCoordinatorEmail;
+    private String ugCoordinatorPhone;
+
+    private String pgCoordinatorName;
+    private String pgCoordinatorEmail;
+    private String pgCoordinatorPhone;
+
     // ✅ CONSTRUCTOR
     public DepartmentResponse(Long departmentId, String departmentName, Long instituteId, String instituteName,
                               String departmentCode, String description, String coordinatorName,
-                              String coordinatorEmail, String coordinatorPhone) {
+                              String coordinatorEmail, String coordinatorPhone,
+                              String ugCoordinatorName, String ugCoordinatorEmail, String ugCoordinatorPhone,
+                              String pgCoordinatorName, String pgCoordinatorEmail, String pgCoordinatorPhone) {
         this.departmentId = departmentId;
         this.departmentName = departmentName;
         this.instituteId = instituteId;
@@ -25,6 +35,12 @@ public class DepartmentResponse {
         this.coordinatorName = coordinatorName;
         this.coordinatorEmail = coordinatorEmail;
         this.coordinatorPhone = coordinatorPhone;
+        this.ugCoordinatorName = ugCoordinatorName;
+        this.ugCoordinatorEmail = ugCoordinatorEmail;
+        this.ugCoordinatorPhone = ugCoordinatorPhone;
+        this.pgCoordinatorName = pgCoordinatorName;
+        this.pgCoordinatorEmail = pgCoordinatorEmail;
+        this.pgCoordinatorPhone = pgCoordinatorPhone;
     }
 
     // ✅ DEFAULT CONSTRUCTOR
@@ -57,4 +73,22 @@ public class DepartmentResponse {
 
     public String getCoordinatorPhone() { return coordinatorPhone; }
     public void setCoordinatorPhone(String coordinatorPhone) { this.coordinatorPhone = coordinatorPhone; }
+
+    public String getUgCoordinatorName() { return ugCoordinatorName; }
+    public void setUgCoordinatorName(String ugCoordinatorName) { this.ugCoordinatorName = ugCoordinatorName; }
+
+    public String getUgCoordinatorEmail() { return ugCoordinatorEmail; }
+    public void setUgCoordinatorEmail(String ugCoordinatorEmail) { this.ugCoordinatorEmail = ugCoordinatorEmail; }
+
+    public String getUgCoordinatorPhone() { return ugCoordinatorPhone; }
+    public void setUgCoordinatorPhone(String ugCoordinatorPhone) { this.ugCoordinatorPhone = ugCoordinatorPhone; }
+
+    public String getPgCoordinatorName() { return pgCoordinatorName; }
+    public void setPgCoordinatorName(String pgCoordinatorName) { this.pgCoordinatorName = pgCoordinatorName; }
+
+    public String getPgCoordinatorEmail() { return pgCoordinatorEmail; }
+    public void setPgCoordinatorEmail(String pgCoordinatorEmail) { this.pgCoordinatorEmail = pgCoordinatorEmail; }
+
+    public String getPgCoordinatorPhone() { return pgCoordinatorPhone; }
+    public void setPgCoordinatorPhone(String pgCoordinatorPhone) { this.pgCoordinatorPhone = pgCoordinatorPhone; }
 }

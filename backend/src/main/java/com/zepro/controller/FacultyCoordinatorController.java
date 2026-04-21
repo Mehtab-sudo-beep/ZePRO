@@ -1,4 +1,5 @@
 package com.zepro.controller;
+// refreshing IDE cache
 import com.zepro.dto.facultycoordinator.*;
 import com.zepro.model.Faculty;
 import com.zepro.repository.FacultyRepository;
@@ -28,8 +29,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<DashboardStatsResponse> getDashboardStats(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/rules");
+    public ResponseEntity<DashboardStatsResponse> getDashboardStats(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/stats?degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -46,7 +47,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getDashboardStats(departmentId));
+        return ResponseEntity.ok(coordinatorService.getDashboardStats(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -55,8 +56,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/faculties")
-    public ResponseEntity<List<CoordinatorFacultyResponse>> getAllFaculties(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/faculties");
+    public ResponseEntity<List<CoordinatorFacultyResponse>> getAllFaculties(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/faculties?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -73,7 +74,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getAllFaculties(departmentId));
+        return ResponseEntity.ok(coordinatorService.getAllFaculties(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -82,8 +83,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/faculties/search")
-    public ResponseEntity<List<CoordinatorFacultyResponse>> searchFaculties(@RequestParam String q,Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 🔍 GET /api/coordinator/faculties/search?q=" + q);
+    public ResponseEntity<List<CoordinatorFacultyResponse>> searchFaculties(@RequestParam String q, Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 🔍 GET /api/coordinator/faculties/search?q=" + q + "&degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -100,7 +101,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.searchFaculties(q,departmentId));    
+        return ResponseEntity.ok(coordinatorService.searchFaculties(q, departmentId, degree));    
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -109,8 +110,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/students")
-    public ResponseEntity<List<CoordinatorStudentResponse>> getAllStudents(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/students");
+    public ResponseEntity<List<CoordinatorStudentResponse>> getAllStudents(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/students?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -127,7 +128,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getAllStudents(departmentId));
+        return ResponseEntity.ok(coordinatorService.getAllStudents(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -136,7 +137,7 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/students/search")
-    public ResponseEntity<List<CoordinatorStudentResponse>> searchStudents(@RequestParam String q, Authentication authentication) {
+    public ResponseEntity<List<CoordinatorStudentResponse>> searchStudents(@RequestParam String q, Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
         try {
             String email = authentication.getName();
             
@@ -153,7 +154,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.searchStudents(q, departmentId));
+        return ResponseEntity.ok(coordinatorService.searchStudents(q, departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -162,8 +163,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/students/allocated")
-    public ResponseEntity<List<CoordinatorStudentResponse>> getAllocatedStudents(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/students/allocated");
+    public ResponseEntity<List<CoordinatorStudentResponse>> getAllocatedStudents(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/students/allocated?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -180,7 +181,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getAllocatedStudents(departmentId));
+        return ResponseEntity.ok(coordinatorService.getAllocatedStudents(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -201,8 +202,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/teams")
-    public ResponseEntity<List<CoordinatorTeamResponse>> getAllTeams(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams");
+    public ResponseEntity<List<CoordinatorTeamResponse>> getAllTeams(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -219,7 +220,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getAllTeams(departmentId));
+        return ResponseEntity.ok(coordinatorService.getAllTeams(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -228,8 +229,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/teams/report")
-    public ResponseEntity<AllTeamsReportResponse> getAllTeamsReport(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams/report");
+    public ResponseEntity<AllTeamsReportResponse> getAllTeamsReport(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams/report?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -246,7 +247,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        return ResponseEntity.ok(coordinatorService.getAllTeamsReport(departmentId) );
+        return ResponseEntity.ok(coordinatorService.getAllTeamsReport(departmentId, degree) );
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -255,8 +256,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/teams/report/pdf")
-    public ResponseEntity<byte[]> getAllTeamsReportPdf(Authentication authentication) {
-         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams/report/pdf");
+    public ResponseEntity<byte[]> getAllTeamsReportPdf(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+         System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/teams/report/pdf?degree=" + degree);
           try {
             String email = authentication.getName();
             
@@ -273,7 +274,7 @@ public class FacultyCoordinatorController {
            if(departmentId == null) {
                 return ResponseEntity.status(400).body(null);
             }
-        byte[] pdf = coordinatorService.generateAllTeamsReportPdf(departmentId);
+        byte[] pdf = coordinatorService.generateAllTeamsReportPdf(departmentId, degree);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"teams_report.pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
@@ -288,8 +289,8 @@ public class FacultyCoordinatorController {
 
     // ✅ GET RULES FOR COORDINATOR'S DEPARTMENT
     @GetMapping("/rules")
-    public ResponseEntity<?> getRules(Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/rules");
+    public ResponseEntity<?> getRules(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/rules?degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -309,8 +310,8 @@ public class FacultyCoordinatorController {
                 ));
             }
 
-            AllocationRulesResponse rules = coordinatorService.getRulesByDepartment(departmentId);
-            System.out.println("[FacultyCoordinatorController] ✅ Rules fetched for department: " + departmentId);
+            AllocationRulesResponse rules = coordinatorService.getRulesByDepartment(departmentId, degree);
+            System.out.println("[FacultyCoordinatorController] ✅ Rules fetched for department: " + departmentId + ", degree: " + degree);
             return ResponseEntity.ok(rules);
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
@@ -365,8 +366,8 @@ public class FacultyCoordinatorController {
 
     // ✅ GET DEADLINES FOR COORDINATOR'S DEPARTMENT
     @GetMapping("/deadlines")
-    public ResponseEntity<?> getDeadlines(Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/deadlines");
+    public ResponseEntity<?> getDeadlines(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/deadlines?degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -383,7 +384,7 @@ public class FacultyCoordinatorController {
                 ));
             }
 
-            DepartmentDeadlinesDTO deadlines = coordinatorService.getDeadlines(departmentId);
+            DepartmentDeadlinesDTO deadlines = coordinatorService.getDeadlines(departmentId, degree);
             return ResponseEntity.ok(deadlines);
         } catch (Exception e) {
             e.printStackTrace();
@@ -393,8 +394,10 @@ public class FacultyCoordinatorController {
 
     // ✅ SAVE DEADLINES FOR COORDINATOR'S DEPARTMENT
     @PostMapping("/deadlines")
-    public ResponseEntity<?> saveDeadlines(@RequestBody DepartmentDeadlinesDTO request, Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 💾 POST /api/coordinator/deadlines");
+    public ResponseEntity<?> saveDeadlines(@RequestBody DepartmentDeadlinesDTO request, 
+                                          Authentication authentication,
+                                          @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 💾 POST /api/coordinator/deadlines?degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -411,7 +414,7 @@ public class FacultyCoordinatorController {
                 ));
             }
 
-            coordinatorService.saveDeadlines(departmentId, request);
+            coordinatorService.saveDeadlines(departmentId, request, degree);
             return ResponseEntity.ok(Map.of("message", "Deadlines updated successfully"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -420,8 +423,9 @@ public class FacultyCoordinatorController {
     }
 
     @PostMapping("/deadlines/send-email")
-    public ResponseEntity<?> sendDepartmentDeadlineEmail(Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📧 POST /api/coordinator/deadlines/send-email");
+    public ResponseEntity<?> sendDepartmentDeadlineEmail(Authentication authentication, 
+                                                        @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📧 POST /api/coordinator/deadlines/send-email?degree=" + degree);
         try {
             String email = authentication.getName();
             
@@ -438,7 +442,7 @@ public class FacultyCoordinatorController {
                 ));
             }
 
-            coordinatorService.sendDepartmentDeadlineEmailsManually(departmentId);
+            coordinatorService.sendDepartmentDeadlineEmailsManually(departmentId, degree);
             return ResponseEntity.ok(Map.of("message", "Department deadline emails sent successfully"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -447,8 +451,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/student-team-details")
-    public ResponseEntity<?> getStudentAndTeamDetails(Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/student-team-details");
+    public ResponseEntity<?> getStudentAndTeamDetails(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/student-team-details?degree=" + degree);
         try {
             String email = authentication.getName();
             Faculty faculty = facultyRepository.findByUser_Email(email)
@@ -461,7 +465,7 @@ public class FacultyCoordinatorController {
                 return ResponseEntity.status(400).body(null);
             }
 
-            return ResponseEntity.ok(coordinatorService.getStudentAndTeamDetails(departmentId));
+            return ResponseEntity.ok(coordinatorService.getStudentAndTeamDetails(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             e.printStackTrace();
@@ -470,8 +474,8 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/available-teams")
-    public ResponseEntity<?> getAvailableTeamsToJoin(Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/available-teams");
+    public ResponseEntity<?> getAvailableTeamsToJoin(Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/available-teams?degree=" + degree);
         try {
             String email = authentication.getName();
             Faculty faculty = facultyRepository.findByUser_Email(email)
@@ -484,7 +488,7 @@ public class FacultyCoordinatorController {
                 return ResponseEntity.status(400).body(null);
             }
 
-            return ResponseEntity.ok(coordinatorService.getAvailableTeamsToJoin(departmentId));
+            return ResponseEntity.ok(coordinatorService.getAvailableTeamsToJoin(departmentId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));

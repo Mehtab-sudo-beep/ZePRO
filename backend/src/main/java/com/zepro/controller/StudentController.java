@@ -34,20 +34,17 @@ public class StudentController {
     private final ProjectRepository projectRepository;
     private final ProjectRequestRepository projectRequestRepository;
     private final StudentRepository studentRepository;
-    private final DepartmentRepository departmentRepository;
     private final MeetingRepository meetingRepository;
 
     public StudentController(StudentService studentService,
             ProjectRepository projectRepository,
             ProjectRequestRepository projectRequestRepository,
             StudentRepository studentRepository,
-            DepartmentRepository departmentRepository,
             MeetingRepository meetingRepository) {
         this.studentService = studentService;
         this.projectRepository = projectRepository;
         this.projectRequestRepository = projectRequestRepository;
         this.studentRepository = studentRepository;
-        this.departmentRepository = departmentRepository;
         this.meetingRepository = meetingRepository;
     }
 
@@ -473,7 +470,7 @@ public class StudentController {
             System.out.println("[StudentController] 📥 Request body:");
             System.out.println("  - Roll Number: " + request.getRollNumber());
             System.out.println("  - CGPA: " + request.getCgpa());
-            System.out.println("  - Year: " + request.getYear());
+            System.out.println("  - Degree: " + request.getDegree());
             System.out.println("  - Phone: " + request.getPhone());
             System.out.println("  - Institute ID: " + request.getInstituteId());
             System.out.println("  - Department ID: " + request.getDepartmentId());
@@ -490,7 +487,7 @@ public class StudentController {
             System.out.println("  - Email: " + response.getEmail());
             System.out.println("  - Roll Number: " + response.getRollNumber());
             System.out.println("  - CGPA: " + response.getCgpa());
-            System.out.println("  - Year: " + response.getYear());
+            System.out.println("  - Degree: " + response.getDegree());
             System.out.println("  - Is Profile Complete: " + response.isProfileComplete());
             System.out.println();
 
@@ -525,7 +522,7 @@ public class StudentController {
             System.out.println("  - Email: " + response.getEmail());
             System.out.println("  - Roll Number: " + response.getRollNumber());
             System.out.println("  - CGPA: " + response.getCgpa());
-            System.out.println("  - Year: " + response.getYear());
+            System.out.println("  - Degree: " + response.getDegree());
             System.out.println("  - Department ID: " + response.getDepartmentId());
             System.out.println("  - Department Name: " + response.getDepartmentName());
             System.out.println("  - Resume Link: " + response.getResumeLink());

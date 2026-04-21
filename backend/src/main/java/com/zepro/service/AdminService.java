@@ -125,7 +125,13 @@ public class AdminService {
                         dept.getDescription(),
                         dept.getCoordinatorName(),
                         dept.getCoordinatorEmail(),
-                        dept.getCoordinatorPhone()))
+                        dept.getCoordinatorPhone(),
+                        dept.getUgCoordinatorName(),
+                        dept.getUgCoordinatorEmail(),
+                        dept.getUgCoordinatorPhone(),
+                        dept.getPgCoordinatorName(),
+                        dept.getPgCoordinatorEmail(),
+                        dept.getPgCoordinatorPhone()))
                 .toList();
     }
 
@@ -180,7 +186,13 @@ public class AdminService {
                 saved.getDescription(),
                 saved.getCoordinatorName(),
                 saved.getCoordinatorEmail(),
-                saved.getCoordinatorPhone());
+                saved.getCoordinatorPhone(),
+                saved.getUgCoordinatorName(),
+                saved.getUgCoordinatorEmail(),
+                saved.getUgCoordinatorPhone(),
+                saved.getPgCoordinatorName(),
+                saved.getPgCoordinatorEmail(),
+                saved.getPgCoordinatorPhone());
     }
 
     public UserResponse createUser(CreateUserRequest request) {
@@ -287,7 +299,7 @@ public class AdminService {
                     projectRepository.delete(project);
                 }
 
-                if (faculty.getIsFC() != null && faculty.getIsFC()) {
+                if (faculty.getIsUGCoordinator() || faculty.getIsPGCoordinator()) {
                     Department dept = faculty.getDepartment();
                     if (dept != null && dept.getCoordinatorEmail() != null
                             && dept.getCoordinatorEmail().equals(user.getEmail())) {
@@ -363,58 +375,51 @@ public class AdminService {
     }
 
     // ✅ FIXED ASSIGN FACULTY COORDINATOR TO DEPARTMENT
-    public DepartmentResponse assignFacultyCoordinator(Long facultyId, Long departmentId) {
+    public DepartmentResponse assignFacultyCoordinator(Long facultyId, Long departmentId, String degree) {
 
         System.out.println("[AdminService] 🔍 Assigning coordinator - FacultyId: " + facultyId + ", DepartmentId: "
-                + departmentId);
+                + departmentId + ", Degree: " + degree);
 
-        // ✅ FIXED: Query by userId instead of facultyId
         Faculty faculty = facultyRepository.findByUser_UserId(facultyId)
-                .orElseThrow(() -> {
-                    System.out.println("[AdminService] ❌ Faculty not found with userId: " + facultyId);
-                    return new RuntimeException("Faculty not found with ID: " + facultyId);
-                });
+                .orElseThrow(() -> new RuntimeException("Faculty not found with ID: " + facultyId));
 
-        System.out.println("[AdminService] ✅ Faculty found: " + faculty.getUser().getName());
-
-        // Get department
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> {
-                    System.out.println("[AdminService] ❌ Department not found with id: " + departmentId);
-                    return new RuntimeException("Department not found with ID: " + departmentId);
-                });
+                .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
 
-        System.out.println("[AdminService] ✅ Department found: " + department.getDepartmentName());
-
-        // ✅ FIXED: Check if faculty belongs to this department
         if (!faculty.getDepartment().getDepartmentId().equals(departmentId)) {
-            System.out.println("[AdminService] ❌ Faculty does not belong to this department");
             throw new RuntimeException("Faculty does not belong to this department");
         }
 
-        // ✅ Ensure only one coordinator per department
-        facultyRepository.findByDepartment_DepartmentIdAndIsFC(departmentId, true)
-                .ifPresent(existing -> {
-                    System.out.println(
-                            "[AdminService] 🔄 Removing FC status from existing: " + existing.getUser().getName());
-                    existing.setIsFC(false);
-                    facultyRepository.save(existing);
-                });
+        if ("UG".equalsIgnoreCase(degree) || "BOTH".equalsIgnoreCase(degree)) {
+            // Remove existing UG coordinator flag from others in department
+            facultyRepository.findByDepartment_DepartmentId(departmentId).forEach(f -> {
+                if (f.getIsUGCoordinator() != null && f.getIsUGCoordinator()) {
+                    f.setIsUGCoordinator(false);
+                    facultyRepository.save(f);
+                }
+            });
+            faculty.setIsUGCoordinator(true);
+            department.setUgCoordinatorName(faculty.getUser().getName());
+            department.setUgCoordinatorEmail(faculty.getUser().getEmail());
+            department.setUgCoordinatorPhone(faculty.getPhone());
+        }
 
-        // Update faculty role to FACULTY_COORDINATOR
-        faculty.setIsFC(true);
+        if ("PG".equalsIgnoreCase(degree) || "BOTH".equalsIgnoreCase(degree)) {
+            // Remove existing PG coordinator flag from others in department
+            facultyRepository.findByDepartment_DepartmentId(departmentId).forEach(f -> {
+                if (f.getIsPGCoordinator() != null && f.getIsPGCoordinator()) {
+                    f.setIsPGCoordinator(false);
+                    facultyRepository.save(f);
+                }
+            });
+            faculty.setIsPGCoordinator(true);
+            department.setPgCoordinatorName(faculty.getUser().getName());
+            department.setPgCoordinatorEmail(faculty.getUser().getEmail());
+            department.setPgCoordinatorPhone(faculty.getPhone());
+        }
+
         facultyRepository.save(faculty);
-
-        System.out.println("[AdminService] 📝 Updating department coordinator info");
-
-        // Update department's coordinator
-        department.setCoordinatorName(faculty.getUser().getName());
-        department.setCoordinatorEmail(faculty.getUser().getEmail());
-        department.setCoordinatorPhone(faculty.getPhone());
-
         Department updated = departmentRepository.save(department);
-
-        System.out.println("[AdminService] ✅ Coordinator assigned successfully");
 
         return new DepartmentResponse(
                 updated.getDepartmentId(),
@@ -425,22 +430,43 @@ public class AdminService {
                 updated.getDescription(),
                 updated.getCoordinatorName(),
                 updated.getCoordinatorEmail(),
-                updated.getCoordinatorPhone());
+                updated.getCoordinatorPhone(),
+                updated.getUgCoordinatorName(),
+                updated.getUgCoordinatorEmail(),
+                updated.getUgCoordinatorPhone(),
+                updated.getPgCoordinatorName(),
+                updated.getPgCoordinatorEmail(),
+                updated.getPgCoordinatorPhone());
     }
 
     // ✅ GET FACULTY BY DEPARTMENT
-    public List<UserResponse> getFacultyByDepartment(Long departmentId) {
-        System.out.println("[AdminService] 📡 Fetching faculty for department: " + departmentId);
+    public List<UserResponse> getFacultyByDepartment(Long departmentId, String degree) {
+        System.out.println("[AdminService] 📡 Fetching faculty for department: " + departmentId + (degree != null ? ", degree: " + degree : ""));
 
         List<UserResponse> response = facultyRepository.findByDepartment_DepartmentId(departmentId)
                 .stream()
-                .map(f -> new UserResponse(
+                .filter(f -> {
+                    if (degree == null || degree.equalsIgnoreCase("BOTH")) return true;
+                    if (degree.equalsIgnoreCase("UG")) return f.getIsUGCoordinator() != null && f.getIsUGCoordinator();
+                    if (degree.equalsIgnoreCase("PG")) return f.getIsPGCoordinator() != null && f.getIsPGCoordinator();
+                    return true;
+                })
+                .map(f -> {
+                    String type = "NONE";
+                    boolean ug = f.getIsUGCoordinator() != null && f.getIsUGCoordinator();
+                    boolean pg = f.getIsPGCoordinator() != null && f.getIsPGCoordinator();
+                    if (ug && pg) type = "BOTH";
+                    else if (ug) type = "UG";
+                    else if (pg) type = "PG";
+
+                    return new UserResponse(
                         f.getUser().getUserId(),
                         f.getUser().getName(),
                         f.getUser().getEmail(),
                         f.getUser().getRole(),
                         f.getEmployeeId(),
-                        f.getIsFC()))
+                        type);
+                })
                 .toList();
 
         System.out.println("[AdminService] ✅ Found " + response.size() + " faculty members");
@@ -448,11 +474,15 @@ public class AdminService {
     }
 
     // ✅ GET STUDENTS BY DEPARTMENT
-    public List<UserResponse> getStudentsByDepartment(Long departmentId) {
-        System.out.println("[AdminService] 📡 Fetching students for department: " + departmentId);
+    public List<UserResponse> getStudentsByDepartment(Long departmentId, String degree) {
+        System.out.println("[AdminService] 📡 Fetching students for department: " + departmentId + (degree != null ? ", degree: " + degree : ""));
 
         List<UserResponse> response = studentRepository.findByDepartment_DepartmentId(departmentId)
                 .stream()
+                .filter(s -> {
+                    if (degree == null || degree.equalsIgnoreCase("BOTH")) return true;
+                    return degree.equalsIgnoreCase(s.getDegree());
+                })
                 .map(s -> new UserResponse(
                         s.getUser().getUserId(),
                         s.getUser().getName(),
@@ -492,21 +522,33 @@ public class AdminService {
         }
 
         // ✅ Check if faculty is actually a coordinator
-        if (!faculty.getIsFC()) {
+        if (!faculty.getIsUGCoordinator() && !faculty.getIsPGCoordinator()) {
             System.out.println("[AdminService] ❌ Faculty is not a coordinator");
             throw new RuntimeException("Faculty is not a coordinator");
         }
 
         System.out.println("[AdminService] 📝 Removing coordinator status");
 
-        // ✅ Set isFC to false
-        faculty.setIsFC(false);
+        // ✅ Remove coordinator status
+        faculty.setIsUGCoordinator(false);
+        faculty.setIsPGCoordinator(false);
         facultyRepository.save(faculty);
 
         // ✅ Clear department coordinator info
         department.setCoordinatorName(null);
         department.setCoordinatorEmail(null);
         department.setCoordinatorPhone(null);
+        
+        if (faculty.getUser().getName().equals(department.getUgCoordinatorName())) {
+            department.setUgCoordinatorName(null);
+            department.setUgCoordinatorEmail(null);
+            department.setUgCoordinatorPhone(null);
+        }
+        if (faculty.getUser().getName().equals(department.getPgCoordinatorName())) {
+            department.setPgCoordinatorName(null);
+            department.setPgCoordinatorEmail(null);
+            department.setPgCoordinatorPhone(null);
+        }
 
         Department updated = departmentRepository.save(department);
 
@@ -521,25 +563,38 @@ public class AdminService {
                 updated.getDescription(),
                 updated.getCoordinatorName(),
                 updated.getCoordinatorEmail(),
-                updated.getCoordinatorPhone());
+                updated.getCoordinatorPhone(),
+                updated.getUgCoordinatorName(),
+                updated.getUgCoordinatorEmail(),
+                updated.getUgCoordinatorPhone(),
+                updated.getPgCoordinatorName(),
+                updated.getPgCoordinatorEmail(),
+                updated.getPgCoordinatorPhone());
     }
 
     // ✅ GET DEPARTMENT STATS
-    public DepartmentStatsResponse getDepartmentStats(Long departmentId) {
+    public DepartmentStatsResponse getDepartmentStats(Long departmentId, String degree) {
 
-        System.out.println("[AdminService] 📊 Fetching stats for department: " + departmentId);
+        System.out.println("[AdminService] 📊 Fetching stats for department: " + departmentId + (degree != null ? ", degree: " + degree : ""));
 
         Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found"));
 
-        // Count students in this department
-        long studentCount = studentRepository.countByDepartment_DepartmentId(departmentId);
+        long studentCount;
+        long facultyCount;
+        long projectCount;
 
-        // Count faculty in this department
-        long facultyCount = facultyRepository.countByDepartment_DepartmentId(departmentId);
-
-        // Count projects in this department
-        long projectCount = projectRepository.countByFaculty_Department_DepartmentId(departmentId);
+        if (degree == null || degree.equalsIgnoreCase("BOTH")) {
+            studentCount = studentRepository.countByDepartment_DepartmentId(departmentId);
+            facultyCount = facultyRepository.countByDepartment_DepartmentId(departmentId);
+            projectCount = projectRepository.countByFaculty_Department_DepartmentId(departmentId);
+        } else {
+            studentCount = studentRepository.countByDepartment_DepartmentIdAndDegree(departmentId, degree.toUpperCase());
+            // For faculty, count those who are coordinators for that degree OR just all? 
+            // Usually we show all faculty. I'll keep facultyCount as total for the department unless we have degree specific faculty.
+            facultyCount = facultyRepository.countByDepartment_DepartmentId(departmentId); 
+            projectCount = projectRepository.countByFaculty_Department_DepartmentIdAndDegree(departmentId, degree.toUpperCase());
+        }
 
         System.out.println("[AdminService] ✅ Students: " + studentCount + ", Faculty: " + facultyCount + ", Projects: "
                 + projectCount);
@@ -596,7 +651,7 @@ public class AdminService {
                 allocatedStudents,
                 maxCapacity,
                 projectsCount,
-                faculty.getIsFC() ? "FACULTY_COORDINATOR" : "FACULTY");
+                (faculty.getIsUGCoordinator() || faculty.getIsPGCoordinator()) ? "FACULTY_COORDINATOR" : "FACULTY");
     }
 
     // ✅ GET STUDENT DASHBOARD STATS
@@ -619,7 +674,7 @@ public class AdminService {
                 student.getUser().getName(),
                 student.getDepartment().getDepartmentName(),
                 student.getCgpa(),
-                student.getYear(),
+                student.getDegree(),
                 isAllocated,
                 isInTeam,
                 student.isTeamLead(),
@@ -669,8 +724,6 @@ public class AdminService {
                         .countByIsAllocatedTrueAndDepartment_DepartmentId(department.getDepartmentId());
                 long unallocated = studentRepository
                         .countByIsAllocatedFalseAndDepartment_DepartmentId(department.getDepartmentId());
-                int totalMembersInTeams = allTeams.stream()
-                        .mapToInt(t -> t.getMembers() == null ? 0 : t.getMembers().size()).sum();
 
                 float margin = 40;
                 float pageWidth = page.getMediaBox().getWidth();

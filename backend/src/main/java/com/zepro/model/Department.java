@@ -17,6 +17,14 @@ public class Department {
     private String coordinatorEmail;
     private String coordinatorPhone;
 
+    private String ugCoordinatorName;
+    private String ugCoordinatorEmail;
+    private String ugCoordinatorPhone;
+
+    private String pgCoordinatorName;
+    private String pgCoordinatorEmail;
+    private String pgCoordinatorPhone;
+
     @ManyToOne
     private Institute institute;
 
@@ -50,6 +58,24 @@ public class Department {
 
     public String getCoordinatorPhone() { return coordinatorPhone; }
     public void setCoordinatorPhone(String coordinatorPhone) { this.coordinatorPhone = coordinatorPhone; }
+
+    public String getUgCoordinatorName() { return ugCoordinatorName; }
+    public void setUgCoordinatorName(String ugCoordinatorName) { this.ugCoordinatorName = ugCoordinatorName; }
+
+    public String getUgCoordinatorEmail() { return ugCoordinatorEmail; }
+    public void setUgCoordinatorEmail(String ugCoordinatorEmail) { this.ugCoordinatorEmail = ugCoordinatorEmail; }
+
+    public String getUgCoordinatorPhone() { return ugCoordinatorPhone; }
+    public void setUgCoordinatorPhone(String ugCoordinatorPhone) { this.ugCoordinatorPhone = ugCoordinatorPhone; }
+
+    public String getPgCoordinatorName() { return pgCoordinatorName; }
+    public void setPgCoordinatorName(String pgCoordinatorName) { this.pgCoordinatorName = pgCoordinatorName; }
+
+    public String getPgCoordinatorEmail() { return pgCoordinatorEmail; }
+    public void setPgCoordinatorEmail(String pgCoordinatorEmail) { this.pgCoordinatorEmail = pgCoordinatorEmail; }
+
+    public String getPgCoordinatorPhone() { return pgCoordinatorPhone; }
+    public void setPgCoordinatorPhone(String pgCoordinatorPhone) { this.pgCoordinatorPhone = pgCoordinatorPhone; }
 
     public Institute getInstitute() {
         return institute;

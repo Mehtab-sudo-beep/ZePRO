@@ -21,6 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { getFacultyByDepartment, assignFacultyCoordinator, removeFacultyCoordinator, getDepartmentStats, getStudentsByDepartment, deleteUser } from '../api/departmentApi';
+import { useDegree } from '../context/DegreeContext';
+import DegreeSelector from '../components/DegreeSelector';
 
 const { width } = Dimensions.get('window');
 
@@ -33,7 +35,9 @@ interface UserItem {
   email: string;
   role: string;
   rollNumber?: string;
-  isFC?: boolean;
+  isUGCoordinator?: boolean;
+  isPGCoordinator?: boolean;
+  coordinatorType?: string;
 }
 
 type TabType = 'FACULTY' | 'STUDENTS';
@@ -52,6 +56,7 @@ const DepartmentDetailsScreen: React.FC = () => {
   const route = useRoute<RoutePropType>();
   const { showAlert } = useContext(AlertContext);
   const { colors, theme } = useContext(ThemeContext);
+  const { selectedDegree } = useDegree();
 
   const { departmentId, departmentName, instituteId, instituteName } = route.params || {};
 
@@ -78,13 +83,13 @@ const DepartmentDetailsScreen: React.FC = () => {
       setLoading(true);
       const [facRes, studRes] = await Promise.all([
         getFacultyByDepartment(String(departmentId)),
-        getStudentsByDepartment(String(departmentId))
+        getStudentsByDepartment(String(departmentId), selectedDegree)
       ]);
       
       setFacultyList(facRes.data || []);
       setStudentList(studRes.data || []);
 
-      const coordinator = facRes.data?.find((f: UserItem) => f.isFC);
+      const coordinator = facRes.data?.find((f: UserItem) => f.coordinatorType && f.coordinatorType !== 'NONE');
       setCurrentCoordinator(coordinator || null);
     } catch (error: any) {
       if (error.response?.status === 403) {
@@ -93,50 +98,64 @@ const DepartmentDetailsScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [departmentId, showAlert]);
+  }, [departmentId, showAlert, selectedDegree]);
 
   const loadStats = useCallback(async () => {
     try {
-      const statsRes = await getDepartmentStats(String(departmentId));
+      const statsRes = await getDepartmentStats(String(departmentId), selectedDegree);
       setStats({
         totalStudents: statsRes.data.studentCount,
         totalFaculty: statsRes.data.facultyCount,
         totalProjects: statsRes.data.projectCount,
       });
     } catch (e) {}
-  }, [departmentId]);
+  }, [departmentId, selectedDegree]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
       loadStats();
-    }, [loadData, loadStats])
+    }, [loadData, loadStats, selectedDegree])
   );
+
+  useEffect(() => {
+    loadData();
+  }, [selectedDegree]);
 
   const handleAssignCoordinator = async (faculty: UserItem) => {
     showAlert(
       'Assign FC',
-      `Make "${faculty.name}" the Faculty Coordinator?`,
+      `Make "${faculty.name}" the Faculty Coordinator for:`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
-          onPress: async () => {
-            setAssigning(true);
-            try {
-              await assignFacultyCoordinator(String(departmentId), faculty.userId);
-              showAlert('Success', 'Coordinator assigned');
-              loadData();
-              setShowModal(false);
-            } catch (error: any) {
-              showAlert('Error', 'Failed to assign');
-            } finally {
-              setAssigning(false);
-            }
-          },
+          text: 'UG',
+          onPress: () => confirmAssign(faculty, 'UG'),
+        },
+        {
+          text: 'PG',
+          onPress: () => confirmAssign(faculty, 'PG'),
+        },
+        {
+          text: 'Both',
+          onPress: () => confirmAssign(faculty, 'BOTH'),
         },
       ]
     );
+  };
+
+  const confirmAssign = async (faculty: UserItem, degree: string) => {
+    setAssigning(true);
+    try {
+      await assignFacultyCoordinator(String(departmentId), faculty.userId, degree);
+      showAlert('Success', `${degree} Coordinator assigned`);
+      loadData();
+      setShowModal(false);
+    } catch (error: any) {
+      showAlert('Error', 'Failed to assign');
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const handleRemoveCoordinator = () => {
@@ -195,7 +214,7 @@ const DepartmentDetailsScreen: React.FC = () => {
 
   const renderMemberCard = (item: UserItem) => {
     const isFaculty = activeTab === 'FACULTY';
-    const isCoordinator = isFaculty && item.isFC;
+    const isCoordinator = isFaculty && item.coordinatorType && item.coordinatorType !== 'NONE';
     
     return (
       <View key={item.userId} style={[styles.card, { backgroundColor: colors.card }]}>
@@ -208,7 +227,9 @@ const DepartmentDetailsScreen: React.FC = () => {
           {isFaculty ? (
             isCoordinator ? (
               <View style={[styles.pill, { backgroundColor: '#16A34A15' }]}>
-                <Text style={[styles.pillText, { color: '#16A34A' }]}>COORDINATOR</Text>
+                <Text style={[styles.pillText, { color: '#16A34A' }]}>
+                  {item.coordinatorType && item.coordinatorType !== 'NONE' ? `FC (${item.coordinatorType})` : 'COORDINATOR'}
+                </Text>
               </View>
             ) : (
               <View style={[styles.pill, { backgroundColor: colors.primary + '15' }]}>
@@ -268,6 +289,7 @@ const DepartmentDetailsScreen: React.FC = () => {
           <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{departmentName}</Text>
           <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={1}>{instituteName}</Text>
         </View>
+        <DegreeSelector />
         <TouchableOpacity 
           style={[styles.addUserBtn, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('AddUser', { departmentId: String(departmentId), departmentName: String(departmentName), instituteId: String(instituteId), instituteName: String(instituteName) })}

@@ -4,35 +4,35 @@ const PREFIX = '/api/coordinator';
 
 export const coordinatorApi = {
   // ✅ STATS
-  getDashboardStats: () =>
-    API.get(`${PREFIX}/stats`).then(res => res.data),
+  getDashboardStats: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/stats?degree=${degree}`).then(res => res.data),
 
   // ✅ FACULTIES
-  getAllFaculties: () =>
-    API.get(`${PREFIX}/faculties`).then(res => res.data),
+  getAllFaculties: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/faculties?degree=${degree}`).then(res => res.data),
 
-  searchFaculties: (query: string) =>
-    API.get(`${PREFIX}/faculties/search?q=${encodeURIComponent(query)}`).then(res => res.data),
+  searchFaculties: (query: string, degree: string = 'UG') =>
+    API.get(`${PREFIX}/faculties/search?q=${encodeURIComponent(query)}&degree=${degree}`).then(res => res.data),
 
   // ✅ STUDENTS
-  getAllStudents: () =>
-    API.get(`${PREFIX}/students`).then(res => res.data),
+  getAllStudents: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/students?degree=${degree}`).then(res => res.data),
 
-  searchStudents: (query: string) =>
-    API.get(`${PREFIX}/students/search?q=${encodeURIComponent(query)}`).then(res => res.data),
+  searchStudents: (query: string, degree: string = 'UG') =>
+    API.get(`${PREFIX}/students/search?q=${encodeURIComponent(query)}&degree=${degree}`).then(res => res.data),
 
-  getAllocatedStudents: () =>
-    API.get(`${PREFIX}/students/allocated`).then(res => res.data),
+  getAllocatedStudents: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/students/allocated?degree=${degree}`).then(res => res.data),
 
   // ✅ TEAMS
-  getAllTeams: () =>
-    API.get(`${PREFIX}/teams`).then(res => res.data),
+  getAllTeams: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/teams?degree=${degree}`).then(res => res.data),
 
-  getAllTeamsReport: () =>
-    API.get(`${PREFIX}/teams/report`).then(res => res.data),
+  getAllTeamsReport: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/teams/report?degree=${degree}`).then(res => res.data),
 
-  downloadTeamsReportPdf: () =>
-    API.get(`${PREFIX}/teams/report/pdf`, { responseType: 'blob' }).then(res => res.data),
+  downloadTeamsReportPdf: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/teams/report/pdf?degree=${degree}`, { responseType: 'blob' }).then(res => res.data),
 
   // ✅ ALLOCATION
   allocateStudent: (studentId: string, facultyId: string) =>
@@ -42,28 +42,28 @@ export const coordinatorApi = {
     API.post(`${PREFIX}/override`, { studentId, newFacultyId }).then(res => res.data),
 
   // ✅ RULES
-  getRules: () =>
-    API.get(`${PREFIX}/rules`).then(res => res.data),
+  getRules: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/rules?degree=${degree}`).then(res => res.data),
 
   saveRules: (rules: any) =>
     API.post(`${PREFIX}/rules`, rules).then(res => res.data),
 
   // ✅ DEPARTMENT DEADLINES
-  getDeadlines: () =>
-    API.get(`${PREFIX}/deadlines`).then(res => res.data),
+  getDeadlines: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/deadlines?degree=${degree}`).then(res => res.data),
 
-  saveDeadlines: (deadlines: any) =>
-    API.post(`${PREFIX}/deadlines`, deadlines).then(res => res.data),
+  saveDeadlines: (deadlines: any, degree: string = 'UG') =>
+    API.post(`${PREFIX}/deadlines?degree=${degree}`, deadlines).then(res => res.data),
 
-  sendDepartmentDeadlineEmail: () =>
-    API.post(`${PREFIX}/deadlines/send-email`).then(res => res.data),
+  sendDepartmentDeadlineEmail: (degree: string = 'UG') =>
+    API.post(`${PREFIX}/deadlines/send-email?degree=${degree}`).then(res => res.data),
 
   // ✅ STUDENTS AND TEAMS
-  getStudentAndTeamDetails: () =>
-    API.get(`${PREFIX}/student-team-details`).then(res => res.data),
+  getStudentAndTeamDetails: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/student-team-details?degree=${degree}`).then(res => res.data),
 
-  getAvailableTeamsToJoin: () =>
-    API.get(`${PREFIX}/available-teams`).then(res => res.data),
+  getAvailableTeamsToJoin: (degree: string = 'UG') =>
+    API.get(`${PREFIX}/available-teams?degree=${degree}`).then(res => res.data),
 
   getFacultyProjects: (facultyId: string) =>
     API.get(`${PREFIX}/faculty-projects/${facultyId}`).then(res => res.data),

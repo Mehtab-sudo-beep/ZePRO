@@ -166,6 +166,7 @@ const CreateProjectScreen = () => {
   const [loading, setLoading] = useState(false);
   const [maxTeamSize, setMaxTeamSize] = useState(10);
   const [documents, setDocuments] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
+  const [degree, setDegree] = useState<'UG' | 'PG'>('UG');
 
   const isDark = colors.background === '#111827';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
@@ -174,13 +175,13 @@ const CreateProjectScreen = () => {
   useEffect(() => {
     if (user?.token) {
       loadDomains();
-      loadRules();
+      loadRules(degree);
     }
-  }, [user]);
+  }, [user, degree]);
 
-  const loadRules = async () => {
+  const loadRules = async (selectedDegree: string) => {
     try {
-      const rules = await getAllocationRules(user!.token);
+      const rules = await getAllocationRules(selectedDegree, user!.token);
       if (rules && rules.maxTeamSize) {
         setMaxTeamSize(rules.maxTeamSize);
       }
@@ -248,6 +249,7 @@ const CreateProjectScreen = () => {
           domainId,
           subDomainId,
           studentSlots: slotCount,
+          degree,
         },
         user!.token,
       );
@@ -376,6 +378,25 @@ const CreateProjectScreen = () => {
               maxLength={2}
               editable={!loading}
             />
+
+            {/* UG/PG Toggle */}
+            <Text style={[styles.fieldLabel, { color: colors.text, marginTop: 12 }]}>
+              Project Degree Level
+            </Text>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity 
+                style={[styles.degreeBtn, degree === 'UG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+                onPress={() => setDegree('UG')}
+              >
+                <Text style={[styles.degreeText, { color: colors.text }, degree === 'UG' && { color: '#FFF' }]}>UG Project</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.degreeBtn, degree === 'PG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+                onPress={() => setDegree('PG')}
+              >
+                <Text style={[styles.degreeText, { color: colors.text }, degree === 'PG' && { color: '#FFF' }]}>PG Project</Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={[styles.fieldLabel, { color: colors.text, marginTop: 12 }]}>
               Domain
@@ -635,6 +656,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'right',
     marginBottom: 12,
+  },
+
+  // UG/PG Toggle
+  toggleContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  degreeBtnActive: {
+    backgroundColor: '#3B82F6',
+  },
+  degreeText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   selector: {

@@ -8,15 +8,17 @@ public class CreateDeadlineRequest {
     private String description;
     private LocalDateTime deadlineDate;
     private UserRole roleSpecificity;
+    private String degree;
 
     public CreateDeadlineRequest() {}
 
     public CreateDeadlineRequest(String title, String description, LocalDateTime deadlineDate, 
-                               UserRole roleSpecificity) {
+                               UserRole roleSpecificity, String degree) {
         this.title = title;
         this.description = description;
         this.deadlineDate = deadlineDate;
         this.roleSpecificity = roleSpecificity;
+        this.degree = degree;
     }
 
     // Getters and Setters
@@ -31,4 +33,7 @@ public class CreateDeadlineRequest {
 
     public UserRole getRoleSpecificity() { return roleSpecificity; }
     public void setRoleSpecificity(UserRole roleSpecificity) { this.roleSpecificity = roleSpecificity; }
+
+    public String getDegree() { return degree; }
+    public void setDegree(String degree) { this.degree = degree; }
 }

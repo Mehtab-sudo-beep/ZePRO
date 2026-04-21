@@ -39,6 +39,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [rescheduleForm, setRescheduleForm] = useState<Partial<any>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
+  const [selectedDegree, setSelectedDegree] = useState<'UG' | 'PG'>('UG');
 
   // ✅ NEW: Separate date/time states for reschedule modal
   const [scheduledDate, setScheduledDate] = useState(new Date());
@@ -51,14 +52,14 @@ const FacultyViewMeetingsScreen: React.FC = () => {
       if (user?.token) {
         loadMeetings();
       }
-    }, [user?.token])
+    }, [user?.token, selectedDegree])
   );
 
   const loadMeetings = async () => {
     try {
       setLoading(true);
       if (!user?.token) return;
-      const data = await getAllMeetings(user!.token);
+      const data = await getAllMeetings(selectedDegree, user!.token);
       setMeetings(data || []);
     } catch (err) {
       console.log('Error loading meetings:', err);
@@ -539,6 +540,22 @@ const FacultyViewMeetingsScreen: React.FC = () => {
           <Text style={[styles.headerTitle, { color: colors.text }]}>My Meetings</Text>
         </View>
 
+        {/* UG/PG Toggle */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity 
+            style={[styles.degreeBtn, selectedDegree === 'UG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+            onPress={() => setSelectedDegree('UG')}
+          >
+            <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'UG' && { color: '#FFF' }]}>UG Meetings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.degreeBtn, selectedDegree === 'PG' && styles.degreeBtnActive, { borderColor: colors.primary }]}
+            onPress={() => setSelectedDegree('PG')}
+          >
+            <Text style={[styles.degreeText, { color: colors.text }, selectedDegree === 'PG' && { color: '#FFF' }]}>PG Meetings</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={[styles.filterRow, { backgroundColor: colors.card }]}>
           {(['all', 'upcoming', 'completed', 'cancelled'] as const).map(f => (
             <TouchableOpacity
@@ -682,6 +699,29 @@ const styles = StyleSheet.create({
   listContent: { padding: 16, paddingBottom: 32 },
   emptyBox: { borderRadius: 12, padding: 40, alignItems: 'center' },
   emptyText: { fontSize: 15 },
+  
+  // UG/PG Toggle
+  toggleContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  degreeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  degreeBtnActive: {
+    backgroundColor: '#3B82F6',
+  },
+  degreeText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   card: {
     borderRadius: 14,
     padding: 16,

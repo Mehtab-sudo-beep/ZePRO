@@ -225,6 +225,18 @@ const ProfileScreen: React.FC = () => {
             <Text style={[styles.profileEmail, { color: colors.subText }]}>
               {profile.email}
             </Text>
+            {profile.degree && (
+              <View style={[styles.degreeBadge, {
+                backgroundColor: profile.degree === 'PG' ? '#8B5CF615' : colors.primary + '18',
+                borderColor: profile.degree === 'PG' ? '#8B5CF6' : colors.primary,
+              }]}>
+                <Text style={[styles.degreeBadgeText, {
+                  color: profile.degree === 'PG' ? '#8B5CF6' : colors.primary,
+                }]}>
+                  {profile.degree} Student
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -232,6 +244,7 @@ const ProfileScreen: React.FC = () => {
         <ScrollView style={[styles.list, { backgroundColor: colors.card }]}>
           <InfoItem label="Institute" value={profile.institute} colors={colors} user={user} />
           <InfoItem label="Department" value={profile.department} colors={colors} user={user} />
+          <InfoItem label="Degree" value={profile.degree} colors={colors} user={user} />
           <InfoItem label="Team" value={profile.teamName} colors={colors} user={user} />
           <InfoItem
             label="Role"
@@ -433,5 +446,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginVertical: 10,
-  }
+  },
+  degreeBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  degreeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 });

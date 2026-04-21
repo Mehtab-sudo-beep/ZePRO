@@ -41,6 +41,9 @@ public class Project {
     @Column(name = "maximum_slots_reached_till_now")
     private int maximumSlotsReachedTillNow = 0;
 
+    @Column(name = "degree")
+    private String degree; // UG or PG
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "project_documents", joinColumns = @JoinColumn(name = "project_id"))
     @Column(name = "document_url", length = 500)
@@ -143,5 +146,13 @@ public class Project {
         this.previousStatus = this.presentStatus;
         this.presentStatus = newStatus;
         this.status = newStatus;
+    }
+
+    public String getDegree() {
+        return degree;
+    }
+
+    public void setDegree(String degree) {
+        this.degree = degree;
     }
 }

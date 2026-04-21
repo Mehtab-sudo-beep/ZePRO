@@ -30,16 +30,18 @@ export const getUsersByDepartment = (departmentId: string) => {
 };
 
 // ✅ GET FACULTY BY DEPARTMENT
-export const getFacultyByDepartment = (departmentId: string) => {
-  console.log('📡 GET /admin/department/' + departmentId + '/faculty');
-  return API.get(`/admin/department/${departmentId}/faculty`);
+export const getFacultyByDepartment = (departmentId: string, degree?: string) => {
+  const url = `/admin/department/${departmentId}/faculty` + (degree ? `?degree=${degree}` : '');
+  console.log('📡 GET ' + url);
+  return API.get(url);
 };
 
 // ✅ ASSIGN FACULTY COORDINATOR - FIXED ENDPOINT
-export const assignFacultyCoordinator = (departmentId: string, facultyId: string) => {
+export const assignFacultyCoordinator = (departmentId: string, facultyId: string, degree: string) => {
   const payload = {
     facultyId: parseInt(facultyId),
     departmentId: parseInt(departmentId),
+    degree: degree,
   };
   
   console.log('📤 POST /admin/department/' + departmentId + '/coordinator');
@@ -55,15 +57,17 @@ export const removeFacultyCoordinator = (departmentId: string, facultyId: string
 };
 
 // ✅ GET DEPARTMENT STATS
-export const getDepartmentStats = (departmentId: string) => {
-  console.log('📊 GET /admin/department/' + departmentId + '/stats');
-  return API.get(`/admin/department/${departmentId}/stats`);
+export const getDepartmentStats = (departmentId: string, degree?: string) => {
+  const url = `/admin/department/${departmentId}/stats` + (degree ? `?degree=${degree}` : '');
+  console.log('📊 GET ' + url);
+  return API.get(url);
 };
 
 // ✅ GET STUDENTS BY DEPARTMENT
-export const getStudentsByDepartment = (departmentId: string) => {
-  console.log('📡 GET /admin/department/' + departmentId + '/students');
-  return API.get(`/admin/department/${departmentId}/students`);
+export const getStudentsByDepartment = (departmentId: string, degree?: string) => {
+  const url = `/admin/department/${departmentId}/students` + (degree ? `?degree=${degree}` : '');
+  console.log('📡 GET ' + url);
+  return API.get(url);
 };
 
 // ✅ DELETE USER

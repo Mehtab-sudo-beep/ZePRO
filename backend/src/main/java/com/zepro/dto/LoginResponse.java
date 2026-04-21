@@ -11,11 +11,12 @@ public class LoginResponse {
     private String email;
     private String name;
     private String phone;
-    private boolean isFC;
     private boolean emailNotifications;
     private boolean pushNotifications;
     private String profilePictureUrl;
     private boolean profileComplete;
+    private boolean isUGCoordinator;
+    private boolean isPGCoordinator;
 
     public LoginResponse(String token, String role, Long facultyId) {
         this.token = token;
@@ -24,7 +25,9 @@ public class LoginResponse {
     }
 
     public LoginResponse(String token, String role, Long facultyId, Long studentId,
-                         boolean isInTeam, boolean isTeamLead, String email, String name, String phone) {
+                         boolean isInTeam, boolean isTeamLead, String email, String name, String phone,
+                         boolean emailNotifications, boolean pushNotifications, String profilePictureUrl, boolean profileComplete,
+                         boolean isUGCoordinator, boolean isPGCoordinator) {
         this.token = token;
         this.role = role;
         this.facultyId = facultyId;
@@ -34,25 +37,12 @@ public class LoginResponse {
         this.email = email;
         this.name = name;
         this.phone = phone;
-    }
-
-    public LoginResponse(String token, String role, Long facultyId, Long studentId,
-                         boolean isInTeam, boolean isTeamLead, String email, String name, String phone, boolean isFC,
-                         boolean emailNotifications, boolean pushNotifications, String profilePictureUrl, boolean profileComplete) {
-        this.token = token;
-        this.role = role;
-        this.facultyId = facultyId;
-        this.studentId = studentId;
-        this.isInTeam = isInTeam;
-        this.isTeamLead = isTeamLead;
-        this.email = email;
-        this.name = name;
-        this.phone = phone;
-        this.isFC = isFC;
         this.emailNotifications = emailNotifications;
         this.pushNotifications = pushNotifications;
         this.profilePictureUrl = profilePictureUrl;
         this.profileComplete = profileComplete;
+        this.isUGCoordinator = isUGCoordinator;
+        this.isPGCoordinator = isPGCoordinator;
     }
 
     public boolean isProfileComplete() {
@@ -87,13 +77,6 @@ public class LoginResponse {
         return isTeamLead;
     }
 
-    public boolean isFC() {
-        return isFC;
-    }
-
-    public void setFC(boolean isFC) {
-        this.isFC = isFC;
-    }
 
     public boolean isEmailNotifications() {
         return emailNotifications;
@@ -106,4 +89,12 @@ public class LoginResponse {
     public String getProfilePictureUrl() {
         return profilePictureUrl;
     }
-}
+
+    public boolean isUGCoordinator() {
+        return isUGCoordinator;
+    }
+
+    public boolean isPGCoordinator() {
+        return isPGCoordinator;
+    }
+}

@@ -83,15 +83,15 @@ public class MeetingService {
     // ------------------------------------------------
     // DEADLINE CHECKER
     // ------------------------------------------------
-    private void checkMeetingSchedulingDeadline(Long departmentId, LocalDateTime proposedTime) {
+    private void checkMeetingSchedulingDeadline(Long departmentId, LocalDateTime proposedTime, String degree) {
         if (departmentId == null || proposedTime == null)
             return;
-        departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+        departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .ifPresent(deadlines -> {
                     if (deadlines.getMeetingSchedulingDeadline() != null &&
                             proposedTime.isAfter(deadlines.getMeetingSchedulingDeadline())) {
                         throw new RuntimeException(
-                                "The selected meeting date cannot be after the official department deadline.");
+                                "The selected meeting date cannot be after the official department deadline (" + degree + ").");
                     }
                 });
     }
@@ -125,7 +125,9 @@ public class MeetingService {
         Long departmentId = projectRequest.getFaculty().getDepartment() != null
                 ? projectRequest.getFaculty().getDepartment().getDepartmentId()
                 : null;
-        checkMeetingSchedulingDeadline(departmentId, request.getMeetingTime());
+        
+        String degree = project.getDegree() != null ? project.getDegree() : "UG";
+        checkMeetingSchedulingDeadline(departmentId, request.getMeetingTime(), degree);
 
         // ✅ Create meeting
         Meeting meeting = new Meeting();
@@ -280,17 +282,23 @@ public class MeetingService {
     }
 
     // ✅ GET ALL MEETINGS (ONLY FOR NON-CLOSED PROJECTS)
-    public List<MeetingResponse> getAllMeetings(Long facultyId) {
+    public List<MeetingResponse> getAllMeetings(Long facultyId, String degree) {
 
-        System.out.println("[MeetingService] 📡 Fetching all meetings for faculty: " + facultyId);
+        System.out.println("[MeetingService] 📡 Fetching all meetings for faculty: " + facultyId + " degree: " + degree);
 
         return meetingRepository
                 .findByRequestFacultyFacultyId(facultyId)
                 .stream()
                 .filter(meeting -> {
                     // ✅ Only include meetings whose project status is NOT CLOSE
-                    String projectStatus = meeting.getRequest().getProject().getStatus();
+                    Project project = meeting.getRequest().getProject();
+                    String projectStatus = project.getStatus();
                     boolean isNotClosed = !("CLOSE".equals(projectStatus));
+
+                    // ✅ FILTER: Match degree track
+                    if (isNotClosed && degree != null && !degree.equals(project.getDegree())) {
+                        isNotClosed = false;
+                    }
 
                     if (!isNotClosed) {
                         System.out.println("[MeetingService] 🚫 Filtering out meeting for closed project: "
@@ -524,7 +532,9 @@ public class MeetingService {
         Long departmentId = meeting.getRequest().getFaculty().getDepartment() != null
                 ? meeting.getRequest().getFaculty().getDepartment().getDepartmentId()
                 : null;
-        checkMeetingSchedulingDeadline(departmentId, req.getMeetingTime());
+        
+        String degree = project.getDegree() != null ? project.getDegree() : "UG";
+        checkMeetingSchedulingDeadline(departmentId, req.getMeetingTime(), degree);
 
         meeting.setMeetingLink(req.getMeetingLink());
         meeting.setMeetingTime(req.getMeetingTime());

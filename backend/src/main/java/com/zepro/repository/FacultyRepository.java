@@ -18,7 +18,8 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
 
     Optional<Faculty> findByUser(Users user);
 
-    Optional<Faculty> findByUserUserIdAndIsFCTrue(Long userId);
+    @Query("SELECT f FROM Faculty f WHERE f.user.userId = :userId AND (f.isUGCoordinator = true OR f.isPGCoordinator = true)")
+    Optional<Faculty> findByUserUserIdAndIsFCTrue(@Param("userId") Long userId);
 
     List<Faculty> findByDepartment_DepartmentId(Long departmentId);
 
@@ -26,7 +27,8 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
 
     long countByDepartment_DepartmentId(Long departmentId);
 
-    Optional<Faculty> findByDepartment_DepartmentIdAndIsFC(Long departmentId, Boolean isFC);
+    @Query("SELECT f FROM Faculty f WHERE f.department.departmentId = :departmentId AND (f.isUGCoordinator = true OR f.isPGCoordinator = true)")
+    List<Faculty> findCoordinatorsByDepartment(@Param("departmentId") Long departmentId);
 
     @Query("SELECT f FROM Faculty f WHERE " +
             "LOWER(f.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
