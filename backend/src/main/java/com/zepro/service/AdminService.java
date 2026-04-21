@@ -271,18 +271,24 @@ public class AdminService {
             throw new RuntimeException("Faculty does not belong to this department");
         }
 
-        System.out.println("[AdminService] 📝 Updating faculty role to FACULTY_COORDINATOR");
+        // ✅ Ensure only one coordinator per department
+        facultyRepository.findByDepartment_DepartmentIdAndIsFC(departmentId, true)
+                .ifPresent(existing -> {
+                    System.out.println("[AdminService] 🔄 Removing FC status from existing: " + existing.getUser().getName());
+                    existing.setIsFC(false);
+                    facultyRepository.save(existing);
+                });
 
         // Update faculty role to FACULTY_COORDINATOR
         faculty.setIsFC(true);
-        usersRepository.save(faculty.getUser());
+        facultyRepository.save(faculty);
 
         System.out.println("[AdminService] 📝 Updating department coordinator info");
 
         // Update department's coordinator
         department.setCoordinatorName(faculty.getUser().getName());
         department.setCoordinatorEmail(faculty.getUser().getEmail());
-        department.setCoordinatorPhone(faculty.getPhone()); // ✅ FIXED: Use correct field name
+        department.setCoordinatorPhone(faculty.getPhone());
         
         Department updated = departmentRepository.save(department);
 
@@ -308,11 +314,12 @@ public class AdminService {
         List<UserResponse> response = facultyRepository.findByDepartment_DepartmentId(departmentId)
                 .stream()
                 .map(f -> new UserResponse(
-                        f.getUser().getUserId(),  // ✅ USE userId FOR FRONTEND
+                        f.getUser().getUserId(),
                         f.getUser().getName(),
                         f.getUser().getEmail(),
                         f.getUser().getRole(),
-                        f.getEmployeeId()
+                        f.getEmployeeId(),
+                        f.getIsFC()
                 ))
                 .toList();
         

@@ -26,6 +26,17 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   
   const [securePass, setSecurePass] = useState(true);
   const [secureConfirm, setSecureConfirm] = useState(true);
+  const [allowedTails, setAllowedTails] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    const fetchTails = async () => {
+      try {
+        const res = await (require('../api/authApi').getAllowedTails());
+        setAllowedTails(res.data || []);
+      } catch (err) {}
+    };
+    fetchTails();
+  }, []);
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword || !role) {
@@ -33,13 +44,22 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
-    if (!email.endsWith('@gmail.com')) {
-      showAlert('Error', 'Only Gmail addresses are allowed');
+    const emailLower = email.toLowerCase();
+    if (!emailLower.includes('@')) {
+      showAlert('Error', 'Invalid email address');
+      return;
+    }
+
+    const domain = emailLower.split('@')[1];
+    const isAllowed = allowedTails.some(tail => domain === tail || domain.endsWith('.' + tail));
+
+    if (!isAllowed) {
+      showAlert('Error', 'Registration is restricted to institute-specific email addresses.');
       return;
     }
 
     // ✅ Password length validation
-    if (password.length < 1) {
+    if (password.length < 8) {
       showAlert('Error', 'Password must be at least 8 characters long');
       return;
     }
@@ -60,10 +80,10 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
       showAlert('Success', `Registered as ${role}`);
       navigation.navigate('Login');
-    } catch (error) {
+    } catch (error: any) {
       showAlert(
         'Registration Failed',
-        'Unable to create account. Please try again.',
+        error.response?.data?.message || 'Unable to create account. Please try again.',
       );
     }
   };

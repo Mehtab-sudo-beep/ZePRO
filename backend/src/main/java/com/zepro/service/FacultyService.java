@@ -422,6 +422,50 @@ public class FacultyService {
         return getProjectResponse(saved, faculty);
     }
 
+    @Transactional
+    public void deleteProject(Long projectId, Faculty faculty) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getFaculty().getFacultyId().equals(faculty.getFacultyId())) {
+            throw new RuntimeException("Unauthorized: You don't own this project");
+        }
+
+        if ("ASSIGNED".equalsIgnoreCase(project.getStatus())) {
+            throw new RuntimeException("You cannot delete an allocated project.");
+        }
+
+        if (project.getIsActive()) {
+            throw new RuntimeException("First deactivate this project and then do the delete option.");
+        }
+
+        // Clean up relations
+        projectDomainRepository.deleteAll(projectDomainRepository.findByProjectProjectId(projectId));
+        projectSubDomainRepository.deleteAll(projectSubDomainRepository.findByProjectProjectId(projectId));
+        
+        // Delete project requests (and their meetings)
+        List<ProjectRequest> requests = projectRequestRepository.findByProjectProjectId(projectId);
+        for (ProjectRequest req : requests) {
+            meetingRepository.findByRequestRequestId(req.getRequestId()).ifPresent(meetingRepository::delete);
+            projectRequestRepository.delete(req);
+        }
+
+        projectRepository.delete(project);
+    }
+
+    @Transactional
+    public void deleteProjectDocuments(Long projectId, Faculty faculty) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!project.getFaculty().getFacultyId().equals(faculty.getFacultyId())) {
+            throw new RuntimeException("Unauthorized: You don't own this project");
+        }
+
+        project.getDocuments().clear();
+        projectRepository.save(project);
+    }
+
     private ProjectResponse getProjectResponse(Project p,Faculty faculty) {
         String domainStr = "";
         String subdomainStr = "";

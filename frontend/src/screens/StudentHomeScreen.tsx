@@ -20,7 +20,6 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { getProjectRequestsStatus, getAssignedProject, getTeamInfo, getDepartmentDeadlines, leaveTeam, assignTeamLeader } from '../api/studentApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { usePushNotifications } from '../hooks/usePushNotifications';
 import { getUnreadCount } from '../api/notificationApi';
 
 type StudentHomeNavigationProp = NativeStackNavigationProp<
@@ -194,8 +193,6 @@ const StudentHomeScreen: React.FC = () => {
   const [isTeamFormationLocked, setIsTeamFormationLocked] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Initialize Push Notifications
-  usePushNotifications();
 
   useFocusEffect(
     useCallback(() => {
@@ -323,6 +320,11 @@ const StudentHomeScreen: React.FC = () => {
   };
 
   const handleLeaveTeam = () => {
+    if (studentUser.isAllocated) {
+      Alert.alert("Cannot Leave Team", "You cannot leave the team after a project has been allocated.");
+      return;
+    }
+
     Alert.alert(
       "Leave Team?",
       "Are you sure you want to leave this team? If you are the only member, the team will be deleted.",

@@ -41,11 +41,12 @@ const TeamProjectRequestsScreen: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case 'ACCEPTED': return '#16A34A';
+      case 'ACCEPTED':
+      case 'ASSIGNED': return '#16A34A';
       case 'SCHEDULED': return '#8B5CF6';
       case 'COMPLETED': return '#3B82F6';
-      case 'REJECTED': return '#f44336';
-      case 'PENDING': return '#ff9800';
+      case 'REJECTED': return '#DC2626';
+      case 'PENDING': return '#F59E0B';
       default: return colors.primary;
     }
   };
@@ -53,30 +54,56 @@ const TeamProjectRequestsScreen: React.FC = () => {
   const divider = isDark ? '#374151' : '#E5E7EB';
   const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
 
+  const handlePress = (item: any) => {
+    const status = item.status?.toUpperCase();
+    if (status === 'SCHEDULED' || status === 'REJECTED' || status === 'COMPLETED' || status === 'ASSIGNED') {
+      navigation.navigate('MeetingDetails', { requestId: item.requestId });
+    } else {
+      navigation.navigate('ProjectDetails', { projectId: item.projectId });
+    }
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const sColor = getStatusColor(item.status);
+    const isAccepted = item.status?.toUpperCase() === 'ACCEPTED' || item.status?.toUpperCase() === 'ASSIGNED';
+
     return (
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
+      <TouchableOpacity 
+        activeOpacity={0.7}
+        onPress={() => handlePress(item)}
+        style={[styles.card, { backgroundColor: colors.card }]}
+      >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1, marginRight: 12 }}>
-            <Text style={[styles.title, { color: colors.text }]}>{item.projectTitle}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Image source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} style={{width: 12, height: 12, marginRight: 6, tintColor: colors.subText}} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={[styles.title, { color: colors.text }]}>{item.projectTitle}</Text>
+              {isAccepted && (
+                <Image 
+                  source={require('../assets/trophy.png')} 
+                  style={{ width: 18, height: 18, marginLeft: 8, tintColor: '#EAB308' }} 
+                />
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image 
+                source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} 
+                style={{ width: 12, height: 12, marginRight: 6, tintColor: colors.subText }} 
+              />
               <Text style={[styles.value, { color: colors.subText }]}>{item.facultyName}</Text>
             </View>
           </View>
-          <View style={[styles.statusContainer, { backgroundColor: sColor + '1A' }]}>
-            <Text style={[styles.statusValue, { color: sColor }]}>{item.status?.toUpperCase()}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: sColor + '15' }]}>
+            <Text style={[styles.statusText, { color: sColor }]}>{item.status?.toUpperCase()}</Text>
           </View>
         </View>
         
         {item.status?.toUpperCase() === 'REJECTED' && (item.rejectionReason || item.reason) && (
-          <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: divider }}>
-            <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700', letterSpacing: 0.5 }}>REASON FOR REJECTION</Text>
-            <Text style={{ fontSize: 13, color: colors.text, marginTop: 4 }}>{item.rejectionReason || item.reason}</Text>
+          <View style={[styles.reasonBox, { backgroundColor: isDark ? '#450a0a' : '#FEF2F2' }]}>
+            <Text style={styles.reasonLabel}>REASON FOR REJECTION</Text>
+            <Text style={[styles.reasonText, { color: colors.text }]}>{item.rejectionReason || item.reason}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -100,17 +127,21 @@ const TeamProjectRequestsScreen: React.FC = () => {
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Text style={[styles.errorText, { color: '#f44336' }]}>{error}</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Image
-              source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
-              style={styles.backIcon}
-            />
+          <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
+          <TouchableOpacity 
+            style={[styles.retryButton, { backgroundColor: colors.primary }]} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.retryText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       ) : requests.length === 0 ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '500', marginBottom: 8 }}>No Requests Found</Text>
+          <Image 
+            source={require('../assets/requests.png')} 
+            style={{ width: 60, height: 60, opacity: 0.2, marginBottom: 16, tintColor: colors.subText }} 
+          />
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>No Requests Found</Text>
           <Text style={{ color: colors.subText, textAlign: 'center' }}>Your team has not sent any project requests yet.</Text>
         </View>
       ) : (
@@ -119,6 +150,7 @@ const TeamProjectRequestsScreen: React.FC = () => {
           keyExtractor={(item) => item.requestId.toString()}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </SafeAreaView>
@@ -127,7 +159,7 @@ const TeamProjectRequestsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   header: {
-    height: 64,
+    height: 72,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -136,54 +168,67 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 12,
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     resizeMode: 'contain',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.5,
   },
   listContainer: {
     padding: 16,
     paddingBottom: 32,
   },
   card: {
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 14,
-    elevation: 2,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   value: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '500',
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
+  statusBadge: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 99,
   },
-  statusLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statusValue: {
+  statusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  reasonBox: {
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+  },
+  reasonLabel: {
+    fontSize: 10,
+    color: '#DC2626',
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  reasonText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   center: {
     flex: 1,
@@ -192,19 +237,20 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 24,
+    fontWeight: '500',
   },
   retryButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   retryText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '700',
+    fontSize: 15,
   },
 });
 

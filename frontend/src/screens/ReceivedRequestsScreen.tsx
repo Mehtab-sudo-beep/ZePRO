@@ -120,6 +120,12 @@ const ReceivedRequestsScreen: React.FC = () => {
           'Team has reached maximum size due to allocation rules.',
           [{ text: 'OK' }]
         );
+      } else if (errorMsg.includes('already allocated')) {
+        showAlert(
+          '🚫 Already Allocated',
+          'You cannot add members to the team after a project has been allocated.',
+          [{ text: 'OK' }]
+        );
       } else {
         showAlert('Error', errorMsg, [{ text: 'OK' }]);
       }

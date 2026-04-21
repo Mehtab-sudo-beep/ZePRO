@@ -23,6 +23,11 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @GetMapping("/tails")
+    public java.util.List<String> getAllowedTails() {
+        return authService.getAllowedTails();
+    }
+
     @PostMapping("/signup")
     public Object signup(@RequestBody SignupRequest request) {
         return authService.signup(request);

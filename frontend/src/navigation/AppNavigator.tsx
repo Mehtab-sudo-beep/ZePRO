@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { View, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { AuthContext } from '../context/AuthContext';
+import { ThemeContext } from '../theme/ThemeContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { Meeting } from '../types/Meeting';
+
+// Screens
 import LoginScreen from '../screens/LoginScreen';
 import StudentHomeScreen from '../screens/StudentHomeScreen';
 import ViewProjectsScreen from '../screens/ViewProjectsScreen';
 import ScheduledMeetingsScreen from '../screens/ScheduledMeetingsScreen';
 import MeetingDetailsScreen from '../screens/MeetingDetailsScreen';
-import { Meeting } from '../types/Meeting';
 import FacultyHomeScreen from '../screens/FacultyHomeScreen';
 import FacultyRequestsScreen from '../screens/FacultyRequestsScreen';
 import JoinTeamScreen from '../screens/JoinTeamScreen';
 import CreateTeamScreen from '../screens/CreateTeamScreen';
 import MoreScreen from '../screens/MoreScreen';
-
-
 import AdminMoreScreen from '../screens/AdminMoreScreen';
 import FacultyCoordinatorDashboard from '../screens/FacultyCoordinatorScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
@@ -72,7 +76,6 @@ export type RootStackParamList = {
     instituteId?: string;
     instituteName?: string;
   } | undefined;
-
   Logs: undefined;
   AdminMore: undefined;
   FacultyCoordinatorDashboard: undefined;
@@ -97,7 +100,7 @@ export type RootStackParamList = {
   VerifyOTP: { email: string };
   ResetPassword: { email: string, otp: string };
   CreateProject: undefined;
-  ProjectDetails: { project: any, isRequested?: boolean };
+  ProjectDetails: { project?: any, isRequested?: boolean, projectId?: number };
   FacultyCreateMenu: undefined;
   CreateDomain: undefined;
   CreateSubDomain: undefined;
@@ -125,109 +128,88 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
+  const { user, loading } = useContext(AuthContext);
+  const { colors } = useContext(ThemeContext);
+  usePushNotifications(user);
+
+  if (loading) {
+    const isDark = colors.background === '#111827';
+    return (
+      <View style={[navStyles.splash, { backgroundColor: colors.background }]}>
+        <Image
+          source={isDark ? require('../assets/zepro_new.png') : require('../assets/zepro.png')}
+          style={navStyles.splashLogo}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 20 }} />
+      </View>
+    );
+  }
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="StudentHome" component={StudentHomeScreen} />
-      <Stack.Screen name="ViewProjects" component={ViewProjectsScreen} />
-      <Stack.Screen
-        name="ScheduledMeetings"
-        component={ScheduledMeetingsScreen}
-      />
-      <Stack.Screen name="MeetingDetails" component={MeetingDetailsScreen} />
-      <Stack.Screen name="FacultyHome" component={FacultyHomeScreen} />
-      <Stack.Screen name="FacultyRequests" component={FacultyRequestsScreen} />
-      <Stack.Screen name="JoinTeam" component={JoinTeamScreen} />
-      <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
-      <Stack.Screen name="More" component={MoreScreen} />
-      <Stack.Screen name="DepartmentDetails" component={DepartmentDetailsScreen} />
-      <Stack.Screen name="AdminMore" component={AdminMoreScreen} />
-      <Stack.Screen
-        name="FacultyCoordinatorDashboard"
-        component={FacultyCoordinatorDashboard}
-      />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
-      <Stack.Screen name="Deadline" component={DeadlineScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
-      <Stack.Screen
-        name="ReceivedRequests"
-        component={ReceivedRequestsScreen}
-      />
-      <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
-      <Stack.Screen
-        name="FacultyCoordinatorMore"
-        component={FacultyCoordinatorMoreScreen}
-      />
-      <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
-      <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
-      <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
-      <Stack.Screen name="AddDepartment" component={AddDepartmentScreen} />
-      <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen} />
-      <Stack.Screen
-        name="DeadlineManagement"
-        component={ChangeDeadlinesScreen}
-      />
-      <Stack.Screen
-        name="FacultyMeetings"
-        component={FacultyViewMeetingsScreen}
-      />
-      <Stack.Screen name="InstituteList" component={InstituteListScreen} />
-      <Stack.Screen name="DepartmentList" component={DepartmentListScreen} />
-      <Stack.Screen name="AdminHome" component={DepartmentDetailsScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-      <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
-      <Stack.Screen
-        name="FacultyCreateMenu"
-        component={FacultyCreateMenuScreen}
-      />
-      <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
-      <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
-      <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen} />
-      <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen} />
-      <Stack.Screen name="DeadlineDetail" component={DeadlineDetailScreen} />
-      <Stack.Screen
-        name="CompleteProfile"
-        component={CompleteProfileScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="CompleteFacultyProfile"
-        component={CompleteFacultyProfileScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ProjectDetails"
-        component={ProjectDetailsScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="OAuthSignup" component={OAuthSignupScreen} />
-      <Stack.Screen name="AddUser" component={AddUserScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+      {!user ? (
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="StudentHome" component={StudentHomeScreen} />
+          <Stack.Screen name="FacultyHome" component={FacultyHomeScreen} />
+          <Stack.Screen name="InstituteList" component={InstituteListScreen} />
+          <Stack.Screen name="ViewProjects" component={ViewProjectsScreen} />
+          <Stack.Screen name="ScheduledMeetings" component={ScheduledMeetingsScreen} />
+          <Stack.Screen name="MeetingDetails" component={MeetingDetailsScreen} />
+          <Stack.Screen name="FacultyRequests" component={FacultyRequestsScreen} />
+          <Stack.Screen name="JoinTeam" component={JoinTeamScreen} />
+          <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
+          <Stack.Screen name="More" component={MoreScreen} />
+          <Stack.Screen name="DepartmentDetails" component={DepartmentDetailsScreen} />
+          <Stack.Screen name="AdminMore" component={AdminMoreScreen} />
+          <Stack.Screen name="FacultyCoordinatorDashboard" component={FacultyCoordinatorDashboard} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+          <Stack.Screen name="Deadline" component={DeadlineScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="SentRequests" component={SentRequestsScreen} />
+          <Stack.Screen name="ReceivedRequests" component={ReceivedRequestsScreen} />
+          <Stack.Screen name="FacultyMore" component={FacultyMoreScreen} />
+          <Stack.Screen name="FacultyCoordinatorMore" component={FacultyCoordinatorMoreScreen} />
+          <Stack.Screen name="FacultyProjects" component={FacultyProjectsScreen} />
+          <Stack.Screen name="FacultyProfile" component={FacultyProfileScreen} />
+          <Stack.Screen name="AddInstitute" component={AddInstituteScreen} />
+          <Stack.Screen name="AddDepartment" component={AddDepartmentScreen} />
+          <Stack.Screen name="RuleManagement" component={AdminChangeRulesScreen} />
+          <Stack.Screen name="DeadlineManagement" component={ChangeDeadlinesScreen} />
+          <Stack.Screen name="FacultyMeetings" component={FacultyViewMeetingsScreen} />
+          <Stack.Screen name="DepartmentList" component={DepartmentListScreen} />
+          <Stack.Screen name="AdminHome" component={DepartmentDetailsScreen} />
+          <Stack.Screen name="CreateProject" component={CreateProjectScreen} />
+          <Stack.Screen name="FacultyCreateMenu" component={FacultyCreateMenuScreen} />
+          <Stack.Screen name="CreateDomain" component={CreateDomainScreen} />
+          <Stack.Screen name="CreateSubDomain" component={CreateSubDomainScreen} />
+          <Stack.Screen name="TeamProjectRequests" component={TeamProjectRequestsScreen} />
+          <Stack.Screen name="AllocatedProject" component={AllocatedProjectScreen} />
+          <Stack.Screen name="DeadlineDetail" component={DeadlineDetailScreen} />
+          <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+          <Stack.Screen name="CompleteFacultyProfile" component={CompleteFacultyProfileScreen} />
+          <Stack.Screen name="ProjectDetails" component={ProjectDetailsScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="OAuthSignup" component={OAuthSignupScreen} />
+          <Stack.Screen name="AddUser" component={AddUserScreen} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };
 
+const navStyles = StyleSheet.create({
+  splash: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  splashLogo: { width: 150, height: 150 },
+});
+
 export default AppNavigator;
-
-// ✅ When creating the Student stack, ensure CompleteProfile is NOT part of StudentHome stack
-// export const StudentStack = () => {
-//   return (
-//     <Stack.Navigator
-//       screenOptions={{
-//         headerShown: false,
-//         animationEnabled: true,
-//       }}
-//     >
-//       {/* Profile completion must happen BEFORE StudentHome */}
-//       <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
-//       <Stack.Screen name="StudentHome" component={StudentHomeScreen} />
-//       {/* other screens */}
-//     </Stack.Navigator>
-//   );
-// };
-

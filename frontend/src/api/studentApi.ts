@@ -83,6 +83,10 @@ export const getTeamProjectRequests = (studentId: number) => {
   return API.get(`/student/team-project-requests/${studentId}`);
 };
 
+export const getProjectById = (projectId: number, studentId: number) => {
+  return API.get(`/student/project/${projectId}/${studentId}`);
+};
+
 // ================= STUDENT PROFILE =================
 
 // ================= STUDENT PROFILE =================

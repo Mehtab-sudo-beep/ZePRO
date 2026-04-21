@@ -7,18 +7,18 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { login, googleLogin } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
-import { StudentAuthContext } from '../context/StudentAuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getProfileStatus } from '../api/studentApi';
-import { getFacultyProfileStatus } from '../api/facultyApi';
 import { GoogleSignin, statusCodes, isErrorWithCode } from '@react-native-google-signin/google-signin';
-import { useEffect } from 'react';
+import Animated, { FadeInUp, FadeInDown, Layout } from 'react-native-reanimated';
 
 GoogleSignin.configure({
   webClientId: '799118111005-enlr4flip3roa6u3qn366aac0ao5gmbb.apps.googleusercontent.com',
@@ -27,8 +27,7 @@ GoogleSignin.configure({
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, setUser, loading: authLoading } = useContext(AuthContext);
-  const { setStudentUser } = useContext(StudentAuthContext);
+  const { setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
 
   const [email, setEmail] = useState('');
@@ -37,81 +36,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // --- AUTO LOGIN EFFECT ---
-  useEffect(() => {
-    if (!authLoading && user) {
-      // Restore user state locally to process directly into the app
-      processLoginSession({
-        ...user,
-        inTeam: user.isInTeam,
-        teamLead: user.isTeamLead,
-        fc: user.isFC
-      });
-    }
-  }, [authLoading, user]);
-
-  // --- HELPER: SAVE SESSION & NAVIGATE ---
-  const processLoginSession = async (data: any) => {
-    const {
-      token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, fc: isFC, profilePictureUrl
-    } = data;
-
-    // Save basic info
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('role', role);
-    await AsyncStorage.setItem('userEmail', resEmail || '');
-    await AsyncStorage.setItem('userName', name || '');
-    await AsyncStorage.setItem('isFC', isFC ? 'true' : 'false');
-
-    if (studentId) await AsyncStorage.setItem('studentId', studentId.toString());
-    if (facultyId) await AsyncStorage.setItem('facultyId', facultyId.toString());
-
-    // Update Global Auth Context
-    setUser({
-      token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, isFC, profilePictureUrl
-    });
-
-    if (role === 'STUDENT') {
-      const studentData = { ...data, isInTeam: data.inTeam, isTeamLead: data.teamLead };
-      await AsyncStorage.setItem('user', JSON.stringify(studentData));
-      setStudentUser(studentData);
-
-      try {
-        const profileStatusRes = await getProfileStatus(studentId);
-        const profileStatus = profileStatusRes.data;
-        const isComplete = profileStatus.isProfileComplete || profileStatus.profileComplete;
-
-        navigation.reset({
-          index: 0,
-          routes: [{ name: isComplete ? 'StudentHome' : 'CompleteProfile' as any }],
-        });
-      } catch (err) {
-        navigation.reset({ index: 0, routes: [{ name: 'CompleteProfile' as any }] });
-      }
-    }
-    else if (role === 'FACULTY') {
-      try {
-        const facultyProfileRes = await getFacultyProfileStatus(facultyId, token);
-        const facultyProfile = facultyProfileRes.data;
-        const isComplete = facultyProfile.isProfileComplete || facultyProfile.profileComplete;
-
-        if (isComplete) {
-          navigation.replace('FacultyHome');
-        } else {
-          navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
-        }
-      } catch (err) {
-        navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
-      }
-    }
-    else if (role === 'ADMIN') {
-      navigation.replace('InstituteList');
-    }
-  };
-
-  // --- HANDLER: STANDARD LOGIN ---
   const handleLogin = async () => {
     if (!email || !password) {
       setErrorMsg("Please enter email and password");
@@ -122,7 +46,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(true);
       setErrorMsg(null);
       const res = await login({ email, password });
-      await processLoginSession(res.data);
+      setUser(res.data);
     } catch (error: any) {
       setErrorMsg(error.response?.data?.message || "Invalid credentials");
     } finally {
@@ -130,173 +54,222 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  // --- HANDLER: GOOGLE LOGIN ---
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       setErrorMsg(null);
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      
-      // Force account picker by clearing any silently-remembered session
-      try {
-        await GoogleSignin.signOut();
-      } catch (e) {
-        // Ignore if not previously signed in
-      }
-      
+      await GoogleSignin.hasPlayServices();
+      try { await GoogleSignin.signOut(); } catch (e) {}
       const userInfo = await GoogleSignin.signIn();
 
-      let idToken = null;
-      if (userInfo && userInfo.data && userInfo.data.idToken) {
-        idToken = userInfo.data.idToken;
-      } else if (userInfo && (userInfo as any).idToken) {
-        // Compatibility with older module versions
-        idToken = (userInfo as any).idToken;
-      }
-
+      let idToken = userInfo.data?.idToken || (userInfo as any).idToken;
       if (!idToken) throw new Error("No ID Token received.");
 
       const backendRes = await googleLogin({ idToken, role: 'STUDENT' });
-      await processLoginSession(backendRes.data);
+      setUser(backendRes.data);
     } catch (error: any) {
-      console.log('[Google Login Error]', error);
       if (isErrorWithCode(error)) {
-        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-          setErrorMsg('Sign in cancelled');
-        } else if (error.code === statusCodes.IN_PROGRESS) {
-          setErrorMsg('Sign in is in progress already');
-        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-          setErrorMsg('Play services not available or out of date');
-        } else {
-          setErrorMsg('Google login failed: ' + error.message);
-        }
+        if (error.code === statusCodes.SIGN_IN_CANCELLED) setErrorMsg('Sign in cancelled');
+        else setErrorMsg('Google login failed');
       } else {
-        setErrorMsg('Google login failed: ' + error.message);
+        setErrorMsg('Google login failed');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  if (authLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
-  }
+  const isDark = colors.background === '#111827';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.brandContainer}>
-        <Image
-          source={require('../assets/zepro_new.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
-        <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Project Allocation Portal</Text>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
-        <Text style={[styles.signInTitle, { color: colors.text }]}>Sign in</Text>
-        <Text style={[styles.signInSubtitle, { color: colors.subText }]}>Enter your details below</Text>
-
-        {errorMsg && (
-          <View style={styles.inlineAlert}>
-            <Image source={require('../assets/info.png')} style={[styles.alertIcon, { tintColor: '#ef4444' }]} />
-            <Text style={styles.inlineAlertText}>{errorMsg}</Text>
-          </View>
-        )}
-
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-          autoCapitalize="none"
-          placeholderTextColor={colors.subText}
-        />
-
-        <View style={[styles.passwordContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <TextInput
-            placeholder="Password"
-            secureTextEntry={secure}
-            value={password}
-            onChangeText={setPassword}
-            style={[styles.passwordInput, { color: colors.text }]}
-            placeholderTextColor={colors.subText}
-          />
-          <TouchableOpacity onPress={() => setSecure(!secure)} style={{ padding: 4 }}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.inner}>
+          <Animated.View 
+            entering={FadeInUp.duration(800).delay(200)}
+            style={styles.header}
+          >
             <Image
-              source={colors.background === '#111827' ? require('../assets/eye-white.png') : require('../assets/eye.png')}
-              style={{ width: 20, height: 20, opacity: secure ? 0.4 : 1 }}
+              source={isDark ? require('../assets/zepro_new.png') : require('../assets/zepro.png')}
+              style={styles.logo}
               resizeMode="contain"
             />
-          </TouchableOpacity>
+            <Text style={[styles.title, { color: colors.text }]}>ZePRO</Text>
+            <Text style={[styles.subtitle, { color: colors.subText }]}>Experience Premium Project Management</Text>
+          </Animated.View>
+
+          <Animated.View 
+            entering={FadeInDown.duration(800).delay(400)}
+            layout={Layout.springify()}
+            style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+          >
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Welcome Back</Text>
+            
+            {errorMsg && (
+              <Animated.View entering={FadeInUp} style={styles.errorBox}>
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </Animated.View>
+            )}
+
+            <View style={styles.inputWrapper}>
+              <Text style={[styles.label, { color: colors.subText }]}>Email Address</Text>
+              <TextInput
+                placeholder="e.g. name@institute.edu"
+                value={email}
+                onChangeText={setEmail}
+                style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                autoCapitalize="none"
+                placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Text style={[styles.label, { color: colors.subText }]}>Password</Text>
+              <View style={[styles.passwordField, { borderColor: colors.border }]}>
+                <TextInput
+                  placeholder="••••••••"
+                  secureTextEntry={secure}
+                  value={password}
+                  onChangeText={setPassword}
+                  style={[styles.passInput, { color: colors.text }]}
+                  placeholderTextColor={isDark ? '#4B5563' : '#9CA3AF'}
+                />
+                <TouchableOpacity onPress={() => setSecure(!secure)}>
+                  <Image
+                    source={isDark ? require('../assets/eye-white.png') : require('../assets/eye.png')}
+                    style={[styles.eyeIcon, { opacity: secure ? 0.3 : 1 }]}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotPass}
+            >
+              <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.loginButton, { backgroundColor: colors.primary }]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.subText }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.socialButton, { borderColor: colors.border }]}
+              onPress={handleGoogleLogin}
+              disabled={loading}
+            >
+              <Image source={require('../assets/google_icon.png')} style={styles.socialIcon} />
+              <Text style={[styles.socialText, { color: colors.text }]}>Continue with Google</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View 
+            entering={FadeInDown.duration(800).delay(600)}
+            style={styles.footer}
+          >
+            <Text style={[styles.footerText, { color: colors.subText }]}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={[styles.signupLink, { color: colors.primary }]}> Create Account</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
-
-        <TouchableOpacity
-          style={[styles.loginBtn, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginText}>Login</Text>}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.googleBtn}
-          onPress={handleGoogleLogin}
-          disabled={loading}
-        >
-          <Image source={require('../assets/google_icon.png')} style={styles.googleIcon} />
-          <Text style={styles.googleBtnText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footerLinks}>
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-            <Text style={[styles.link, { color: colors.primary }]}>Forgot Password?</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={[styles.link, { color: colors.primary }]}> Sign Up?</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  brandContainer: { alignItems: 'center', marginBottom: 25 },
-  logo: { width: 120, height: 120, marginBottom: 5 },
-  brandTitle: { fontSize: 30, fontWeight: '800' },
-  brandSubtitle: { fontSize: 14, marginTop: 4 },
-  card: { borderRadius: 12, padding: 20, elevation: 4 },
-  signInTitle: { fontSize: 22, fontWeight: '600' },
-  signInSubtitle: { marginBottom: 16 },
-  input: { borderWidth: 1, borderRadius: 6, padding: 12, marginBottom: 15 },
-  passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, marginBottom: 15 },
-  passwordInput: { flex: 1, paddingVertical: 12 },
-  loginBtn: { padding: 14, borderRadius: 6, alignItems: 'center', marginBottom: 12 },
-  loginText: { color: '#ffffff', fontWeight: '600' },
-  googleBtn: {
+  container: { flex: 1 },
+  inner: { flex: 1, padding: 24, justifyContent: 'center' },
+  header: { alignItems: 'center', marginBottom: 40 },
+  logo: { width: 100, height: 100, marginBottom: 16 },
+  title: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
+  subtitle: { fontSize: 16, marginTop: 8, textAlign: 'center', opacity: 0.8 },
+  card: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  cardTitle: { fontSize: 22, fontWeight: '700', marginBottom: 24 },
+  errorBox: { 
+    backgroundColor: '#FEE2E2', 
+    padding: 12, 
+    borderRadius: 12, 
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FECACA'
+  },
+  errorText: { color: '#B91C1C', fontSize: 14, fontWeight: '500', textAlign: 'center' },
+  inputWrapper: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginLeft: 4 },
+  input: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 16,
+  },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingRight: 14,
+  },
+  passInput: { flex: 1, padding: 14, fontSize: 16 },
+  eyeIcon: { width: 22, height: 22 },
+  forgotPass: { alignSelf: 'flex-end', marginBottom: 24 },
+  forgotText: { fontSize: 14, fontWeight: '600' },
+  loginButton: {
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  loginButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+  dividerLine: { flex: 1, height: 1, opacity: 0.5 },
+  dividerText: { marginHorizontal: 16, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff'
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
   },
-  googleIcon: { width: 20, height: 20, marginRight: 10 },
-  googleBtnText: { color: '#374151', fontWeight: '600' },
-  footerLinks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
-  link: { fontSize: 13, fontWeight: '500' },
-  inlineAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', padding: 10, borderRadius: 8, marginBottom: 15 },
-  alertIcon: { width: 16, height: 16, marginRight: 8 },
-  inlineAlertText: { color: '#b91c1c', fontSize: 13, flex: 1 },
-});
+  socialIcon: { width: 20, height: 20, marginRight: 12 },
+  socialText: { fontSize: 15, fontWeight: '600' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
+  footerText: { fontSize: 15 },
+  signupLink: { fontSize: 15, fontWeight: '700' },
+});

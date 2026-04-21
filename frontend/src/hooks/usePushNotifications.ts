@@ -23,11 +23,11 @@ export interface PushNotificationState {
   notification?: Notifications.Notification;
 }
 
-export const usePushNotifications = () => {
+export const usePushNotifications = (user: any) => {
   const [expoPushToken, setExpoPushToken] = useState<Notifications.ExpoPushToken | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
-  const notificationListener = useRef<Notifications.Subscription>(undefined);
-  const responseListener = useRef<Notifications.Subscription>(undefined);
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
   async function registerForPushNotificationsAsync() {
@@ -57,17 +57,18 @@ export const usePushNotifications = () => {
       const projectId = Constants?.expoConfig?.extra?.eas?.projectId 
         ?? Constants?.easConfig?.projectId;
 
-      // In managed Expo workflow, the Expo push token will implicitly use FCM if configured
       token = await Notifications.getExpoPushTokenAsync({
         projectId: projectId,
       });
 
-      // Save token to backend
-      try {
-        await API.post('/auth/push-token', { token: token.data });
-        console.log("Saved push token to backend");
-      } catch (e) {
-        console.error("Failed to save push token", e);
+      // Save token to backend ONLY if user is logged in
+      if (user) {
+        try {
+          await API.post('/auth/push-token', { token: token.data });
+          console.log("Saved push token to backend for user:", user.email);
+        } catch (e) {
+          console.error("Failed to save push token", e);
+        }
       }
     } else {
       console.log('Must use physical device for Push Notifications');
@@ -77,24 +78,24 @@ export const usePushNotifications = () => {
   }
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => {
-      setExpoPushToken(token);
-    });
+    // Register token whenever user state changes (e.g. login)
+    if (user) {
+      registerForPushNotificationsAsync().then((token) => {
+        setExpoPushToken(token);
+      });
+    }
 
-    // Handle Foreground Notifications
+    // Always listen for notifications if the hook is active
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
       setNotification(notification);
     });
 
-    // Handle Notification Clicks (Foreground/Background)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       const targetScreen = data?.targetScreen;
       const targetId = data?.targetId;
 
       if (targetScreen) {
-        // App was opened via Notification Click
-        // Navigate based on metadata
         if (targetScreen === 'MeetingDetails' && targetId) {
             // @ts-ignore
             navigation.navigate('MeetingDetails', { requestId: parseInt(targetId) });
@@ -103,21 +104,16 @@ export const usePushNotifications = () => {
             navigation.navigate(targetScreen);
         }
       } else {
-        // Fallback or generic history
         // @ts-ignore
         navigation.navigate('Notifications');
       }
     });
 
     return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
+      notificationListener.current && Notifications.removeNotificationSubscription(notificationListener.current);
+      responseListener.current && Notifications.removeNotificationSubscription(responseListener.current);
     };
-  }, []);
+  }, [user]);
 
   return { expoPushToken, notification };
 };

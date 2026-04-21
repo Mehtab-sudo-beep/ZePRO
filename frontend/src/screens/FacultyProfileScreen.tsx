@@ -211,7 +211,7 @@ const FacultyProfileScreen: React.FC = () => {
 
           <View style={[styles.deptBadge, { backgroundColor: colors.primary + '18' }]}>
             <Text style={[styles.deptBadgeText, { color: colors.primary }]}>
-              {profile.department || 'No Department'}
+              {profile.instituteName || 'No Institute'} | {profile.department || 'No Department'}
             </Text>
           </View>
         </View>
@@ -264,11 +264,11 @@ const FacultyProfileScreen: React.FC = () => {
           <InfoRow label="Designation" value={profile.designation} editKey="designation"
             onEdit={openEdit} colors={colors} isDark={isDark} />
 
-          <InfoRow label="Department" value={profile.department} editKey="department"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
+          <InfoRow label="Department" value={profile.department}
+            colors={colors} isDark={isDark} />
 
-          <InfoRow label="Institute" value={profile.institute} editKey="institute"
-            onEdit={openEdit} colors={colors} isDark={isDark} />
+          <InfoRow label="Institute" value={profile.instituteName}
+            colors={colors} isDark={isDark} />
 
           <InfoRow label="Qualification" value={profile.qualification} editKey="qualification"
             onEdit={openEdit} colors={colors} isDark={isDark} />

@@ -18,7 +18,7 @@ public class FacultyProfile {
     private String experience;
     private String qualification;
     private String cabinNo;
-    private Institute institute;
+    private String instituteName;
 
 
     private int totalCreatedSlots;
@@ -69,8 +69,8 @@ public class FacultyProfile {
     public String getCabinNo() { return cabinNo; }
     public void setCabinNo(String cabinNo) { this.cabinNo = cabinNo; }
 
-    public Institute getInstitute() { return institute; }
-    public void setInstitute(Institute institute) { this.institute = institute; }
+    public String getInstituteName() { return instituteName; }
+    public void setInstituteName(String instituteName) { this.instituteName = instituteName; }
 
 
 

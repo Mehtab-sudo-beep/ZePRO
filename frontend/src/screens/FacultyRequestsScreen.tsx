@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,15 @@ import {
   TextInput,
   Image,
   Platform,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { BASE_URL } from '../api/api';
+import axios from 'axios';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,8 +38,10 @@ const FacultyRequestsScreen = () => {
   const isDark = colors.background === '#111827';
   const navigation = useNavigation<any>();
 
-  const [requests, setRequests] = useState<any[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [groupedRequests, setGroupedRequests] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [expandedTeam, setExpandedTeam] = useState<number | null>(null);
 
   const [meetingLink, setMeetingLink] = useState('');
@@ -46,26 +51,79 @@ const FacultyRequestsScreen = () => {
   const [hasSelectedDate, setHasSelectedDate] = useState(false);
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
+  const [maxDate, setMaxDate] = useState<Date | undefined>(undefined);
 
   const [message, setMessage] = useState('');
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    loadRequests();
+    loadDeadlines();
+    return () => { isMounted.current = false; };
+  }, []);
 
   const loadRequests = async () => {
     try {
+      setLoading(true);
       const data = await getPendingRequests(user!.token);
-      setRequests(data || []);
+      
+      // Group by projectId
+      const grouped = data.reduce((acc: any, curr: any) => {
+        const pid = curr.projectId;
+        if (!acc[pid]) {
+          acc[pid] = {
+            projectId: pid,
+            title: curr.title,
+            description: curr.description,
+            requests: []
+          };
+        }
+        acc[pid].requests.push(curr);
+        return acc;
+      }, {});
+      
+      if (isMounted.current) {
+        const groupedArray = Object.values(grouped);
+        setGroupedRequests(groupedArray);
+        
+        // Update selectedProject if it's open
+        if (selectedProject) {
+          const updatedProj = groupedArray.find((p: any) => p.projectId === selectedProject.projectId);
+          if (updatedProj) setSelectedProject(updatedProj);
+          else setSelectedProject(null);
+        }
+      }
     } catch (err) {
       console.log(err);
+    } finally {
+      if (isMounted.current) setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadRequests();
-  }, []);
+  const loadDeadlines = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/api/deadlines`, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+      const deadlines = res.data;
+      const meetingDeadline = deadlines.find((d: any) => 
+        d.title.toLowerCase().includes('meeting') || 
+        d.title.toLowerCase().includes('schedule')
+      );
+      if (meetingDeadline && isMounted.current) {
+        setMaxDate(new Date(meetingDeadline.deadlineDate));
+      }
+    } catch (e) {
+      console.log('[FacultyRequestsScreen] Error loading deadlines:', e);
+    }
+  };
 
   const handleCancel = async (requestId: number) => {
     try {
       await cancelRequest(requestId, user!.token);
-      setMessage('Request cancelled');
+      setMessage('Request cancelled successfully');
+      setTimeout(() => setMessage(''), 3000);
       loadRequests();
     } catch (err) {
       console.log(err);
@@ -78,29 +136,27 @@ const FacultyRequestsScreen = () => {
       'Cancel Request',
       `Are you sure you want to cancel the request from "${teamName}"?`,
       [
-        {
-          text: 'No',
-          style: 'cancel',
-          onPress: () => { },
-        },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: () => handleCancel(requestId),
-        },
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes, Cancel', style: 'destructive', onPress: () => handleCancel(requestId) },
       ]
     );
   };
 
   const handleSchedule = async (requestId: number) => {
+    if (!hasSelectedDate) {
+      showAlert('Error', 'Please select meeting date and time.');
+      return;
+    }
+
     try {
       const now = new Date();
+      if (date.getTime() < now.getTime()) {
+        showAlert('Invalid Time', 'Cannot select past date/time.');
+        return;
+      }
 
-      if (
-        date.toDateString() === now.toDateString() &&
-        date.getTime() < now.getTime()
-      ) {
-        showAlert('Invalid Time', 'Cannot select past time today');
+      if (maxDate && date.getTime() > maxDate.getTime()) {
+        showAlert('Deadline Exceeded', 'Meeting must be scheduled before the department deadline.');
         return;
       }
 
@@ -121,573 +177,346 @@ const FacultyRequestsScreen = () => {
       );
 
       setMessage('Meeting scheduled successfully');
+      setTimeout(() => setMessage(''), 3000);
       setSelectedRequest(null);
       setMeetingLink('');
       setLocation('');
+      setHasSelectedDate(false);
       loadRequests();
 
     } catch (err: any) {
       console.log(err);
-      showAlert(
-        'Error',
-        err?.response?.data?.message || 'Failed to schedule meeting.'
-      );
+      showAlert('Error', err?.response?.data?.message || 'Failed to schedule meeting.');
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString();
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const formatDate = (d: Date) => d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const openLink = async (url: string) => {
     if (!url || url === 'N/A') return;
-
     try {
       const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
       const filename = encodeURIComponent(url.split('/').pop() || 'document.pdf');
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
       
-      console.log('[FacultyRequestsScreen] Downloading:', fullUrl);
-
       const downloadedFile = await FileSystem.downloadAsync(fullUrl, fileUri, {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
 
       if (downloadedFile.status === 200) {
         if (Platform.OS === 'android') {
-          try {
-            const contentUri = await FileSystem.getContentUriAsync(downloadedFile.uri);
-            await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-              data: contentUri,
-              flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
-              type: 'application/pdf',
-            });
-          } catch (err) {
-            // Fallback to sharing if native viewing fails
-            if (await Sharing.isAvailableAsync()) {
-              await Sharing.shareAsync(downloadedFile.uri, { mimeType: 'application/pdf' });
-            }
-          }
+          const contentUri = await FileSystem.getContentUriAsync(downloadedFile.uri);
+          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+            data: contentUri,
+            flags: 1,
+            type: 'application/pdf',
+          });
         } else {
-          // iOS native QuickLook inside Share Sheet
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
-          } else {
-            showAlert('Error', 'No application available to open this document.');
-          }
+          await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
         }
       } else {
-        showAlert('Error', `Server returned status: ${downloadedFile.status}`);
+        showAlert('Error', `Server error: ${downloadedFile.status}`);
       }
-    } catch (err: any) {
-      console.log('[FacultyRequestsScreen] Download error:', err);
-      showAlert('Error', `Unable to fetch document.`);
+    } catch (err) {
+      showAlert('Error', 'Unable to fetch document.');
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Image
-            source={
-              isDark
-                ? require('../assets/angle-white.png')
-                : require('../assets/angle.png')
-            }
+            source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
             style={styles.backIcon}
           />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Pending Requests
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Pending Requests</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-
-        {/* Success message */}
+      {/* Grouped View */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {message !== '' && (
           <View style={styles.successBox}>
             <Text style={styles.successText}>{message}</Text>
           </View>
         )}
 
-        {/* Empty state */}
-        {requests.length === 0 ? (
+        {loading ? (
+          <View style={styles.loader}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : groupedRequests.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={[styles.emptyText, { color: colors.subText }]}>
-              No pending requests
-            </Text>
+            <Text style={[styles.emptyText, { color: colors.subText }]}>No pending requests</Text>
           </View>
         ) : (
-          requests.map(r => {
-            const isSelected = selectedRequest === r.requestId;
-            const isTeamExpanded = expandedTeam === r.teamId;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+          groupedRequests.map((proj) => (
+            <TouchableOpacity
+              key={proj.projectId}
+              style={[styles.projectCard, { backgroundColor: colors.card }]}
+              onPress={() => setSelectedProject(proj)}
+            >
+              <View style={styles.projHeader}>
+                <Text style={[styles.projTitle, { color: colors.text }]} numberOfLines={1}>
+                  {proj.title}
+                </Text>
+                <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[styles.badgeText, { color: colors.primary }]}>
+                    {proj.requests.length} {proj.requests.length === 1 ? 'Request' : 'Requests'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.projDesc, { color: colors.subText }]} numberOfLines={2}>
+                {proj.description}
+              </Text>
+              <View style={styles.projFooter}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>View Requests ›</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </ScrollView>
 
-            return (
-              <View
-                key={r.requestId}
-                style={[
-                  styles.card,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
-              >
-                {/* ✅ Team name with expand button */}
-                <TouchableOpacity
-                  onPress={() => setExpandedTeam(isTeamExpanded ? null : r.teamId)}
-                  style={styles.teamHeaderRow}
+      {/* Requests Modal */}
+      <Modal visible={!!selectedProject} animationType="slide" transparent={false}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={[styles.header, { backgroundColor: colors.card }]}>
+            <TouchableOpacity style={styles.backButton} onPress={() => { setSelectedProject(null); setSelectedRequest(null); }}>
+              <Image
+                source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+                style={styles.backIcon}
+              />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+              {selectedProject?.title}
+            </Text>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <Text style={[styles.sectionHeading, { color: colors.subText }]}>TEAM REQUESTS</Text>
+            
+            {selectedProject?.requests.map((r: any) => (
+              <View key={r.requestId} style={[styles.requestCard, { backgroundColor: colors.card }]}>
+                <TouchableOpacity 
+                  onPress={() => setExpandedTeam(expandedTeam === r.teamId ? null : r.teamId)}
+                  style={styles.requestHeader}
                 >
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={[styles.team, { color: colors.text }]}>
-                      {r.teamName || `Team ${r.teamId}`}
-                    </Text>
-                    <Text style={{ marginLeft: 8, fontSize: 16, color: colors.subText }}>
-                      {isTeamExpanded ? '▼' : '▶'}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.teamName, { color: colors.text }]}>{r.teamName || `Team ${r.teamId}`}</Text>
+                    <Text style={[styles.memberCount, { color: colors.subText }]}>
+                      {r.teamMembers?.length || 0} Members
                     </Text>
                   </View>
+                  <Text style={{ color: colors.subText, fontSize: 18 }}>
+                    {expandedTeam === r.teamId ? '▼' : '▶'}
+                  </Text>
                 </TouchableOpacity>
 
-                {/* ✅ Team details (expandable) */}
-                {isTeamExpanded && r.teamMemberDetails && r.teamMemberDetails.length > 0 && (
-                  <View style={[styles.teamDetailsBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                      Team Members Details
-                    </Text>
-
-                    {r.teamMemberDetails.map((member: any, idx: number) => (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.memberCard,
-                          { borderColor: colors.border }
-                        ]}
-                      >
-                        <View style={styles.memberHeader}>
+                {expandedTeam === r.teamId && (
+                  <View style={styles.expandedContent}>
+                    {r.teamMemberDetails?.map((m: any, idx: number) => (
+                      <View key={idx} style={[styles.memberItem, { borderTopColor: colors.border }]}>
+                        <View style={styles.memberMeta}>
                           <Text style={[styles.memberName, { color: colors.text }]}>
-                            {member.name}
-                            {member.isTeamLead && <Text style={styles.leadBadge}> ★ LEAD</Text>}
+                            {m.name} {m.isTeamLead && <Text style={{ color: '#F59E0B' }}>★</Text>}
                           </Text>
+                          <Text style={[styles.memberSub, { color: colors.subText }]}>{m.rollNo} | {m.cgpa ? m.cgpa.toFixed(2) : 'N/A'} CGPA</Text>
                         </View>
-
-                        <View style={styles.memberRow}>
-                          <Text style={[styles.label, { color: colors.subText }]}>Roll No:</Text>
-                          <Text style={[styles.value, { color: colors.text }]}>{member.rollNo}</Text>
+                        
+                        <View style={styles.docRow}>
+                          {m.resumeLink && m.resumeLink !== 'N/A' && (
+                            <TouchableOpacity style={styles.docBtn} onPress={() => openLink(m.resumeLink)}>
+                              <Text style={styles.docBtnText}>📄 Resume</Text>
+                            </TouchableOpacity>
+                          )}
+                          {m.marksheetLink && m.marksheetLink !== 'N/A' && (
+                            <TouchableOpacity style={styles.docBtn} onPress={() => openLink(m.marksheetLink)}>
+                              <Text style={styles.docBtnText}>📋 Marksheet</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
-
-                        <View style={styles.memberRow}>
-                          <Text style={[styles.label, { color: colors.subText }]}>Email:</Text>
-                          <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
-                            {member.email}
-                          </Text>
-                        </View>
-
-                        <View style={styles.memberRow}>
-                          <Text style={[styles.label, { color: colors.subText }]}>CGPA:</Text>
-                          <Text style={[styles.value, { color: colors.text }]}>
-                            {member.cgpa ? member.cgpa.toFixed(2) : 'N/A'}
-                          </Text>
-                        </View>
-
-                        {member.resumeLink && member.resumeLink !== 'N/A' && (
-                          <TouchableOpacity
-                            style={[styles.linkButton, { marginTop: 6 }]}
-                            onPress={() => openLink(member.resumeLink)}
-                          >
-                            <Text style={styles.linkText}>📄 View Resume</Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {member.marksheetLink && member.marksheetLink !== 'N/A' && (
-                          <TouchableOpacity
-                            style={[styles.linkButton, { marginTop: 4 }]}
-                            onPress={() => openLink(member.marksheetLink)}
-                          >
-                            <Text style={styles.linkText}>📋 View Mark Sheet</Text>
-                          </TouchableOpacity>
-                        )}
                       </View>
                     ))}
                   </View>
                 )}
 
-                {/* Members (collapsed view) */}
-                {!isTeamExpanded && r.members && r.members.length > 0 && (
-                  <Text style={{ fontSize: 12, color: colors.subText, marginBottom: 8 }}>
-                    Members: {r.members.join(', ')}
-                  </Text>
-                )}
-
-                <Text style={[styles.request, { color: colors.subText }]}>
-                  Request ID: {r.requestId}
-                </Text>
-
-                {/* Action buttons (not expanded) */}
-                {!isSelected && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.scheduleBtn}
-                      onPress={() => setSelectedRequest(r.requestId)}
-                    >
-                      <Text style={styles.btnText}>Schedule Meeting</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => confirmCancel(r.requestId, r.teamName || `Team ${r.teamId}`)}
-                    >
-                      <Text style={styles.btnText}>Cancel Request</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {/* Schedule form (expanded) */}
-                {isSelected && (
-                  <View style={styles.form}>
-
-                    <Text style={[styles.label, { color: colors.text }]}>
-                      Meeting Link
-                    </Text>
-                    <TextInput
-                      placeholder="Paste Google Meet / Zoom link (optional)"
-                      placeholderTextColor={colors.subText}
-                      value={meetingLink}
-                      onChangeText={setMeetingLink}
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                    />
-
-                    <Text style={[styles.label, { color: colors.text }]}>
-                      Location
-                    </Text>
-                    <TextInput
-                      placeholder="Enter venue or online location"
-                      placeholderTextColor={colors.subText}
-                      value={location}
-                      onChangeText={setLocation}
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                    />
-
-                    <TouchableOpacity
-                      style={[
-                        styles.picker,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                      onPress={() => setShowDate(true)}
-                    >
-                      <Text style={[styles.pickerText, { color: colors.text }]}>
-                        {hasSelectedDate ? formatDate(date) : 'Select Meeting Date'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.picker,
-                        {
-                          borderColor: colors.border,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                      onPress={() => setShowTime(true)}
-                    >
-                      <Text style={[styles.pickerText, { color: colors.text }]}>
-                        {hasSelectedDate ? formatTime(date) : 'Select Meeting Time'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    {showDate && (
-                      <DateTimePicker
-                        value={date}
-                        mode="date"
-                        minimumDate={today}
-                        onChange={(event, selectedDate) => {
-                          setShowDate(false);
-                          if (selectedDate) {
-                            setDate(selectedDate);
-                            setHasSelectedDate(true);
-                          }
-                        }}
-                      />
-                    )}
-
-                    {showTime && (
-                      <DateTimePicker
-                        value={date}
-                        mode="time"
-                        is24Hour={true}
-                        onChange={(event, selectedDate) => {
-                          setShowTime(false);
-                          if (selectedDate) {
-                            setDate(selectedDate);
-                            setHasSelectedDate(true);
-                          }
-                        }}
-                      />
-                    )}
-
-                    <TouchableOpacity
-                      style={styles.confirmBtn}
-                      onPress={() => handleSchedule(r.requestId)}
-                    >
-                      <Text style={styles.btnText}>Confirm Meeting</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => setSelectedRequest(null)}
-                    >
-                      <Text style={styles.btnText}>Back</Text>
-                    </TouchableOpacity>
-
-                  </View>
-                )}
+                <View style={styles.requestActions}>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => setSelectedRequest(r)}
+                  >
+                    <Text style={styles.actionBtnText}>Schedule Meeting</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
+                    onPress={() => confirmCancel(r.requestId, r.teamName || `Team ${r.teamId}`)}
+                  >
+                    <Text style={styles.actionBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            );
-          })
-        )}
-      </ScrollView>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+
+        {/* Schedule Sub-Modal */}
+        <Modal visible={!!selectedRequest} animationType="fade" transparent={true}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Schedule Meeting</Text>
+              <Text style={[styles.modalSub, { color: colors.subText }]}>
+                Team: {selectedRequest?.teamName}
+              </Text>
+
+              <TextInput
+                placeholder="Meeting Link (Google Meet / Zoom)"
+                placeholderTextColor={colors.subText}
+                value={meetingLink}
+                onChangeText={setMeetingLink}
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
+              />
+
+              <TextInput
+                placeholder="Location (Room No / Online)"
+                placeholderTextColor={colors.subText}
+                value={location}
+                onChangeText={setLocation}
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
+              />
+
+              <View style={styles.pickerRow}>
+                <TouchableOpacity 
+                  style={[styles.miniPicker, { borderColor: colors.border }]}
+                  onPress={() => setShowDate(true)}
+                >
+                  <Text style={{ color: colors.text }}>{hasSelectedDate ? formatDate(date) : 'Select Date'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.miniPicker, { borderColor: colors.border }]}
+                  onPress={() => setShowTime(true)}
+                >
+                  <Text style={{ color: colors.text }}>{hasSelectedDate ? formatTime(date) : 'Select Time'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {maxDate && (
+                <Text style={styles.deadlineWarning}>
+                  Deadline: {formatDate(maxDate)}
+                </Text>
+              )}
+
+              {showDate && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  minimumDate={new Date()}
+                  maximumDate={maxDate}
+                  onChange={(e, d) => { setShowDate(false); if(d){ setDate(d); setHasSelectedDate(true); } }}
+                />
+              )}
+              {showTime && (
+                <DateTimePicker
+                  value={date}
+                  mode="time"
+                  onChange={(e, d) => { setShowTime(false); if(d){ setDate(d); setHasSelectedDate(true); } }}
+                />
+              )}
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity 
+                  style={[styles.footerBtn, { backgroundColor: '#9CA3AF' }]} 
+                  onPress={() => setSelectedRequest(null)}
+                >
+                  <Text style={styles.footerBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.footerBtn, { backgroundColor: '#10B981' }]} 
+                  onPress={() => handleSchedule(selectedRequest.requestId)}
+                >
+                  <Text style={styles.footerBtnText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-export default FacultyRequestsScreen;
-
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-
   header: {
-    height: 60,
+    height: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    elevation: 4,
+    paddingHorizontal: 16,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  backButton: { width: 40, height: 40, justifyContent: 'center' },
+  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
+  headerTitle: { fontSize: 18, fontWeight: '700', flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
+  successBox: { backgroundColor: '#DCFCE7', padding: 12, borderRadius: 10, marginBottom: 16 },
+  successText: { color: '#15803D', textAlign: 'center', fontWeight: '600' },
+  emptyBox: { alignItems: 'center', marginTop: 100 },
+  emptyText: { fontSize: 16, fontWeight: '600' },
 
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    marginLeft: -8,
-  },
-
-  backIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-  },
-
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-
-  card: {
-    borderWidth: 1,
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 18,
+  // Project Cards
+  projectCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    elevation: 3,
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
+  projHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  projTitle: { fontSize: 18, fontWeight: '800', flex: 1, marginRight: 10 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  badgeText: { fontSize: 12, fontWeight: '700' },
+  projDesc: { fontSize: 14, lineHeight: 20, marginBottom: 12 },
+  projFooter: { alignItems: 'flex-end' },
 
-  teamHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
+  // Request Cards
+  sectionHeading: { fontSize: 12, fontWeight: '800', marginBottom: 12, letterSpacing: 1 },
+  requestCard: { borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 },
+  requestHeader: { flexDirection: 'row', alignItems: 'center' },
+  teamName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  memberCount: { fontSize: 12 },
+  expandedContent: { marginTop: 12 },
+  memberItem: { borderTopWidth: 0.5, paddingVertical: 12 },
+  memberMeta: { marginBottom: 8 },
+  memberName: { fontSize: 14, fontWeight: '600' },
+  memberSub: { fontSize: 12 },
+  docRow: { flexDirection: 'row', gap: 10 },
+  docBtn: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  docBtnText: { fontSize: 11, fontWeight: '600', color: '#374151' },
+  requestActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-  team: {
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-
-  teamDetailsBox: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-
-  memberCard: {
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 8,
-    marginBottom: 6,
-  },
-
-  memberHeader: {
-    marginBottom: 6,
-  },
-
-  memberName: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  leadBadge: {
-    color: '#F59332',
-    fontWeight: '700',
-    fontSize: 10,
-  },
-
-  memberRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-
-  value: {
-    fontSize: 10,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-
-  linkButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    backgroundColor: '#6366F1',
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-
-  linkText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-
-  request: {
-    fontSize: 13,
-    marginBottom: 12,
-  },
-
-  scheduleBtn: {
-    backgroundColor: '#6366F1',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-
-  cancelBtn: {
-    backgroundColor: '#EF4444',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-
-  confirmBtn: {
-    backgroundColor: '#10B981',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-
-  btnText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-  form: {
-    marginTop: 10,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-
-  picker: {
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 6,
-  },
-
-  pickerText: {
-    fontSize: 14,
-  },
-
-  helper: {
-    fontSize: 12,
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
-  successBox: {
-    backgroundColor: '#DCFCE7',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-
-  successText: {
-    color: '#15803D',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-
-  emptyBox: {
-    marginTop: 80,
-    alignItems: 'center',
-  },
-
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { borderRadius: 20, padding: 24, elevation: 5 },
+  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 4 },
+  modalSub: { fontSize: 14, marginBottom: 20 },
+  modalInput: { borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 },
+  pickerRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  miniPicker: { flex: 1, borderWidth: 1, borderRadius: 10, padding: 12, alignItems: 'center' },
+  deadlineWarning: { fontSize: 12, color: '#EF4444', fontWeight: '600', marginBottom: 16, textAlign: 'center' },
+  modalFooter: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  footerBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  footerBtnText: { color: '#fff', fontWeight: '700' },
 });
+
+export default FacultyRequestsScreen;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://10.237.186.133:8080';
+const API = 'http://4.186.27.158';
 
 // ✅ GET ALL INSTITUTES
 export const getAllInstitutes = (token: string) => {
@@ -257,5 +257,19 @@ export const rescheduleMeeting = async (
       headers: { Authorization: `Bearer ${token}` },
     },
   ).then(res => res.data);
+};
+
+export const deleteProject = async (projectId: number, token: string) => {
+  const res = await axios.delete(`${API}/faculty/project/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const deleteProjectDocuments = async (projectId: number, token: string) => {
+  const res = await axios.delete(`${API}/faculty/project/${projectId}/documents`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
 };
 

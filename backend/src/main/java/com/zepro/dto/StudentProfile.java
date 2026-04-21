@@ -9,8 +9,10 @@ public class StudentProfile {
     private Boolean isInTeam;
     private Boolean isTeamLead;
     private String teamName;
+    private String institute;
     private String resumeLink;
     private String marksheetLink;
+    private Boolean isAllocated;
 
     // getters & setters
 
@@ -22,6 +24,9 @@ public class StudentProfile {
 
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
+
+    public String getInstitute() { return institute; }
+    public void setInstitute(String institute) { this.institute = institute; }
 
     public Boolean getIsInTeam() { return isInTeam; }
     public void setIsInTeam(Boolean isInTeam) { this.isInTeam = isInTeam; }
@@ -37,4 +42,7 @@ public class StudentProfile {
 
     public String getMarksheetLink() { return marksheetLink; }
     public void setMarksheetLink(String marksheetLink) { this.marksheetLink = marksheetLink; }
+
+    public Boolean getIsAllocated() { return isAllocated; }
+    public void setIsAllocated(Boolean isAllocated) { this.isAllocated = isAllocated; }
 }

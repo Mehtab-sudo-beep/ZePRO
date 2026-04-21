@@ -33,12 +33,17 @@ public class StudentProfileService {
             dto.setDepartment(student.getDepartment().getDepartmentName());
         }
 
+        if (student.getInstitute() != null) {
+            dto.setInstitute(student.getInstitute().getInstituteName());
+        }
+
         if (student.getTeam() != null) {
             dto.setTeamName(student.getTeam().getTeamName());
         }
 
         dto.setResumeLink(student.getResumeLink());
         dto.setMarksheetLink(student.getMarksheetLink());
+        dto.setIsAllocated(student.isAllocated());
 
         return dto;
     }

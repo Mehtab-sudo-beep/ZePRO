@@ -242,6 +242,36 @@ public class FacultyController {
         return facultyService.deactivateProject(projectId, faculty);
     }
 
+    @DeleteMapping("/project/{projectId}")
+    public ResponseEntity<?> deleteProject(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+        String email = authentication.getName();
+        Faculty faculty = facultyRepository.findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        try {
+            facultyService.deleteProject(projectId, faculty);
+            return ResponseEntity.ok(Map.of("message", "Project deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/project/{projectId}/documents")
+    public ResponseEntity<?> deleteProjectDocuments(
+            @PathVariable Long projectId,
+            Authentication authentication) {
+        String email = authentication.getName();
+        Faculty faculty = facultyRepository.findByUser_Email(email)
+                .orElseThrow(() -> new RuntimeException("Faculty not found"));
+        try {
+            facultyService.deleteProjectDocuments(projectId, faculty);
+            return ResponseEntity.ok(Map.of("message", "All documents deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/pending-requests")
     public List<ProjectResponse> getPendingRequests(Authentication authentication) {
 

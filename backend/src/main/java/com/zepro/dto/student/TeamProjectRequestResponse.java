@@ -7,13 +7,15 @@ public class TeamProjectRequestResponse {
     private String facultyName;
     private String status;
     private String rejectionReason;
+    private Long projectId;
 
-    public TeamProjectRequestResponse(Long requestId, String projectTitle, String facultyName, String status, String rejectionReason) {
+    public TeamProjectRequestResponse(Long requestId, String projectTitle, String facultyName, String status, String rejectionReason, Long projectId) {
         this.requestId = requestId;
         this.projectTitle = projectTitle;
         this.facultyName = facultyName;
         this.status = status;
         this.rejectionReason = rejectionReason;
+        this.projectId = projectId;
     }
 
     public Long getRequestId() {
@@ -34,5 +36,9 @@ public class TeamProjectRequestResponse {
 
     public String getRejectionReason() {
         return rejectionReason;
+    }
+
+    public Long getProjectId() {
+        return projectId;
     }
 }

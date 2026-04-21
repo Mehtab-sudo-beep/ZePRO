@@ -228,6 +228,7 @@ const ProfileScreen: React.FC = () => {
 
         {/* Details */}
         <ScrollView style={[styles.list, { backgroundColor: colors.card }]}>
+          <InfoItem label="Institute" value={profile.institute} colors={colors} user={user} />
           <InfoItem label="Department" value={profile.department} colors={colors} user={user} />
           <InfoItem label="Team" value={profile.teamName} colors={colors} user={user} />
           <InfoItem

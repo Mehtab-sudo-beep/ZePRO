@@ -11,21 +11,27 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FacultyRepository extends JpaRepository<Faculty, Long> {
-    
-    // ✅ ADD THIS METHOD (Find faculty by user email)
+
     Optional<Faculty> findByUser_Email(String email);
-    
+
     Optional<Faculty> findByUserUserId(Long userId);
+
     Optional<Faculty> findByUser(Users user);
+
     Optional<Faculty> findByUserUserIdAndIsFCTrue(Long userId);
+
     List<Faculty> findByDepartment_DepartmentId(Long departmentId);
-        Optional<Faculty> findByUser_UserId(Long userId);
+
+    Optional<Faculty> findByUser_UserId(Long userId);
+
     long countByDepartment_DepartmentId(Long departmentId);
 
+    Optional<Faculty> findByDepartment_DepartmentIdAndIsFC(Long departmentId, Boolean isFC);
+
     @Query("SELECT f FROM Faculty f WHERE " +
-           "LOWER(f.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(f.user.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(f.specialization) LIKE LOWER(CONCAT('%', :query, '%'))")
+            "LOWER(f.user.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(f.user.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "LOWER(f.specialization) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Faculty> searchFaculties(@Param("query") String query);
 
     @Query("SELECT COALESCE(SUM(f.maxStudents), 0) FROM Faculty f")
@@ -43,5 +49,5 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     void incrementAllocatedStudents(@Param("facultyId") Long facultyId);
 
     // ✅ ADD THIS - Find faculties by department
-    
+
 }

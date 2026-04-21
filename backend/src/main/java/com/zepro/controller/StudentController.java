@@ -445,6 +445,11 @@ public class StudentController {
         return studentService.getTeamProjectRequests(studentId);
     }
 
+    @GetMapping("/project/{projectId}/{studentId}")
+    public ProjectResponse getProjectById(@PathVariable Long projectId, @PathVariable Long studentId) {
+        return studentService.getProjectById(projectId, studentId);
+    }
+
     // ✅ COMPLETE STUDENT PROFILE (Mandatory after login)
     @PostMapping(value = "/complete-profile/{studentId}", consumes = {
             org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE })

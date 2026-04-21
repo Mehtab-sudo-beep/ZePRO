@@ -5,6 +5,10 @@ export const signup = (data: any) => {
   return API.post('/auth/signup', data);
 };
 
+export const getAllowedTails = () => {
+  return API.get('/auth/tails');
+};
+
 export const login = (data: any) => {
   return API.post('/auth/login', data);
 };

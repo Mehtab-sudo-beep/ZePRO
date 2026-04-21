@@ -183,19 +183,20 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           console.log('[CompleteProfile] ✅ Institutes loaded:', res.data.length);
           
           if (res.data.length === 1) {
-             console.log('[CompleteProfile] 🎯 Auto-selecting institute');
-             setSelectedInstitute(res.data[0]);
+            console.log('[CompleteProfile] 🎯 Auto-selecting institute');
+            setSelectedInstitute(res.data[0]);
+            // No need to show selection block if only one
           } else if (res.data.length === 0) {
-             showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{ 
-               text: 'OK', 
-               onPress: async () => {
-                 try {
-                   await AsyncStorage.clear();
-                 } catch (e) {}
-                 setUser(null);
-                 navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
-               }
-             }]);
+            showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{
+              text: 'OK',
+              onPress: async () => {
+                try {
+                  await AsyncStorage.clear();
+                } catch (e) { }
+                setUser(null);
+                navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
+              }
+            }]);
           }
         }
       } catch (e: any) {
@@ -214,7 +215,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
       }
     };
     fetchInstitutes();
-  }, [showAlert]);
+  }, [showAlert, navigation, setUser]);
 
   // Load departments when institute changes
   useEffect(() => {
@@ -245,7 +246,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
 
   const validate = (): string | null => {
     if (!phone.trim()) return 'Phone number is required.';
-    if (!/^[0-9]{10}$/.test(phone.replace(/\D/g, ''))) 
+    if (phone.length !== 10)
       return 'Please enter a valid 10-digit phone number.';
     
     if (!rollNumber.trim()) return 'Roll number is required.';
@@ -389,10 +390,10 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Phone Number *</Text>
             <TextInput
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ''))}
               placeholder="e.g. 9876543210"
               placeholderTextColor={colors.subText}
-              keyboardType="phone-pad"
+              keyboardType="number-pad"
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               maxLength={10}
             />
@@ -460,6 +461,13 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Institute *</Text>
             {loadingInstitutes ? (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+            ) : institutes.length === 1 ? (
+              <View style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background, opacity: 0.8 }]}>
+                <Text style={[styles.selectorText, { color: colors.text }]}>
+                  {institutes[0].instituteName}
+                </Text>
+                <Text style={{ color: colors.primary, fontSize: 16 }}>✓</Text>
+              </View>
             ) : (
               <TouchableOpacity
                 style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}

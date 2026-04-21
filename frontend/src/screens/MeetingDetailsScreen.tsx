@@ -183,7 +183,7 @@ const Detail = ({ label, value, colors }: { label: string; value: string; colors
 
 const styles = StyleSheet.create({
   header: {
-    height: 64,
+    height: 72,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -192,12 +192,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     resizeMode: 'contain',
   },
   content: {
@@ -210,11 +211,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 8,
     marginLeft: 4,
+    textTransform: 'uppercase',
   },
   title: {
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 8,
+    letterSpacing: -0.4,
   },
   description: {
     fontSize: 15,
@@ -236,15 +239,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   linkContainer: {
     marginTop: 4,

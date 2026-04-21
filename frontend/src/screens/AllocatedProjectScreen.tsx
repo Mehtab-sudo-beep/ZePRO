@@ -213,7 +213,7 @@ export default AllocatedProjectScreen;
 
 const styles = StyleSheet.create({
   header: {
-    height: 64,
+    height: 72,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -222,8 +222,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   content: {
     padding: 16,
@@ -271,16 +272,18 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
-    lineHeight: 28,
+    lineHeight: 30,
+    letterSpacing: -0.4,
   },
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     letterSpacing: 1.2,
     marginLeft: 4,
     marginBottom: 8,
+    textTransform: 'uppercase',
   },
   card: {
     borderRadius: 16,
@@ -292,12 +295,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   descriptionHeader: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   descriptionBody: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
   },
   divider: {
@@ -311,18 +316,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   detailLabel: {
     fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
   detailValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
   },
   docLink: {

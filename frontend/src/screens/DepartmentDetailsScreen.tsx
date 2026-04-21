@@ -10,6 +10,8 @@ import {
   Modal,
   FlatList,
   Image,
+  Dimensions,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,17 +20,23 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
-import { getFacultyByDepartment, assignFacultyCoordinator, removeFacultyCoordinator, getDepartmentStats } from '../api/departmentApi';
+import { getFacultyByDepartment, assignFacultyCoordinator, removeFacultyCoordinator, getDepartmentStats, getStudentsByDepartment } from '../api/departmentApi';
+
+const { width } = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'DepartmentDetails'>;
 type RoutePropType = RouteProp<RootStackParamList, 'DepartmentDetails'>;
 
-interface Faculty {
+interface UserItem {
   userId: string;
   name: string;
   email: string;
   role: string;
+  rollNumber?: string;
+  isFC?: boolean;
 }
+
+type TabType = 'FACULTY' | 'STUDENTS';
 
 const DepartmentDetailsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -39,10 +47,13 @@ const DepartmentDetailsScreen: React.FC = () => {
   const { departmentId, departmentName, instituteId, instituteName } = route.params || {};
 
   const [loading, setLoading] = useState(false);
-  const [facultyList, setFacultyList] = useState<Faculty[]>([]);
+  const [facultyList, setFacultyList] = useState<UserItem[]>([]);
+  const [studentList, setStudentList] = useState<UserItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('FACULTY');
   const [showModal, setShowModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [currentCoordinator, setCurrentCoordinator] = useState<Faculty | null>(null);
+  const [currentCoordinator, setCurrentCoordinator] = useState<UserItem | null>(null);
 
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -50,120 +61,64 @@ const DepartmentDetailsScreen: React.FC = () => {
     totalProjects: 0,
   });
 
-  // ✅ USE CALLBACK TO MEMOIZE FUNCTION
-  const loadFacultyList = useCallback(async () => {
+  const isDark = theme === 'dark';
+  const divider = isDark ? '#374151' : '#E5E7EB';
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('[DepartmentDetails] 📡 Fetching faculty...');
+      const [facRes, studRes] = await Promise.all([
+        getFacultyByDepartment(String(departmentId)),
+        getStudentsByDepartment(String(departmentId))
+      ]);
+      
+      setFacultyList(facRes.data || []);
+      setStudentList(studRes.data || []);
 
-      const response = await getFacultyByDepartment(String(departmentId));
-      console.log('[DepartmentDetails] ✅ Faculty loaded:', response.data);
-
-      setFacultyList(response.data || []);
-      setStats(prev => ({ ...prev, totalFaculty: response.data?.length || 0 }));
-
-      // ✅ CHECK IF ANY COORDINATOR EXISTS
-      const coordinator = response.data?.find((f: Faculty) => f.role === 'FACULTY_COORDINATOR');
-      if (coordinator) {
-        setCurrentCoordinator(coordinator);
-      }
+      const coordinator = facRes.data?.find((f: UserItem) => f.isFC);
+      setCurrentCoordinator(coordinator || null);
     } catch (error: any) {
-      console.log('[DepartmentDetails] ❌ Error:', error.message);
-      console.log('[DepartmentDetails] ❌ Status:', error.response?.status);
-      console.log('[DepartmentDetails] ❌ Data:', error.response?.data);
-
-      // ✅ HANDLE 403 FORBIDDEN
       if (error.response?.status === 403) {
-        showAlert(
-          'Access Denied',
-          'You do not have permission to view faculty. Only admins can access this feature.'
-        );
-      } else {
-        showAlert(
-          'Error',
-          error.response?.data?.error || 'Failed to load faculty'
-        );
+        showAlert('Access Denied', 'Permission required to view members.');
       }
     } finally {
       setLoading(false);
     }
-  }, [departmentId, showAlert]); // ✅ DEPENDENCIES FOR CALLBACK
+  }, [departmentId, showAlert]);
 
-  // ✅ FIXED USEEFFECT WITH PROPER DEPENDENCIES
-  useEffect(() => {
-    console.log('[DepartmentDetails] 📋 Loaded');
-    console.log('Department ID:', departmentId);
-    console.log('Department Name:', departmentName);
-    console.log('Institute ID:', instituteId);
-    console.log('Institute Name:', instituteName);
-
-    loadFacultyList();
-  }, [departmentId, departmentName, instituteId, instituteName, loadFacultyList]); // ✅ ALL DEPS INCLUDED
-
-  // ✅ ADD THIS USEEFFECT FOR STATS
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const statsRes = await getDepartmentStats(String(departmentId));
-        setStats({
-          totalStudents: statsRes.data.studentCount,
-          totalFaculty: statsRes.data.facultyCount,
-          totalProjects: statsRes.data.projectCount,
-        });
-      } catch (e) {
-        console.log('ERROR LOADING STATS:', e);
-      }
-    };
-    loadStats();
+  const loadStats = useCallback(async () => {
+    try {
+      const statsRes = await getDepartmentStats(String(departmentId));
+      setStats({
+        totalStudents: statsRes.data.studentCount,
+        totalFaculty: statsRes.data.facultyCount,
+        totalProjects: statsRes.data.projectCount,
+      });
+    } catch (e) {}
   }, [departmentId]);
 
-  const handleAssignCoordinator = async (faculty: Faculty) => {
-    console.log('[DepartmentDetails] 🚀 Assigning coordinator:', faculty.name);
+  useEffect(() => {
+    loadData();
+    loadStats();
+  }, [loadData, loadStats]);
 
+  const handleAssignCoordinator = async (faculty: UserItem) => {
     showAlert(
-      'Confirm Assignment',
-      `Assign "${faculty.name}" as Faculty Coordinator?`,
+      'Assign FC',
+      `Make "${faculty.name}" the Faculty Coordinator?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Assign',
-          style: 'default',
+          text: 'Confirm',
           onPress: async () => {
             setAssigning(true);
-
             try {
-              const response = await assignFacultyCoordinator(
-                String(departmentId),
-                faculty.userId
-              );
-
-              console.log('[DepartmentDetails] ✅ Assigned:', response.data);
-
-              setCurrentCoordinator(faculty);
+              await assignFacultyCoordinator(String(departmentId), faculty.userId);
+              showAlert('Success', 'Coordinator assigned');
+              loadData();
               setShowModal(false);
-
-              showAlert(
-                'Success',
-                `${faculty.name} is now Faculty Coordinator!`
-              );
-
-              loadFacultyList();
             } catch (error: any) {
-              console.log('[DepartmentDetails] ❌ Error:', error.message);
-              console.log('[DepartmentDetails] ❌ Status:', error.response?.status);
-
-              // ✅ HANDLE 403 FORBIDDEN
-              if (error.response?.status === 403) {
-                showAlert(
-                  'Access Denied',
-                  'You do not have permission to assign coordinators. Only admins can do this.'
-                );
-              } else {
-                showAlert(
-                  'Error',
-                  error.response?.data?.error || 'Failed to assign coordinator'
-                );
-              }
+              showAlert('Error', 'Failed to assign');
             } finally {
               setAssigning(false);
             }
@@ -175,10 +130,9 @@ const DepartmentDetailsScreen: React.FC = () => {
 
   const handleRemoveCoordinator = () => {
     if (!currentCoordinator) return;
-
     showAlert(
-      'Remove Coordinator',
-      `Remove "${currentCoordinator.name}" as coordinator?`,
+      'Remove FC',
+      `Remove "${currentCoordinator.name}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -187,310 +141,191 @@ const DepartmentDetailsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await removeFacultyCoordinator(String(departmentId), currentCoordinator.userId);
-              setCurrentCoordinator(null);
-              showAlert('Success', 'Coordinator removed successfully');
-              loadFacultyList();
-            } catch (err: any) {
-              showAlert('Error', err.response?.data?.error || 'Failed to remove coordinator');
-            }
+              loadData();
+            } catch (err) {}
           },
         },
       ]
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.card} />
+  const filteredList = (activeTab === 'FACULTY' ? facultyList : studentList).filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.rollNumber && item.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Image
-              source={require('../assets/angle.png')}
-              style={[styles.backIcon, { tintColor: colors.text }]}
-            />
-          </TouchableOpacity>
+  const renderMemberCard = (item: UserItem) => {
+    const isFaculty = activeTab === 'FACULTY';
+    const isCoordinator = isFaculty && item.isFC;
+    
+    return (
+      <View key={item.userId} style={[styles.card, { backgroundColor: colors.card }]}>
+        <View style={styles.cardContent}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>{departmentName}</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.subText }]}>{instituteName}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{item.name}</Text>
+            <Text style={[styles.subtitle, { color: colors.subText }]}>{item.email}</Text>
+          </View>
+          
+          {isFaculty ? (
+            isCoordinator ? (
+              <View style={[styles.pill, { backgroundColor: '#16A34A15' }]}>
+                <Text style={[styles.pillText, { color: '#16A34A' }]}>COORDINATOR</Text>
+              </View>
+            ) : (
+              <View style={[styles.pill, { backgroundColor: colors.primary + '15' }]}>
+                <Text style={[styles.pillText, { color: colors.primary }]}>FACULTY</Text>
+              </View>
+            )
+          ) : (
+            <View style={[styles.pill, { backgroundColor: '#8B5CF615' }]}>
+              <Text style={[styles.pillText, { color: '#8B5CF6' }]}>
+                {item.rollNumber || 'STUDENT'}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        {isFaculty && (
+          <View style={[styles.cardFooter, { borderTopColor: divider }]}>
+            <TouchableOpacity 
+              onPress={() => isCoordinator ? handleRemoveCoordinator() : handleAssignCoordinator(item)}
+              style={[
+                styles.solidButton, 
+                { backgroundColor: isCoordinator ? '#DC2626' : colors.primary }
+              ]}
+            >
+              <Text style={styles.solidButtonText}>
+                {isCoordinator ? 'Remove Coordinator' : 'Set as Coordinator'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      
+      {/* HEADER */}
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Image source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')} style={styles.backIcon} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{departmentName}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={1}>{instituteName}</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* STATS */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statBox, { backgroundColor: colors.card }]}>
+            <Text style={[styles.statNum, { color: '#6366F1' }]}>{stats.totalStudents}</Text>
+            <Text style={styles.statLabel}>Students</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: colors.card }]}>
+            <Text style={[styles.statNum, { color: '#10B981' }]}>{stats.totalFaculty}</Text>
+            <Text style={styles.statLabel}>Faculty</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: colors.card }]}>
+            <Text style={[styles.statNum, { color: '#F59E0B' }]}>{stats.totalProjects}</Text>
+            <Text style={styles.statLabel}>Projects</Text>
           </View>
         </View>
 
-        {loading && facultyList.length === 0 ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#4F46E5" />
+        {/* SEARCH */}
+        <View style={styles.searchWrap}>
+          <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TextInput
+              placeholder={`Search ${activeTab.toLowerCase()}...`}
+              placeholderTextColor={colors.subText}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={[styles.searchInput, { color: colors.text }]}
+            />
           </View>
-        ) : (
-          <ScrollView style={styles.content}>
-            {/* Stats Grid */}
-            <View style={styles.statsGrid}>
-              <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: '#4F46E5' }]}>
-                  {stats.totalStudents}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.subText }]}>Students</Text>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: '#059669' }]}>
-                  {stats.totalFaculty}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.subText }]}>Faculty</Text>
-              </View>
-              <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: '#D97706' }]}>
-                  {stats.totalProjects}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.subText }]}>Projects</Text>
-              </View>
-            </View>
+        </View>
 
-            {/* Current Coordinator Card */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Faculty Coordinator</Text>
-
-              {currentCoordinator ? (
-                <>
-                  <View style={[styles.coordinatorCard, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}>
-                    <Text style={[styles.coordinatorName, { color: colors.text }]}>
-                      ✅ {currentCoordinator.name}
-                    </Text>
-                    <Text style={[styles.coordinatorEmail, { color: colors.subText }]}>
-                      {currentCoordinator.email}
-                    </Text>
-                    <Text style={[styles.coordinatorRole, { color: colors.primary }]}>
-                      FACULTY_COORDINATOR
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.removeButton, { marginTop: 10 }]}
-                    onPress={handleRemoveCoordinator}
-                  >
-                    <Text style={styles.removeButtonText}>❌ Remove Coordinator</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <Text style={[styles.noCoordinatorText, { color: colors.subText }]}>
-                  No coordinator assigned yet
+        {/* TABS */}
+        <View style={styles.tabRow}>
+          {(['FACULTY', 'STUDENTS'] as TabType[]).map(tab => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[
+                  styles.tabItem, 
+                  isActive && { backgroundColor: colors.primary, borderColor: colors.primary }
+                ]}
+                onPress={() => { setActiveTab(tab); setSearchQuery(''); }}
+              >
+                <Text style={[
+                  styles.tabText, 
+                  { color: isActive ? '#fff' : colors.subText }, 
+                  isActive && { fontWeight: '700' }
+                ]}>
+                  {tab}
                 </Text>
-              )}
-            </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-            {/* Manage Faculty Section */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Faculty Members</Text>
-                <TouchableOpacity
-                  style={styles.assignButton}
-                  onPress={() => setShowModal(true)}
-                  disabled={facultyList.length === 0}
-                >
-                  <Text style={styles.assignButtonText}>📌 Assign</Text>
-                </TouchableOpacity>
-              </View>
-
-              {facultyList.length === 0 ? (
-                <Text style={[styles.noDataText, { color: colors.subText }]}>
-                  No faculty members in this department
-                </Text>
-              ) : (
-                facultyList.map(faculty => (
-                  <View
-                    key={faculty.userId}
-                    style={[
-                      styles.facultyCard,
-                      {
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                      },
-                      faculty.role === 'FACULTY_COORDINATOR' && { backgroundColor: colors.primary + '15' },
-                    ]}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.facultyName, { color: colors.text }]}>
-                        {faculty.name}
-                      </Text>
-                      <Text style={[styles.facultyEmail, { color: colors.subText }]}>
-                        {faculty.email}
-                      </Text>
-                      {faculty.role === 'FACULTY_COORDINATOR' && (
-                        <Text style={[styles.coordinatorBadge, { color: colors.primary }]}>
-                          📌 Coordinator
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          </ScrollView>
-        )}
-
-        {/* Faculty Selection Modal */}
-        <Modal visible={showModal} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  Select Faculty Coordinator
-                </Text>
-                <TouchableOpacity onPress={() => setShowModal(false)}>
-                  <Text style={[styles.closeButton, { color: colors.subText }]}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {assigning ? (
-                <ActivityIndicator size="large" color="#4F46E5" style={{ marginVertical: 40 }} />
-              ) : (
-                <FlatList
-                  data={facultyList}
-                  keyExtractor={item => item.userId}
-                  scrollEnabled={false}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[
-                        styles.facultyOption,
-                        { backgroundColor: colors.background, borderColor: colors.border },
-                      ]}
-                      onPress={() => handleAssignCoordinator(item)}
-                      disabled={assigning}
-                    >
-                      <View>
-                        <Text style={[styles.optionName, { color: colors.text }]}>
-                          {item.name}
-                        </Text>
-                        <Text style={[styles.optionEmail, { color: colors.subText }]}>
-                          {item.email}
-                        </Text>
-                      </View>
-                      <Text style={styles.selectArrow}>›</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              )}
-            </View>
-          </View>
-        </Modal>
-      </View>
+        {/* LIST */}
+        <View style={{ paddingHorizontal: 16 }}>
+          {loading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          ) : filteredList.length === 0 ? (
+            <Text style={styles.emptyText}>No results found.</Text>
+          ) : (
+            filteredList.map(renderMemberCard)
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
-
-  header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-  },
-  backBtn: { marginRight: 12, width: 40, justifyContent: 'center', alignItems: 'center' },
+  header: { height: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, elevation: 2 },
+  backBtn: { padding: 8, marginRight: 4 },
   backIcon: { width: 22, height: 22, resizeMode: 'contain' },
-  headerTitle: { fontSize: 22, fontWeight: 'bold' },
-  headerSubtitle: { fontSize: 13, marginTop: 2 },
+  headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 12, marginTop: 1 },
 
-  content: { flex: 1, padding: 16 },
+  statsContainer: { flexDirection: 'row', gap: 12, padding: 16 },
+  statBox: { flex: 1, padding: 16, borderRadius: 16, alignItems: 'center', elevation: 2 },
+  statNum: { fontSize: 20, fontWeight: '800' },
+  statLabel: { fontSize: 10, fontWeight: '600', color: '#94a3b8', marginTop: 4, textTransform: 'uppercase' },
 
-  statsGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  statCard: {
-    borderRadius: 12,
-    padding: 16,
-    flex: 1,
-    elevation: 2,
-    borderWidth: 1,
-  },
-  statValue: { fontSize: 24, fontWeight: 'bold' },
-  statLabel: { fontSize: 11, marginTop: 4 },
+  searchWrap: { paddingHorizontal: 16, marginBottom: 16 },
+  searchBox: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 48, justifyContent: 'center' },
+  searchInput: { fontSize: 14, padding: 0 },
 
-  section: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 12 },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  tabRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 },
+  tabItem: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  tabText: { fontSize: 12, letterSpacing: 0.5 },
 
-  coordinatorCard: {
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 2,
-  },
-  coordinatorName: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  coordinatorEmail: { fontSize: 13, marginBottom: 4 },
-  coordinatorRole: { fontSize: 11, fontWeight: '600' },
+  card: { borderRadius: 16, padding: 18, marginBottom: 14, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  cardContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  title: { fontSize: 15, fontWeight: '700' },
+  subtitle: { fontSize: 13, marginTop: 2 },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 },
+  pillText: { fontSize: 10, fontWeight: '800' },
+  cardFooter: { marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  solidButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignSelf: 'flex-start' },
+  solidButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  emptyText: { textAlign: 'center', marginTop: 40, color: '#94a3b8', fontStyle: 'italic' },
 
-  noCoordinatorText: { fontSize: 14, fontStyle: 'italic', paddingVertical: 20, textAlign: 'center' },
-  noDataText: { fontSize: 14, paddingVertical: 16, textAlign: 'center' },
-
-  assignButton: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  assignButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  facultyCard: {
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  coordinatorHighlight: { backgroundColor: '#EEF2FF' },
-  facultyName: { fontSize: 14, fontWeight: '600' },
-  facultyEmail: { fontSize: 12, marginTop: 2 },
-  coordinatorBadge: { fontSize: 12, fontWeight: '600', marginTop: 4 },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 24,
-    paddingBottom: 32,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: { fontSize: 20, fontWeight: '700' },
-  closeButton: { fontSize: 24 },
-
-  facultyOption: {
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  optionName: { fontSize: 14, fontWeight: '600' },
-  optionEmail: { fontSize: 12, marginTop: 2 },
-  selectArrow: { fontSize: 24, color: '#4F46E5', fontWeight: '600' },
-
-  removeButton: {
-    borderWidth: 1,
-    borderColor: '#DC2626',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  removeButtonText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  modalItem: { paddingVertical: 16, borderBottomWidth: StyleSheet.hairlineWidth },
 });
 
-export default DepartmentDetailsScreen;
+export default DepartmentDetailsScreen;

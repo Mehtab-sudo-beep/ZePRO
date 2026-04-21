@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,9 @@ import {
   Modal,
   TextInput,
   Alert,
-  Animated,
   Dimensions,
   StatusBar,
   Image,
-  Platform,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +19,7 @@ import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import * as DocumentPicker from 'expo-document-picker';
 
 import {
   getFacultyProjects,
@@ -30,120 +29,21 @@ import {
   activateProjectStatus,
   deactivateProjectStatus,
   getAllocationRules,
+  deleteProject,
+  deleteProjectDocuments,
+  uploadProjectDocuments,
 } from '../api/facultyApi';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_PEEK = 60;
+const { width } = Dimensions.get('window');
 
 // Solid status colors
 const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
-  OPEN: { label: 'Open', bg: '#4abf71ff', fg: '#FFFFFF' },
-  ASSIGNED: { label: 'Assigned', bg: '#3763c2ff', fg: '#FFFFFF' },
-  CLOSE: { label: 'Closed', bg: '#d63838ff', fg: '#FFFFFF' },
+  OPEN: { label: 'Open', bg: '#10B981', fg: '#FFFFFF' },
+  ASSIGNED: { label: 'Assigned', bg: '#2563EB', fg: '#FFFFFF' },
+  CLOSE: { label: 'Closed', bg: '#EF4444', fg: '#FFFFFF' },
 };
 const getStatus = (s: string) =>
   STATUS_META[s?.toUpperCase()] ?? { label: s, fg: '#FFFFFF', bg: '#6B7280' };
-
-// ── Project Detail Modal ───────────────────────────────────────────────
-const ProjectDetailSheet = ({
-  project,
-  visible,
-  onClose,
-  colors,
-  onToggleStatus,
-  activatingId,
-}: any) => {
-  if (!project) return null;
-
-  const status = getStatus(project.status);
-  const isActive = project.isActive;
-  const isToggling = activatingId === project.projectId;
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.sheetBackdrop}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
-      </View>
-
-      <View style={styles.centeredModalContainer} pointerEvents="box-none">
-        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
-          {/* Close icon button (top-right) */}
-          <TouchableOpacity onPress={onClose} style={styles.closeIconBtn} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Image
-              source={require('../assets/close.png')}
-              style={[styles.closeIcon, { tintColor: colors.text }]}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.sheetScroll}
-            bounces={false}
-          >
-            {/* Title + status */}
-            <View style={styles.sheetTitleRow}>
-              <Text style={[styles.sheetTitle, { color: colors.text }]} numberOfLines={3}>
-                {project.title}
-              </Text>
-              <View style={[styles.sheetStatusBadge, { backgroundColor: status.bg }]}>
-                <Text style={[styles.sheetStatusText, { color: status.fg }]}>{status.label}</Text>
-              </View>
-            </View>
-
-            {/* Description */}
-            <View style={[styles.descBlock, { backgroundColor: colors.background }]}>
-              <Text style={[styles.descBlockLabel, { color: colors.subText }]}>DESCRIPTION</Text>
-              <Text style={[styles.descBlockText, { color: colors.text }]}>
-                {project.description || 'No description provided.'}
-              </Text>
-            </View>
-
-            {/* Domain & SubDomain — vertical, no extra colored accents */}
-            <View style={[styles.infoBlock, { backgroundColor: colors.background }]}>
-              <Text style={[styles.infoBlockLabel, { color: colors.subText }]}>DOMAIN</Text>
-              <Text style={[styles.infoBlockValue, { color: colors.text }]}>
-                {project.domain || '—'}
-              </Text>
-            </View>
-
-            <View style={[styles.infoBlock, { backgroundColor: colors.background }]}>
-              <Text style={[styles.infoBlockLabel, { color: colors.subText }]}>SUB DOMAIN</Text>
-              <Text style={[styles.infoBlockValue, { color: colors.text }]}>
-                {project.subdomain || '—'}
-              </Text>
-            </View>
-
-            {/* Slot stats — solid colors */}
-            <View style={styles.infoCardRow}>
-              <SlotCard label="Max Slots" value={project.maxSlots ?? 0} />
-              <SlotCard
-                label="Available"
-                value={project.presentSlots ?? 0}
-              />
-              <SlotCard label="Assigned" value={project.assignedStudents ?? 0} />
-            </View>
-
-            {/* Active status indicator (solid) */}
-            <View style={[styles.activeBanner, { backgroundColor: isActive ? 'rgb(50, 195, 96)' : '#EF4444' }]}>
-              <View style={[styles.activeDot, { backgroundColor: '#FFFFFF' }]} />
-              <Text style={styles.activeBannerText}>
-                {isActive ? 'Project is currently ACTIVE' : 'Project is currently INACTIVE'}
-              </Text>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
-const SlotCard = ({ label, value, color, textColor }: any) => (
-  <View style={[styles.slotCard, { backgroundColor: color }]}>
-    <Text style={[styles.slotNumber, { color: textColor }]}>{value}</Text>
-    <Text style={[styles.slotLabel, { color: textColor }]}>{label}</Text>
-  </View>
-);
 
 // ── Main Screen ────────────────────────────────────────────────────────────────
 const FacultyProjectsScreen = () => {
@@ -155,16 +55,14 @@ const FacultyProjectsScreen = () => {
 
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activatingId, setActivatingId] = useState<any>(null);
-
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [sheetVisible, setSheetVisible] = useState(false);
+  const [processingId, setProcessingId] = useState<any>(null);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSlots, setEditSlots] = useState('');
+  const [uploadingDocs, setUploadingDocs] = useState(false);
 
   const [domains, setDomains] = useState<any[]>([]);
   const [subDomains, setSubDomains] = useState<any[]>([]);
@@ -207,16 +105,11 @@ const FacultyProjectsScreen = () => {
       else if (data?.projects) setProjects(data.projects);
       else setProjects([]);
     } catch {
-      Alert.alert('Error', 'Failed to load projects');
+      showAlert('Error', 'Failed to load projects');
       setProjects([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const openDetail = (project: any) => {
-    setSelectedProject(project);
-    setSheetVisible(true);
   };
 
   const openEdit = (project: any) => {
@@ -238,6 +131,7 @@ const FacultyProjectsScreen = () => {
       showAlert('Error', `Slots must be between 1 and ${maxTeamSize}`); return;
     }
     try {
+      setProcessingId(editingProject.projectId);
       await updateProject(
         editingProject.projectId,
         { title: editTitle, description: editDesc, studentSlots: slotCount, domainId: editDomainId, subDomainId: editSubDomainId },
@@ -245,14 +139,17 @@ const FacultyProjectsScreen = () => {
       );
       setEditModalVisible(false);
       loadProjects();
-    } catch {
-      showAlert('Error', 'Update failed');
+      showAlert('Success', 'Project updated successfully');
+    } catch (err: any) {
+      showAlert('Error', err?.response?.data?.error || 'Update failed');
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handleToggleStatus = async (projectId: any, isCurrentlyActive: boolean) => {
     try {
-      setActivatingId(projectId);
+      setProcessingId(projectId);
       if (isCurrentlyActive) {
         await deactivateProjectStatus(projectId, user!.token);
         showAlert('Success', 'Project deactivated');
@@ -262,17 +159,108 @@ const FacultyProjectsScreen = () => {
       }
       await loadProjects();
     } catch (error: any) {
-      const errorCode = error?.response?.status;
-      const errorMessage = error?.response?.data?.message;
-      if (errorCode === 403) {
-        showAlert('Cannot Activate Project', 'You have reached the maximum number of active projects. Please deactivate one project first to activate this project.', [{ text: 'OK', onPress: () => { } }]);
-      } else {
-        showAlert('Error', errorMessage || error?.message || 'Failed to update project status');
-      }
+      showAlert('Error', error?.response?.data?.error || 'Failed to update status');
     } finally {
-      setActivatingId(null);
+      setProcessingId(null);
     }
   };
+
+  const handleDeleteProject = async (project: any) => {
+    Alert.alert(
+      "Delete Project",
+      `Are you sure you want to delete "${project.title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setProcessingId(project.projectId);
+              await deleteProject(project.projectId, user!.token);
+              showAlert('Success', 'Project deleted successfully');
+              loadProjects();
+            } catch (err: any) {
+              showAlert('Cannot Delete', err?.response?.data?.error || 'Failed to delete project');
+            } finally {
+              setProcessingId(null);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleAddDocuments = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        multiple: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setUploadingDocs(true);
+        const formData = new FormData();
+        result.assets.forEach((asset: any) => {
+          formData.append('files', {
+            uri: asset.uri,
+            name: asset.name,
+            type: asset.mimeType || 'application/pdf',
+          } as any);
+        });
+
+        await uploadProjectDocuments(editingProject.projectId, formData, user!.token);
+        showAlert('Success', 'Documents uploaded successfully');
+        
+        // Refresh project data to show new docs
+        const data: any = await getFacultyProjects(user!.token);
+        const updatedProjects = Array.isArray(data) ? data : (data?.projects || []);
+        setProjects(updatedProjects);
+        const updatedEditing = updatedProjects.find((p: any) => p.projectId === editingProject.projectId);
+        if (updatedEditing) setEditingProject(updatedEditing);
+
+      }
+    } catch (err) {
+      showAlert('Error', 'Failed to upload documents');
+    } finally {
+      setUploadingDocs(false);
+    }
+  };
+
+  const handleDeleteAllDocs = async () => {
+    Alert.alert(
+      "Delete All Documents",
+      "Are you sure you want to delete all uploaded documents for this project?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setUploadingDocs(true);
+              await deleteProjectDocuments(editingProject.projectId, user!.token);
+              showAlert('Success', 'All documents deleted');
+              
+              // Refresh
+              const data: any = await getFacultyProjects(user!.token);
+              const updatedProjects = Array.isArray(data) ? data : (data?.projects || []);
+              setProjects(updatedProjects);
+              const updatedEditing = updatedProjects.find((p: any) => p.projectId === editingProject.projectId);
+              if (updatedEditing) setEditingProject(updatedEditing);
+            } catch (err) {
+              showAlert('Error', 'Failed to delete documents');
+            } finally {
+              setUploadingDocs(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const accentSoft = isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.07)';
+  const divider = isDark ? '#374151' : '#E5E7EB';
 
   if (!user?.token) {
     return <View style={styles.center}><ActivityIndicator size="large" /></View>;
@@ -280,11 +268,11 @@ const FacultyProjectsScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       <View style={styles.container}>
-        {/* HEADER with back button, no count */}
-        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
           <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Image
               source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
@@ -293,413 +281,337 @@ const FacultyProjectsScreen = () => {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My Projects</Text>
+            <Text style={{ color: colors.subText, fontSize: 12 }}>{projects.length} Total Projects</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {loading && (
+          {loading && projects.length === 0 ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.subText }]}>Loading projects…</Text>
             </View>
-          )}
-
-          {!loading && projects.length === 0 && (
+          ) : projects.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIconCircle, { backgroundColor: colors.card }]}>
-                <Text style={{ fontSize: 32 }}>📂</Text>
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No projects yet</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No projects found</Text>
               <Text style={[styles.emptySubtitle, { color: colors.subText }]}>Projects you create will appear here.</Text>
             </View>
-          )}
+          ) : (
+            projects.map((p) => {
+              const status = getStatus(p.status);
+              const isActive = p.isActive;
+              const isProcessing = processingId === p.projectId;
 
-          {!loading && projects.map((p: any) => {
-            const status = getStatus(p.status);
-            const isActive = p.isActive;
-            const isToggling = activatingId === p.projectId;
-
-            return (
-              <TouchableOpacity
-                key={p.projectId}
-                activeOpacity={0.82}
-                onPress={() => openDetail(p)}
-                style={[styles.card, { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border }]}
-              >
-                <View style={[styles.cardStripe, { backgroundColor: isActive ? colors.primary : 'transparent' }]} />
-
-                <View style={styles.cardInner}>
-                  <View style={styles.titleRow}>
-                    <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
-                      {p.title}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={(e) => { e.stopPropagation(); openEdit(p); }}
-                      style={[
-                        styles.editBtn,
-                        {
-                          borderColor: colors.primary,
-                          backgroundColor: isDark ? colors.primary + '20' : colors.primary + '10'
-                        }
-                      ]}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Text style={[styles.editBtnText, { color: colors.primary }]}>Edit</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={[styles.description, { color: colors.subText }]} numberOfLines={1}>
-                    {p.description || 'No description'}
-                  </Text>
-
-                  <View style={styles.tagsRow}>
-                    {p.domain ? (
-                      <View
-                        style={[
-                          styles.tag,
-                          { borderColor: colors.border, backgroundColor: colors.background },
-                        ]}
-                      >
-                        <Text style={[styles.tagText, { color: colors.text }]}>
-                          {p.domain}
-                        </Text>
-                      </View>
-                    ) : null}
-
-                    {p.subdomain ? (
-                      <View
-                        style={[
-                          styles.tag,
-                          { borderColor: colors.border, backgroundColor: colors.background },
-                        ]}
-                      >
-                        <Text style={[styles.tagText, { color: colors.text }]}>
-                          {p.subdomain}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.cardFooter}>
-                    <View style={styles.slotsRow}>
-                      <SlotPill label="Max" value={p.maxSlots ?? 0} color="#10B981" />
-                      <SlotPill label="Free" value={p.presentSlots ?? 0} color={p.presentSlots === 0 ? '#EF4444' : '#10B981'} />
-                      <SlotPill label="Students" value={p.assignedStudents ?? 0} color="#2563EB" />
-                    </View>
-
-                    <View style={styles.footerRight}>
+              return (
+                <View key={p.projectId} style={[styles.projectCard, { backgroundColor: colors.card }]}>
+                  <View style={styles.cardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.projectTitle, { color: colors.text }]} numberOfLines={2}>{p.title}</Text>
                       <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                        <Text style={[styles.statusText, { color: status.fg }]}>{status.label}</Text>
+                        <Text style={styles.statusText}>{status.label}</Text>
                       </View>
-
-                      <TouchableOpacity
-                        style={[styles.toggleBtn, { backgroundColor: isActive ? '#EF4444' : '#10B981' }]}
-                        onPress={(e) => { e.stopPropagation(); handleToggleStatus(p.projectId, isActive); }}
-                        disabled={isToggling}
-                        activeOpacity={0.8}
+                    </View>
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity 
+                        style={[styles.iconBtn, { backgroundColor: accentSoft }]} 
+                        onPress={() => openEdit(p)}
                       >
-                        {isToggling ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <Text style={styles.toggleText}>{isActive ? 'Inactivate' : 'Activate'}</Text>
-                        )}
+                        <Image source={require('../assets/edit.png')} style={[styles.icon, { tintColor: colors.primary }]} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.iconBtn, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]} 
+                        onPress={() => handleDeleteProject(p)}
+                      >
+                        <Image source={require('../assets/deadlines/delete.png')} style={[styles.icon, { tintColor: '#EF4444' }]} />
                       </TouchableOpacity>
                     </View>
                   </View>
 
-                  <Text style={[styles.tapHint, { color: colors.subText }]}>Tap card for full details  ›</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text style={[styles.projectDesc, { color: colors.subText }]} numberOfLines={2}>
+                    {p.description || 'No description provided.'}
+                  </Text>
 
-          <View style={{ height: 24 }} />
+                  <View style={[styles.cardDivider, { backgroundColor: divider }]} />
+
+                  <View style={styles.cardFooter}>
+                    <View style={styles.statsRow}>
+                      <StatItem label="MAX" value={p.maxSlots} colors={colors} />
+                      <StatItem label="STUDENTS" value={p.assignedStudents} colors={colors} />
+                      <StatItem label="REMAINING" value={p.presentSlots} color={p.presentSlots > 0 ? '#10B981' : '#EF4444'} colors={colors} />
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.toggleBtn, 
+                        { backgroundColor: isActive ? '#EF4444' : '#10B981' }
+                      ]}
+                      onPress={() => handleToggleStatus(p.projectId, isActive)}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={styles.toggleText}>{isActive ? 'Deactivate' : 'Activate'}</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })
+          )}
+          <View style={{ height: 100 }} />
         </ScrollView>
       </View>
 
-      <ProjectDetailSheet
-        project={selectedProject}
-        visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
-        colors={colors}
-        onToggleStatus={handleToggleStatus}
-        activatingId={activatingId}
-      />
-
-      {/* EDIT MODAL */}
+      {/* Edit Modal */}
       <Modal visible={editModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Project</Text>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={styles.modalCloseBtn}>
-                <Text style={{ color: colors.subText, fontSize: 20 }}>✕</Text>
+              <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                <Text style={{ color: colors.subText, fontSize: 18 }}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[styles.label, { color: colors.subText }]}>PROJECT TITLE</Text>
-              <TextInput style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.card }]} value={editTitle} onChangeText={setEditTitle} placeholderTextColor={colors.subText} placeholder="Enter title" />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              <Text style={[styles.label, { color: colors.subText }]}>TITLE</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: divider }]} 
+                value={editTitle} 
+                onChangeText={setEditTitle} 
+              />
 
               <Text style={[styles.label, { color: colors.subText }]}>DESCRIPTION</Text>
-              <TextInput style={[styles.input, styles.inputMulti, { borderColor: colors.border, color: colors.text, backgroundColor: colors.card }]} value={editDesc} onChangeText={setEditDesc} multiline placeholderTextColor={colors.subText} placeholder="Describe the project" />
+              <TextInput 
+                style={[styles.input, styles.textArea, { backgroundColor: colors.background, color: colors.text, borderColor: divider }]} 
+                value={editDesc} 
+                onChangeText={setEditDesc} 
+                multiline 
+              />
 
-              <Text style={[styles.label, { color: colors.subText }]}>MAX STUDENT SLOTS  (1–{maxTeamSize})</Text>
-              <TextInput style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.card }]} keyboardType="numeric" value={editSlots} onChangeText={setEditSlots} placeholderTextColor={colors.subText} placeholder="e.g. 3" />
+              <Text style={[styles.label, { color: colors.subText }]}>MAX SLOTS (1-{maxTeamSize})</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: divider }]} 
+                value={editSlots} 
+                onChangeText={setEditSlots} 
+                keyboardType="numeric"
+              />
 
-              <Text style={[styles.label, { color: colors.subText }]}>DOMAIN</Text>
-              <TouchableOpacity style={[styles.picker, { borderColor: colors.border, backgroundColor: colors.card }]} onPress={() => setDomainModal(true)}>
-                <Text style={{ color: editDomainName ? colors.text : colors.subText }}>{editDomainName || 'Select Domain'}</Text>
-                <Text style={{ color: colors.subText }}>›</Text>
-              </TouchableOpacity>
+              {/* Domain Pickers */}
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, { color: colors.subText }]}>DOMAIN</Text>
+                  <TouchableOpacity 
+                    style={[styles.picker, { backgroundColor: colors.background, borderColor: divider }]} 
+                    onPress={() => setDomainModal(true)}
+                  >
+                    <Text style={{ color: colors.text }} numberOfLines={1}>{editDomainName || 'Select'}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, { color: colors.subText }]}>SUB-DOMAIN</Text>
+                  <TouchableOpacity 
+                    style={[styles.picker, { backgroundColor: colors.background, borderColor: divider }]} 
+                    onPress={() => setSubDomainModal(true)}
+                  >
+                    <Text style={{ color: colors.text }} numberOfLines={1}>{editSubDomainName || 'Select'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-              <Text style={[styles.label, { color: colors.subText }]}>SUB DOMAIN</Text>
-              <TouchableOpacity style={[styles.picker, { borderColor: colors.border, backgroundColor: colors.card }]} onPress={() => setSubDomainModal(true)}>
-                <Text style={{ color: editSubDomainName ? colors.text : colors.subText }}>{editSubDomainName || 'Select Sub Domain'}</Text>
-                <Text style={{ color: colors.subText }}>›</Text>
-              </TouchableOpacity>
+              {/* Document Management */}
+              <View style={[styles.docSection, { backgroundColor: colors.background, borderColor: divider }]}>
+                <View style={styles.docHeader}>
+                  <Text style={[styles.docTitle, { color: colors.text }]}>Documents</Text>
+                  {editingProject?.documents?.length > 0 && (
+                    <TouchableOpacity onPress={handleDeleteAllDocs}>
+                      <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700' }}>Delete All</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                {editingProject?.documents?.length > 0 ? (
+                  <View style={styles.docList}>
+                    {editingProject.documents.map((doc: string, idx: number) => (
+                      <View key={idx} style={[styles.docItem, { borderBottomColor: divider }]}>
+                        <Text style={[styles.docName, { color: colors.text }]} numberOfLines={1}>
+                          📄 Document {idx + 1}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.subText, fontSize: 13, marginVertical: 10 }}>No documents uploaded yet.</Text>
+                )}
 
-              <View style={styles.modalButtons}>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: colors.border }]} onPress={() => setEditModalVisible(false)}>
-                  <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, { backgroundColor: colors.primary }]} onPress={handleEditSubmit}>
-                  <Text style={styles.modalButtonText}>Save Changes</Text>
+                <TouchableOpacity 
+                  style={[styles.addDocBtn, { backgroundColor: colors.primary }]} 
+                  onPress={handleAddDocuments}
+                  disabled={uploadingDocs}
+                >
+                  {uploadingDocs ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text style={styles.addDocText}>+ Add Documents (PDF)</Text>
+                  )}
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity 
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]} 
+                onPress={handleEditSubmit}
+                disabled={processingId !== null}
+              >
+                {processingId !== null ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* DOMAIN MODAL */}
-      <Modal visible={domainModal} animationType="slide" transparent>
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setDomainModal(false)} activeOpacity={1}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Domain</Text>
-            <ScrollView>
-              {domains.map(item => (
-                <TouchableOpacity key={item.domainId} style={[styles.modalItem, { borderBottomColor: colors.border }]}
-                  onPress={() => { setEditDomainId(item.domainId); setEditDomainName(item.name); setEditSubDomainId(null); setEditSubDomainName(''); setDomainModal(false); }}>
-                  <Text style={{ color: colors.text }}>{item.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* SUBDOMAIN MODAL */}
-      <Modal visible={subDomainModal} animationType="slide" transparent>
-        <TouchableOpacity style={styles.modalOverlay} onPress={() => setSubDomainModal(false)} activeOpacity={1}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Sub Domain</Text>
-            <ScrollView>
-              {subDomains.map(item => (
-                <TouchableOpacity key={item.subDomainId} style={[styles.modalItem, { borderBottomColor: colors.border }]}
-                  onPress={() => { setEditSubDomainId(item.subDomainId); setEditSubDomainName(item.name); setSubDomainModal(false); }}>
-                  <Text style={{ color: colors.text }}>{item.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      {/* Domain Selection Modals */}
+      <SelectionModal 
+        visible={domainModal} 
+        onClose={() => setDomainModal(false)} 
+        title="Select Domain" 
+        data={domains} 
+        onSelect={(item: any) => {
+          setEditDomainId(item.domainId);
+          setEditDomainName(item.name);
+          setEditSubDomainId(null);
+          setEditSubDomainName('');
+          setDomainModal(false);
+        }}
+        colors={colors}
+      />
+      <SelectionModal 
+        visible={subDomainModal} 
+        onClose={() => setSubDomainModal(false)} 
+        title="Select Sub-Domain" 
+        data={subDomains} 
+        onSelect={(item: any) => {
+          setEditSubDomainId(item.subDomainId);
+          setEditSubDomainName(item.name);
+          setSubDomainModal(false);
+        }}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 };
 
-const SlotPill = ({ label, value, color }: any) => (
-  <View style={styles.slotPill}>
-    <Text style={[styles.slotPillValue, { color }]}>{value}</Text>
-    <Text style={styles.slotPillLabel}>{label}</Text>
+const StatItem = ({ label, value, color, colors }: any) => (
+  <View style={styles.statItem}>
+    <Text style={[styles.statValue, { color: color || colors.text }]}>{value}</Text>
+    <Text style={[styles.statLabel, { color: colors.subText }]}>{label}</Text>
   </View>
 );
 
-export default FacultyProjectsScreen;
+const SelectionModal = ({ visible, onClose, title, data, onSelect, colors }: any) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+      <View style={[styles.selectionBox, { backgroundColor: colors.card }]}>
+        <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 16 }]}>{title}</Text>
+        <ScrollView>
+          {data.map((item: any) => (
+            <TouchableOpacity 
+              key={item.domainId || item.subDomainId} 
+              style={[styles.selectionItem, { borderBottomColor: colors.border }]}
+              onPress={() => onSelect(item)}
+            >
+              <Text style={{ color: colors.text }}>{item.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </TouchableOpacity>
+  </Modal>
+);
 
-// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-  // header
   header: {
-    height: 64,
+    height: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    borderBottomWidth: 1,
   },
-  backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  backBtnText: { fontSize: 30, fontWeight: '600', marginTop: -4 },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerSub: { fontSize: 10, fontWeight: '600', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '800', letterSpacing: -0.3 },
+  backIcon: { width: 20, height: 20, resizeMode: 'contain' },
+  headerCenter: { flex: 1, marginLeft: 8 },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
+  content: { padding: 16 },
+  loadingWrap: { marginTop: 100, alignItems: 'center' },
+  emptyWrap: { marginTop: 100, alignItems: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, textAlign: 'center' },
 
-  content: { padding: 14 },
-
-  loadingWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
-  loadingText: { fontSize: 13 },
-
-  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 8 },
-  emptyIconCircle: { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  emptyTitle: { fontSize: 16, fontWeight: '700' },
-  emptySubtitle: { fontSize: 13 },
-
-  // card
-  card: {
+  // Project Card
+  projectCard: {
     borderRadius: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    elevation: 3,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  cardStripe: { width: 4 },
-  cardInner: { flex: 1, padding: 14 },
-
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4, gap: 8 },
-  cardTitle: { fontSize: 15, fontWeight: '700', flex: 1, lineHeight: 20 },
-
-  editBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  editBtnText: { fontSize: 12, fontWeight: '700' },
-
-  description: { fontSize: 12, lineHeight: 16, marginBottom: 8 },
-
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagText: { fontSize: 10, fontWeight: '700', color: '#FFFFFF' },
-
-  cardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 },
-  slotsRow: { flexDirection: 'row', gap: 8, flex: 1 },
-
-  slotPill: { alignItems: 'center' },
-  slotPillValue: { fontSize: 15, fontWeight: '800' },
-  slotPillLabel: { fontSize: 9, color: '#9CA3AF', fontWeight: '500', marginTop: 1 },
-
-  footerRight: { alignItems: 'flex-end', gap: 6 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  statusText: { fontSize: 10, fontWeight: '700' },
-
-  toggleBtn: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center', minWidth: 84,
-  },
-  toggleText: { color: '#fff', fontWeight: '700', fontSize: 11 },
-
-  tapHint: { fontSize: 10, textAlign: 'right', marginTop: 8, opacity: 0.6 },
-
-  // ── project detail modal ──
-  centeredModalContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-  },
-  sheetBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  sheet: {
-    width: '100%',
-    maxHeight: '85%',
-    borderRadius: 24,
-    elevation: 20,
-    shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 20,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    overflow: 'hidden',
   },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  projectTitle: { fontSize: 17, fontWeight: '700', marginBottom: 6, lineHeight: 22 },
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  statusText: { color: '#FFF', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  cardActions: { flexDirection: 'row', gap: 8 },
+  iconBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  icon: { width: 18, height: 18, resizeMode: 'contain' },
+  projectDesc: { fontSize: 13, marginTop: 12, lineHeight: 18 },
+  cardDivider: { height: 1, marginVertical: 16 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statsRow: { flexDirection: 'row', gap: 16 },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '800' },
+  statLabel: { fontSize: 9, fontWeight: '700', marginTop: 2 },
+  toggleBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, minWidth: 100, alignItems: 'center' },
+  toggleText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
 
-  closeIconBtn: {
-    position: 'absolute',
-    top: 14, right: 14,
-    width: 32, height: 32, borderRadius: 16,
-    justifyContent: 'center', alignItems: 'center',
-    zIndex: 10,
-  },
-  closeIcon: { width: 18, height: 18 },
-
-  sheetScroll: { padding: 18, paddingTop: 16, paddingBottom: 48 },
-
-  sheetTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14, paddingRight: 36 },
-  sheetTitle: { flex: 1, fontSize: 20, fontWeight: '800', lineHeight: 26, letterSpacing: -0.3 },
-  sheetStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginTop: 2 },
-  sheetStatusText: { fontSize: 11, fontWeight: '700' },
-
-  descBlock: { borderRadius: 12, padding: 14, marginBottom: 12 },
-  descBlockLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginBottom: 6 },
-  descBlockText: { fontSize: 14, lineHeight: 20 },
-
-  // vertical info blocks (domain / subdomain)
-  infoBlock: { borderRadius: 12, padding: 14, marginBottom: 10 },
-  infoBlockLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginBottom: 6 },
-  infoBlockValue: { fontSize: 14, fontWeight: '700' },
-
-  infoCardRow: { flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 14 },
-  slotCard: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center' },
-  slotNumber: { fontSize: 26, fontWeight: '800', lineHeight: 30 },
-  slotLabel: { fontSize: 10, fontWeight: '700', marginTop: 2, textAlign: 'center', opacity: 0.95 },
-
-  activeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 18,
-  },
-  activeDot: { width: 10, height: 10, borderRadius: 5 },
-  activeBannerText: { fontWeight: '700', fontSize: 13, color: '#FFFFFF' },
-
-  sheetActions: { marginTop: 4, marginBottom: 12 },
-  sheetToggleBtn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetToggleText: { color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 },
-
-  // edit modal
+  // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, maxHeight: '92%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  modalTitle: { fontSize: 16, fontWeight: '700' },
-  modalCloseBtn: { padding: 4 },
-
-  label: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 5 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, fontSize: 14 },
-  inputMulti: { minHeight: 80, textAlignVertical: 'top' },
-  picker: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalButtons: { flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 8 },
-  modalButton: { flex: 1, paddingVertical: 13, borderRadius: 10, alignItems: 'center' },
-  modalButtonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  modalItem: { paddingVertical: 13, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800' },
+  label: { fontSize: 10, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 15, marginBottom: 16 },
+  textArea: { height: 100, textAlignVertical: 'top' },
+  picker: { borderWidth: 1, borderRadius: 12, padding: 14, marginBottom: 16, justifyContent: 'center' },
+  
+  // Document Section
+  docSection: { borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1 },
+  docHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  docTitle: { fontSize: 14, fontWeight: '800' },
+  docList: { marginBottom: 12 },
+  docItem: { paddingVertical: 10, borderBottomWidth: 1 },
+  docName: { fontSize: 13, fontWeight: '500' },
+  addDocBtn: { padding: 12, borderRadius: 10, alignItems: 'center' },
+  addDocText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+  
+  saveBtn: { padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 10 },
+  saveBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  
+  selectionBox: { width: '85%', maxHeight: '60%', borderRadius: 20, padding: 20, alignSelf: 'center' },
+  selectionItem: { paddingVertical: 14, borderBottomWidth: 1 },
 });
+
+export default FacultyProjectsScreen;

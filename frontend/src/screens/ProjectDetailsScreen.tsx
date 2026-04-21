@@ -17,7 +17,7 @@ import { AlertContext } from '../context/AlertContext';
 import DocumentCard from '../components/DocumentCard';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { sendProjectRequest, getDepartmentDeadlines } from '../api/studentApi';
+import { sendProjectRequest, getDepartmentDeadlines, getProjectById } from '../api/studentApi';
 
 const API_BASE = 'http://10.226.126.133:8080';
 
@@ -29,7 +29,9 @@ const ProjectDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  const { project, isRequested: initialIsRequested } = route.params || {};
+  const { project: initialProject, isRequested: initialIsRequested, projectId: passedProjectId } = route.params || {};
+  const [project, setProject] = useState<any>(initialProject || null);
+  const [loadingProject, setLoadingProject] = useState(!initialProject && !!passedProjectId);
 
   const [isRequested, setIsRequested] = useState(initialIsRequested || false);
   const [isSending, setIsSending] = useState(false);
@@ -40,8 +42,25 @@ const ProjectDetailsScreen = () => {
   const isTeamLead = studentUser?.isTeamLead === true;
 
   useEffect(() => {
+    if (!project && passedProjectId) {
+      fetchProjectById();
+    }
     fetchDeadlineStatus();
   }, []);
+
+  const fetchProjectById = async () => {
+    try {
+      setLoadingProject(true);
+      const studentIdStr = await AsyncStorage.getItem("studentId");
+      const res = await getProjectById(Number(passedProjectId), Number(studentIdStr));
+      setProject(res.data);
+    } catch (err) {
+      console.log('Error fetching project by ID', err);
+      showAlert('Error', 'Failed to load project details');
+    } finally {
+      setLoadingProject(false);
+    }
+  };
 
   const fetchDeadlineStatus = async () => {
     try {
@@ -105,6 +124,15 @@ const ProjectDetailsScreen = () => {
   };
 
 
+
+  if (loadingProject) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 12, color: colors.subText }}>Loading project details...</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!project) return null;
 
@@ -207,7 +235,7 @@ export default ProjectDetailsScreen;
 
 const styles = StyleSheet.create({
   header: {
-    height: 64,
+    height: 72,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -216,12 +244,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   backIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     resizeMode: 'contain',
   },
   content: {
@@ -232,6 +261,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginBottom: 12,
+    letterSpacing: -0.4,
   },
   description: {
     fontSize: 15,
@@ -250,20 +280,22 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.2,
     marginBottom: 12,
+    textTransform: 'uppercase',
   },
   docLink: {
     paddingVertical: 8,

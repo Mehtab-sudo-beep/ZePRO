@@ -785,9 +785,12 @@ public class StudentService {
 
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-        // 🔴 prevent duplicate request
         if (student.getTeam() != null) {
             throw new RuntimeException("You are already in a team");
+        }
+
+        if (student.isAllocated()) {
+            throw new RuntimeException("You are already allocated to a project and cannot join another team.");
         }
         boolean alreadyRequested = joinRequestRepository
                 .existsByStudentStudentIdAndTeamTeamId(studentId, teamId);
@@ -844,6 +847,15 @@ public class StudentService {
 
         if (student.getTeam() != null) {
             throw new RuntimeException("Student already belongs to a team");
+        }
+
+        if (student.isAllocated()) {
+            throw new RuntimeException("This student is already allocated to a project.");
+        }
+
+        // Check if team is allocated
+        if (projectRepository.findByTeam(team) != null) {
+            throw new RuntimeException("Cannot add members to an already allocated team.");
         }
 
         // ✅ VALIDATE DEPARTMENT
@@ -963,6 +975,10 @@ public class StudentService {
         Team team = student.getTeam();
         if (team == null) {
             throw new RuntimeException("Student is not in a team");
+        }
+
+        if (student.isAllocated()) {
+            throw new RuntimeException("You cannot leave the team after a project has been allocated.");
         }
 
         if (student.isTeamLead()) {
@@ -1139,7 +1155,8 @@ public class StudentService {
                         req.getProject().getTitle(),
                         req.getProject().getFaculty().getUser().getName(),
                         req.getStatus() != null ? req.getStatus().name() : null,
-                        req.getRejectionReason()))
+                        req.getRejectionReason(),
+                        req.getProject().getProjectId()))
                 .toList();
     }
 
@@ -1428,6 +1445,60 @@ public class StudentService {
         studentRepository.save(currentLead);
         studentRepository.save(newLead);
         teamRepository.save(team);
+    }
+
+    public ProjectResponse getProjectById(Long projectId, Long studentId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        String domainStr = "";
+        String subdomainStr = "";
+
+        var pDomains = projectDomainRepository.findByProjectProjectId(project.getProjectId());
+        if (!pDomains.isEmpty() && pDomains.get(0).getDomain() != null) {
+            domainStr = pDomains.get(0).getDomain().getName();
+        }
+
+        var pSubDomains = projectSubDomainRepository.findByProjectProjectId(project.getProjectId());
+        if (!pSubDomains.isEmpty() && pSubDomains.get(0).getSubDomain() != null) {
+            subdomainStr = pSubDomains.get(0).getSubDomain().getName();
+        }
+
+        com.zepro.model.AllocationRules rules = getAllocationRulesForDept(
+                student.getDepartment().getDepartmentId(),
+                student.getInstitute().getInstituteId());
+
+        int maxSlots = project.getStudentSlots();
+        int projectAssigned = (project.getTeam() != null && project.getTeam().getMembers() != null)
+                ? project.getTeam().getMembers().size()
+                : 0;
+        int remainingSlots = Math.max(0, maxSlots - projectAssigned);
+
+        String facultyName = (project.getFaculty() != null && project.getFaculty().getUser() != null)
+                ? project.getFaculty().getUser().getName()
+                : "N/A";
+
+        Long facultyId = (project.getFaculty() != null)
+                ? project.getFaculty().getFacultyId()
+                : null;
+
+        return new ProjectResponse(
+                project.getProjectId(),
+                project.getTitle(),
+                project.getDescription(),
+                project.getStatus(),
+                domainStr,
+                subdomainStr,
+                project.getIsActive(),
+                projectAssigned,
+                maxSlots,
+                remainingSlots,
+                facultyName,
+                facultyId,
+                project.getDocuments());
     }
 
 } // ✅ CLOSING BRACE FOR CLASS

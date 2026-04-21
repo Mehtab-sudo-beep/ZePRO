@@ -225,6 +225,16 @@ public class AuthService {
         }
     }
 
+    public java.util.List<String> getAllowedTails() {
+        return instituteRepository.findAll().stream()
+                .map(com.zepro.model.Institute::getTail)
+                .filter(java.util.Objects::nonNull)
+                .map(String::toLowerCase)
+                .map(t -> t.startsWith("@") ? t.substring(1) : t)
+                .distinct()
+                .toList();
+    }
+
     // ------------------------------------------------
     // SIGNUP
     // ------------------------------------------------
@@ -233,6 +243,21 @@ public class AuthService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already registered. Please login.");
         }
+
+        String email = request.getEmail().toLowerCase();
+        if (!email.contains("@")) {
+            throw new RuntimeException("Invalid email format.");
+        }
+
+        String domain = email.substring(email.indexOf("@") + 1);
+        java.util.List<String> allowedTails = getAllowedTails();
+
+        boolean isAllowed = allowedTails.stream().anyMatch(tail -> domain.equals(tail) || domain.endsWith("." + tail));
+
+        if (!isAllowed) {
+            throw new RuntimeException("Registration is only allowed for verified institute domains.");
+        }
+
         Users user = new Users();
         user.setName(request.getName());
         user.setEmail(request.getEmail());

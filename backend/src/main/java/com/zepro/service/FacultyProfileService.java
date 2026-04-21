@@ -56,9 +56,8 @@ public class FacultyProfileService {
         // ✅ SET INSTITUTE ID ONLY (NOT FULL OBJECT TO AVOID DUPLICATION)
         if (faculty.getInstitute() != null) {
             dto.setInstituteId(faculty.getInstitute().getInstituteId());
-            System.out.println("🏢 Institute ID: " + faculty.getInstitute().getInstituteId());
-            // ❌ DON'T SET FULL INSTITUTE OBJECT - CAUSES DUPLICATION
-            // dto.setInstitute(faculty.getInstitute());  // ← REMOVE THIS
+            dto.setInstituteName(faculty.getInstitute().getInstituteName());
+            System.out.println("🏢 Institute: " + faculty.getInstitute().getInstituteName());
         }
 
         // ✅ SET DEPARTMENT ID AND NAME ONLY (NOT FULL OBJECT)
