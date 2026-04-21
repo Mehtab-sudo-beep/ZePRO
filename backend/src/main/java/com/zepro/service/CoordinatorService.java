@@ -32,6 +32,8 @@ public class CoordinatorService {
     private final DepartmentDeadlinesRepository departmentDeadlinesRepository;
     private final EmailService emailService;
 
+    private final UserManagementService userManagementService;
+
     public CoordinatorService(StudentRepository studentRepository,
             FacultyRepository facultyRepository,
             TeamRepository teamRepository,
@@ -40,7 +42,8 @@ public class CoordinatorService {
             DepartmentRepository departmentrepository,
             TeamJoinRequestRepository teamJoinRequestRepository,
             DepartmentDeadlinesRepository departmentDeadlinesRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            UserManagementService userManagementService) {
         this.studentRepository = studentRepository;
         this.facultyRepository = facultyRepository;
         this.teamRepository = teamRepository;
@@ -50,6 +53,7 @@ public class CoordinatorService {
         this.teamJoinRequestRepository = teamJoinRequestRepository;
         this.departmentDeadlinesRepository = departmentDeadlinesRepository;
         this.emailService = emailService;
+        this.userManagementService = userManagementService;
     }
 
     // ✅ GET ALLOCATION RULES BY DEPARTMENT
@@ -1274,5 +1278,33 @@ public class CoordinatorService {
                 memberNames,
                 updatedTeam.getMembers().size(),
                 rules.getMaxTeamSize());
+    }
+
+    @Transactional
+    public void deleteUser(Long userId, Long departmentId) {
+        System.out.println("[CoordinatorService] 🗑 Request to delete user " + userId + " from department " + departmentId);
+        
+        // Check if user belongs to the department
+        boolean belongs = false;
+        
+        java.util.Optional<Student> student = studentRepository.findByUserUserId(userId);
+        if (student.isPresent()) {
+            if (student.get().getDepartment().getDepartmentId().equals(departmentId)) {
+                belongs = true;
+            }
+        } else {
+            java.util.Optional<Faculty> faculty = facultyRepository.findByUser_UserId(userId);
+            if (faculty.isPresent()) {
+                if (faculty.get().getDepartment().getDepartmentId().equals(departmentId)) {
+                    belongs = true;
+                }
+            }
+        }
+        
+        if (!belongs) {
+            throw new RuntimeException("User does not belong to your department");
+        }
+        
+        userManagementService.deleteUser(userId);
     }
 }

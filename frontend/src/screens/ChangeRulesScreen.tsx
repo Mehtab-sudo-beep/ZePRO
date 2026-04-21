@@ -93,7 +93,7 @@ const AdminChangeRulesScreen: React.FC = () => {
       };
       await coordinatorApi.saveRules(payload);
       setRules(tempRules);
-      showAlert('Success', 'Rules updated successfully!');
+      // Removed: showAlert('Success', 'Rules updated successfully!');
     } catch (error: any) {
       console.log('Failed to save rules', error);
       showAlert('Error', 'Failed to save rules');

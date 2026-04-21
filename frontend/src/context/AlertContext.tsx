@@ -9,7 +9,7 @@ interface AlertButton {
 }
 
 interface AlertContextProps {
-  showAlert: (title: string, message?: string, buttons?: AlertButton[]) => void;
+  showAlert: (title: string, message?: string, buttons?: AlertButton[], duration?: number) => void;
   hideAlert: () => void;
 }
 
@@ -25,15 +25,29 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
   const [message, setMessage] = useState('');
   const [buttons, setButtons] = useState<AlertButton[]>([]);
 
-  const showAlert = (newTitle: string, newMessage = '', newButtons: AlertButton[] = []) => {
+  const showAlert = (newTitle: string, newMessage = '', newButtons: AlertButton[] = [], duration?: number) => {
     setTitle(newTitle);
     setMessage(newMessage);
-    if (newButtons.length === 0) {
+    
+    const isDefaultButton = newButtons.length === 0;
+    if (isDefaultButton) {
       setButtons([{ text: 'OK', onPress: hideAlert }]);
     } else {
       setButtons(newButtons);
     }
+    
     setVisible(true);
+
+    // Auto-hide success/info messages after 1 second if they are just notifications (no custom buttons)
+    // We avoid auto-hiding errors or warnings to ensure users see them.
+    const isSuccessOrInfo = newTitle.includes('Success') || newTitle.includes('✅') || newTitle.includes('Updated') || newTitle.includes('Info');
+    const isCritical = newTitle.toLowerCase().includes('error') || newTitle.toLowerCase().includes('failed') || newTitle.toLowerCase().includes('warning');
+
+    if (duration || (isSuccessOrInfo && isDefaultButton && !isCritical)) {
+      setTimeout(() => {
+        hideAlert();
+      }, duration || 1000);
+    }
   };
 
   const hideAlert = () => {

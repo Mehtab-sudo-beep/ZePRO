@@ -23,6 +23,8 @@ public class AdminService {
     private final MeetingRepository meetingRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final UserManagementService userManagementService;
+
     public AdminService(InstituteRepository instituteRepository,
             DepartmentRepository departmentRepository,
             UserRepository usersRepository,
@@ -32,7 +34,8 @@ public class AdminService {
             TeamRepository teamRepository,
             ProjectRequestRepository projectRequestRepository,
             MeetingRepository meetingRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            UserManagementService userManagementService) {
 
         this.instituteRepository = instituteRepository;
         this.departmentRepository = departmentRepository;
@@ -44,6 +47,7 @@ public class AdminService {
         this.projectRequestRepository = projectRequestRepository;
         this.meetingRepository = meetingRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userManagementService = userManagementService;
     }
 
     // ✅ UPDATE CREATE INSTITUTE
@@ -257,121 +261,10 @@ public class AdminService {
         return new UserResponse(saved.getUserId(), saved.getName(), saved.getEmail(), saved.getRole());
     }
 
-    // ✅ DELETE USER (FACULTY OR STUDENT)
+    // ✅ DELETE USER
     @org.springframework.transaction.annotation.Transactional
     public void deleteUser(Long userId) {
-        System.out.println("[AdminService] 🗑 Processing delete for User ID: " + userId);
-        Users user = usersRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (user.getRole() == com.zepro.model.UserRole.FACULTY) {
-            facultyRepository.findByUser_UserId(userId).ifPresent(faculty -> {
-                System.out.println("[AdminService] 🗑 Deleting Faculty: " + faculty.getUser().getName());
-
-                List<Project> projects = projectRepository.findByFacultyFacultyId(faculty.getFacultyId());
-                for (Project project : projects) {
-                    if (project.getTeam() != null || "ALLOCATED".equals(project.getStatus())) {
-                        Team team = project.getTeam();
-                        if (team != null) {
-                            team.setStatus("pending");
-                            teamRepository.save(team);
-
-                            for (Student s : team.getMembers()) {
-                                s.setAllocated(false);
-                                s.setAllocatedProject(null);
-                                s.setAllocatedFaculty(null);
-                                studentRepository.save(s);
-                            }
-
-                            List<ProjectRequest> rejectedRequests = projectRequestRepository
-                                    .findByTeamTeamIdAndStatus(team.getTeamId(), RequestStatus.REJECTED);
-                            for (ProjectRequest req : rejectedRequests) {
-                                req.setStatus(RequestStatus.PENDING);
-                                projectRequestRepository.save(req);
-                            }
-                        }
-                    }
-
-                    List<ProjectRequest> requests = projectRequestRepository
-                            .findByProjectProjectId(project.getProjectId());
-                    projectRequestRepository.deleteAll(requests);
-
-                    projectRepository.delete(project);
-                }
-
-                if (faculty.getIsUGCoordinator() || faculty.getIsPGCoordinator()) {
-                    Department dept = faculty.getDepartment();
-                    if (dept != null && dept.getCoordinatorEmail() != null
-                            && dept.getCoordinatorEmail().equals(user.getEmail())) {
-                        dept.setCoordinatorName(null);
-                        dept.setCoordinatorEmail(null);
-                        dept.setCoordinatorPhone(null);
-                        departmentRepository.save(dept);
-                    }
-                }
-
-                facultyRepository.delete(faculty);
-            });
-        } else if (user.getRole() == com.zepro.model.UserRole.STUDENT) {
-            studentRepository.findByUserUserId(userId).ifPresent(student -> {
-                System.out.println("[AdminService] 🗑 Deleting Student: " + student.getUser().getName());
-                Team team = student.getTeam();
-                if (team != null) {
-                    team.getMembers().remove(student);
-
-                    if (student.isTeamLead()) {
-                        if (!team.getMembers().isEmpty()) {
-                            Student newLead = team.getMembers().get(0);
-                            newLead.setTeamLead(true);
-                            team.setTeamLead(newLead);
-                            studentRepository.save(newLead);
-                        } else {
-                            team.setTeamLead(null);
-                        }
-                    }
-
-                    student.setTeam(null);
-
-                    Project allocatedProject = projectRepository.findByTeam(team);
-                    if (allocatedProject != null) {
-                        System.out.println(
-                                "[AdminService] 🔄 Reverting project allocation for team " + team.getTeamName());
-
-                        allocatedProject.updateStatusWithHistory("IN_PROGRESS");
-                        allocatedProject.setTeam(null);
-                        projectRepository.save(allocatedProject);
-
-                        team.setStatus("pending");
-
-                        for (Student s : team.getMembers()) {
-                            s.setAllocated(false);
-                            s.setAllocatedProject(null);
-                            s.setAllocatedFaculty(null);
-                            studentRepository.save(s);
-                        }
-
-                        List<ProjectRequest> rejectedRequests = projectRequestRepository
-                                .findByTeamTeamIdAndStatus(team.getTeamId(), RequestStatus.REJECTED);
-                        for (ProjectRequest req : rejectedRequests) {
-                            req.setStatus(RequestStatus.PENDING);
-                            projectRequestRepository.save(req);
-                        }
-
-                        List<Meeting> cancelledMeetings = meetingRepository.findByTeamTeamIdAndStatus(team.getTeamId(),
-                                com.zepro.model.MeetingStatus.CANCELLED);
-                        for (Meeting meeting : cancelledMeetings) {
-                            meeting.setStatus(com.zepro.model.MeetingStatus.SCHEDULED);
-                            meetingRepository.save(meeting);
-                        }
-                    }
-                    teamRepository.save(team);
-                }
-                studentRepository.delete(student);
-            });
-        }
-
-        usersRepository.delete(user);
-        System.out.println("[AdminService] ✅ User deleted successfully.");
+        userManagementService.deleteUser(userId);
     }
 
     // ✅ FIXED ASSIGN FACULTY COORDINATOR TO DEPARTMENT

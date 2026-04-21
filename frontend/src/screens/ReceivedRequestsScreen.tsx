@@ -243,11 +243,6 @@ const ReceivedRequestsScreen: React.FC = () => {
 
                   <View style={[styles.divider, { backgroundColor: isDark ? '#334155' : '#E2E8F0' }]} />
 
-                  <View style={styles.detailRow}>
-                    <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Student ID: </Text>
-                    <Text style={{ color: colors.text, fontSize: 13, fontWeight: '500' }}>{req.studentId}</Text>
-                  </View>
-
                   {req.studentEmail ? (
                     <View style={styles.detailRow}>
                       <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Email: </Text>

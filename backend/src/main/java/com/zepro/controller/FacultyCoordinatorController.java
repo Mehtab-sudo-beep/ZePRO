@@ -562,4 +562,27 @@ public class FacultyCoordinatorController {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId, Authentication authentication) {
+        System.out.println("[FacultyCoordinatorController] 🗑 DELETE /api/coordinator/user/" + userId);
+        try {
+            String email = authentication.getName();
+            Faculty faculty = facultyRepository.findByUser_Email(email)
+                    .orElseThrow(() -> new RuntimeException("Faculty not found"));
+
+            Long departmentId = faculty.getDepartment() != null 
+                ? faculty.getDepartment().getDepartmentId() : null;
+
+            if(departmentId == null) {
+                return ResponseEntity.status(400).body(Map.of("error", "Coordinator department not found"));
+            }
+
+            coordinatorService.deleteUser(userId, departmentId);
+            return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+        } catch (Exception e) {
+            System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

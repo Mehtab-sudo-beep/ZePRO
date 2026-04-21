@@ -46,6 +46,8 @@ public class AuthService {
     private final StudentService studentService;
     private final FacultyService facultyService;
 
+    private final UserManagementService userManagementService;
+
     public AuthService(UserRepository userRepository,
             StudentRepository studentRepository,
             FacultyRepository facultyRepository,
@@ -57,7 +59,8 @@ public class AuthService {
             DepartmentRepository departmentRepository,
             InstituteRepository instituteRepository,
             StudentService studentService,
-            FacultyService facultyService) {
+            FacultyService facultyService,
+            UserManagementService userManagementService) {
 
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -71,6 +74,7 @@ public class AuthService {
         this.instituteRepository = instituteRepository;
         this.studentService = studentService;
         this.facultyService = facultyService;
+        this.userManagementService = userManagementService;
     }
 
     // ✅ Google Login Endpoint
@@ -445,7 +449,7 @@ public class AuthService {
     public String deleteAccount(String email) {
         Users user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        userRepository.delete(user);
+        userManagementService.deleteUser(user.getUserId());
         return "Account deleted successfully";
     }
 }

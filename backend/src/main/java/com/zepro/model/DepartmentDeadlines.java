@@ -11,7 +11,7 @@ public class DepartmentDeadlines {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 

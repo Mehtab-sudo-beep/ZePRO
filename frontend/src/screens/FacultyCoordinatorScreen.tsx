@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
+import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -22,6 +23,7 @@ type NavProp = NativeStackNavigationProp<RootStackParamList>;
 const FacultyCoordinatorDashboard: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const { user } = useContext(AuthContext);
+  const { showAlert } = useContext(AlertContext);
   const navigation = useNavigation<NavProp>();
   const { selectedDegree } = useDegree();
 
@@ -30,7 +32,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
   const divider = colors.border;
 
   // ───────── ICON HELPER ─────────
-  const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
+  const Icon = ({ name, size = 18, color }: { name: string; size?: number; color?: string }) => {
     const icons: any = {
       overview: isDark ? require('../assets/overview-white.png') : require('../assets/overview.png'),
       faculty: isDark ? require('../assets/faculty-white.png') : require('../assets/faculty.png'),
@@ -39,9 +41,15 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       rules: isDark ? require('../assets/rules-white.png') : require('../assets/rules.png'),
       search: isDark ? require('../assets/search-white.png') : require('../assets/search.png'),
       download: isDark ? require('../assets/download-white.png') : require('../assets/download.png'),
+      delete: isDark ? require('../assets/close-white.png') : require('../assets/close.png'),
       info: require('../assets/info.png'),
     };
-    return <Image source={icons[name]} style={{ width: size, height: size }} />;
+    return (
+      <Image 
+        source={icons[name] || icons.info} 
+        style={{ width: size, height: size, tintColor: color }} 
+      />
+    );
   };
 
   // ───────── STATE ─────────
@@ -82,6 +90,10 @@ const FacultyCoordinatorDashboard: React.FC = () => {
 
   const showLocalMsg = (text: string, type: 'success' | 'error') => {
     setMsg({ text, type });
+    // Automatically hide after 1 second
+    setTimeout(() => {
+      if (isMounted.current) setMsg(null);
+    }, 1000);
   };
 
   // ───────── FETCH ─────────
@@ -254,6 +266,33 @@ const FacultyCoordinatorDashboard: React.FC = () => {
     }
   };
 
+  // ✅ NEW: Delete User Handler
+  const handleDeleteUser = async (userId: number, name: string) => {
+    showAlert(
+      "Confirm Deletion",
+      `Are you sure you want to permanently delete user "${name}"? This will dissolve any assigned teams and reset projects to "In Progress". This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const res = await coordinatorApi.deleteUser(userId);
+              showLocalMsg("User deleted successfully", "success");
+              fetchAll();
+            } catch (err: any) {
+              showLocalMsg(err.error || "Failed to delete user", "error");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleSaveRules = async () => {
     try {
       const computedRules = {
@@ -265,7 +304,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       await coordinatorApi.saveRules(computedRules);
 
       setRules(computedRules);
-      showLocalMsg("Rules updated successfully!", "success");
+      // Removed: showLocalMsg("Rules updated successfully!", "success");
 
       console.log('[FacultyCoordinatorDashboard] ✅ Rules saved:', computedRules);
     } catch (err: any) {
@@ -499,10 +538,18 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{f.name}</Text>
                 <Text style={{ color: colors.subText, fontSize: 13, marginTop: 2 }}>{f.email}</Text>
               </View>
-              <View style={{ backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                <Text style={{ color: isFull ? '#ef4444' : colors.primary, fontSize: 10, fontWeight: '800' }}>
-                  {isFull ? 'FULL' : 'AVAILABLE'}
-                </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ backgroundColor: isFull ? 'rgba(239,68,68,0.1)' : accentSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                  <Text style={{ color: isFull ? '#ef4444' : colors.primary, fontSize: 10, fontWeight: '800' }}>
+                    {isFull ? 'FULL' : 'AVAILABLE'}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => handleDeleteUser(f.userId || f.id, f.name)}
+                  style={{ padding: 4 }}
+                >
+                  <Icon name="delete" size={18} color="#ef4444" />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -612,6 +659,12 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>{s.name || s.studentName}</Text>
                 <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Roll: {s.rollNo || s.rollNumber}</Text>
               </View>
+              <TouchableOpacity 
+                onPress={() => handleDeleteUser(s.userId || s.id || s.studentId, s.name || s.studentName)}
+                style={{ padding: 8 }}
+              >
+                <Icon name="delete" size={20} color="#ef4444" />
+              </TouchableOpacity>
             </View>
 
             <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>

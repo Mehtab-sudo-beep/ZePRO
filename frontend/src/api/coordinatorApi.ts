@@ -88,4 +88,8 @@ export const coordinatorApi = {
       teamId: String(teamId)
     }).then(res => res.data);
   },
+
+  // ✅ DELETE USER
+  deleteUser: (userId: number) =>
+    API.delete(`${PREFIX}/user/${userId}`).then(res => res.data),
 };
