@@ -116,8 +116,13 @@ public class FacultyService {
         // ✅ CHECK PROJECT LIMIT
         List<Project> openProjects = projectRepository.findByFacultyFacultyIdAndStatusAndDegree(
                 faculty.getFacultyId(), "OPEN", request.getDegree());
+        List<Project> in_progressprojects = projectRepository.findByFacultyFacultyIdAndStatusAndDegree(
+                faculty.getFacultyId(), "IN_PROGRESS", request.getDegree());
+        List<Project> assignedProjects = projectRepository.findByFacultyFacultyIdAndStatusAndDegree(
+                faculty.getFacultyId(), "ASSIGNED", request.getDegree());
         Project project = new Project();
-        if (openProjects.size() >= rules.getMaxProjectsPerFaculty()) {
+        if (openProjects.size() + in_progressprojects.size() + assignedProjects.size() >= rules
+                .getMaxProjectsPerFaculty()) {
 
             project.setTitle(request.getTitle());
             project.setDescription(request.getDescription());
@@ -279,7 +284,7 @@ public class FacultyService {
                 project.getFaculty().getFacultyId(),
                 List.of("OPEN", "ASSIGNED", "IN_PROGRESS"),
                 project.getDegree());
-        
+
         if (activeProjects.size() >= rules.getMaxProjectsPerFaculty()) {
             throw new RuntimeException(
                     "Cannot activate this project. You have reached the maximum limit of " +

@@ -26,6 +26,7 @@ import {
   updateDeadline,
   toggleActiveDeadline,
 } from '../api/deadlineApi';
+import { getFacultyProfile } from '../api/facultyApi';
 import DegreeSelector from '../components/DegreeSelector';
 import { useDegree } from '../context/DegreeContext';
 
@@ -62,7 +63,7 @@ interface DeadlineItem {
   updatedAt: string;
 }
 
-type RoleOption = 'STUDENT' | 'FACULTY' | 'FACULTY_COORDINATOR' | 'ADMIN';
+type RoleOption = 'STUDENT' | 'FACULTY';
 
 interface FormState {
   title: string;
@@ -197,7 +198,7 @@ const FormModal: React.FC<FormModalProps> = ({
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Description</Text>
             <TextInput
               style={[styles.fieldInput, styles.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-              placeholder="Optional details..."
+              placeholder="Optional Details"
               placeholderTextColor={colors.subText}
               value={form.description}
               onChangeText={(v) => onChangeForm((f) => ({ ...f, description: v }))}
@@ -354,9 +355,9 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({
               style={[styles.actionBtn, { backgroundColor: item.isActive ? '#F59E0B' : '#10B981', borderColor: item.isActive ? '#F59E0B' : '#10B981' }]}
               onPress={(e) => { e.stopPropagation?.(); onToggle(item); }}
             >
-              <Image 
-                source={item.isActive ? Icons.toggleOff : Icons.toggleOn} 
-                style={[styles.actionIcon, { tintColor: '#FFFFFF' }]} 
+              <Image
+                source={item.isActive ? Icons.toggleOff : Icons.toggleOn}
+                style={[styles.actionIcon, { tintColor: '#FFFFFF' }]}
               />
               <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>{item.isActive ? 'Deactivate' : 'Activate'}</Text>
             </TouchableOpacity>
@@ -393,10 +394,14 @@ const DeadlineScreen: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+
 
   // ── Coordinator role flags ──────────────────────────────────────────────────
-  const isUGCoord = user?.isUGCoordinator === true;
-  const isPGCoord = user?.isPGCoordinator === true;
+  // Prioritize flags from the freshly fetched profile, fallback to login user object
+  const isUGCoord = profile?.isUGCoordinator ?? user?.isUGCoordinator ?? false;
+  const isPGCoord = profile?.isPGCoordinator ?? user?.isPGCoordinator ?? false;
+  
   const isBothCoordinator = isUGCoord && isPGCoord;
   // Any coordinator (UG-only, PG-only, both, or admin) can create/edit deadlines
   const isAnyCoordinator = isUGCoord || isPGCoord || user?.role === 'ADMIN' || user?.role === 'FACULTY_COORDINATOR';
@@ -415,13 +420,23 @@ const DeadlineScreen: React.FC = () => {
 
   useEffect(() => {
     if (user?.role === 'FACULTY') {
-      if (user?.isUGCoordinator && !user?.isPGCoordinator && selectedDegree !== 'UG') {
+      if (isUGCoord && !isPGCoord && selectedDegree !== 'UG') {
         setSelectedDegree('UG');
-      } else if (!user?.isUGCoordinator && user?.isPGCoordinator && selectedDegree !== 'PG') {
+      } else if (!isUGCoord && isPGCoord && selectedDegree !== 'PG') {
         setSelectedDegree('PG');
       }
     }
-  }, [user, selectedDegree, setSelectedDegree]);
+  }, [user, isUGCoord, isPGCoord, selectedDegree, setSelectedDegree]);
+
+  const loadProfile = useCallback(async () => {
+    if (user?.role !== 'FACULTY' || !user?.token) return;
+    try {
+      const data = await getFacultyProfile(selectedDegree, user.token);
+      setProfile(data);
+    } catch (err) {
+      console.log('[DeadlineScreen] Profile load error:', err);
+    }
+  }, [user, selectedDegree]);
 
   const loadDeadlines = useCallback(async () => {
     if (!user?.token) return;
@@ -436,7 +451,10 @@ const DeadlineScreen: React.FC = () => {
     }
   }, [user?.token, showAlert, selectedDegree]);
 
-  useFocusEffect(useCallback(() => { loadDeadlines(); }, [loadDeadlines]));
+  useFocusEffect(useCallback(() => { 
+    loadProfile();
+    loadDeadlines(); 
+  }, [loadProfile, loadDeadlines]));
 
   const resetForm = useCallback(() => {
     // For both-degree coordinators → use selectedDegree; for single → use their fixed track
@@ -477,11 +495,11 @@ const DeadlineScreen: React.FC = () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     if (!hasPickedDate) { showAlert('Validation', 'Please select a deadline date and time'); return; }
     try {
-      await createDeadline({ 
-        title: form.title.trim(), 
-        description: form.description.trim(), 
-        deadlineDate: toLocalDateTimeString(form.deadlineDate), 
-        isAutomatic: true, 
+      await createDeadline({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        deadlineDate: toLocalDateTimeString(form.deadlineDate),
+        isAutomatic: true,
         roleSpecificity: form.roleSpecificity,
         degree: form.degree
       }, form.degree);
@@ -497,10 +515,10 @@ const DeadlineScreen: React.FC = () => {
     if (!form.title.trim()) { showAlert('Validation', 'Title is required'); return; }
     try {
       if (!selectedDeadline) return;
-      await updateDeadline(selectedDeadline.deadlineId, { 
-        title: form.title.trim(), 
-        description: form.description.trim(), 
-        deadlineDate: toLocalDateTimeString(form.deadlineDate), 
+      await updateDeadline(selectedDeadline.deadlineId, {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        deadlineDate: toLocalDateTimeString(form.deadlineDate),
         roleSpecificity: form.roleSpecificity,
         degree: form.degree
       });
@@ -515,15 +533,17 @@ const DeadlineScreen: React.FC = () => {
   const handleDelete = useCallback((deadline: DeadlineItem) => {
     showAlert('Delete Deadline', `Are you sure you want to delete "${deadline.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try {
-          await deleteDeadline(deadline.deadlineId);
-          showAlert('Success', 'Deadline deleted');
-          loadDeadlines();
-        } catch (err: any) {
-          showAlert('Error', err?.response?.data?.error || 'Failed to delete deadline');
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await deleteDeadline(deadline.deadlineId);
+            showAlert('Success', 'Deadline deleted');
+            loadDeadlines();
+          } catch (err: any) {
+            showAlert('Error', err?.response?.data?.error || 'Failed to delete deadline');
+          }
         }
-      }},
+      },
     ]);
   }, [user?.token, showAlert, loadDeadlines]);
 
