@@ -130,7 +130,8 @@ public class StudentService {
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
         // ✅ DEFENSIVE CHECK: Is this student already a lead in the database?
-        // This prevents the "Duplicate entry" error if a previous create attempt partially failed.
+        // This prevents the "Duplicate entry" error if a previous create attempt
+        // partially failed.
         var existingTeams = teamRepository.findByTeamLeadStudentId(request.getStudentId());
         if (!existingTeams.isEmpty()) {
             Team existingTeam = existingTeams.get(0);
@@ -138,7 +139,9 @@ public class StudentService {
             student.setInTeam(true);
             student.setTeamLead(true);
             studentRepository.save(student);
-            throw new RuntimeException("Your previous team creation was partially successful. We have restored your association with team '" + existingTeam.getTeamName() + "'. Please refresh.");
+            throw new RuntimeException(
+                    "Your previous team creation was partially successful. We have restored your association with team '"
+                            + existingTeam.getTeamName() + "'. Please refresh.");
         }
 
         // ✅ CHECK TEAM FORMATION DEADLINE
@@ -918,12 +921,11 @@ public class StudentService {
         // Notify student
         if (student.getUser() != null) {
             notificationService.createAndSendNotification(
-                student.getUser(),
-                "Team Request Approved! 🎉",
-                "You have been successfully added to team " + team.getTeamName(),
-                "StudentHome",
-                null
-            );
+                    student.getUser(),
+                    "Team Request Approved! 🎉",
+                    "You have been successfully added to team " + team.getTeamName(),
+                    "StudentHome",
+                    null);
         }
 
         return "Student added to team successfully";
@@ -941,12 +943,11 @@ public class StudentService {
         // Notify student
         if (request.getStudent() != null && request.getStudent().getUser() != null) {
             notificationService.createAndSendNotification(
-                request.getStudent().getUser(),
-                "Team Request Rejected",
-                "Your request to join team " + request.getTeam().getTeamName() + " was rejected.",
-                "SentRequests",
-                null
-            );
+                    request.getStudent().getUser(),
+                    "Team Request Rejected",
+                    "Your request to join team " + request.getTeam().getTeamName() + " was rejected.",
+                    "SentRequests",
+                    null);
         }
 
         return "Request rejected";
@@ -1004,11 +1005,19 @@ public class StudentService {
             } else {
                 // Team Lead is the only member
                 team.setTeamLead(null);
+                team.setDepartment(null);
+                team.setInstitute(null);
                 teamRepository.save(team);
+
+                student.setTeam(null);
+                student.setInTeam(false);
+                student.setTeamLead(false);
+                studentRepository.save(student);
 
                 // CLEAN UP before deleting team
                 List<TeamJoinRequest> teamJoinRequests = joinRequestRepository.findByTeamTeamId(team.getTeamId());
-                List<DeactivatedTeamJoinRequest> deactivatedJoinRequests = deactivatedTeamJoinRequestRepository.findByTeamJoinRequest_Team_TeamId(team.getTeamId());
+                List<DeactivatedTeamJoinRequest> deactivatedJoinRequests = deactivatedTeamJoinRequestRepository
+                        .findByTeamJoinRequest_Team_TeamId(team.getTeamId());
                 deactivatedTeamJoinRequestRepository.deleteAll(deactivatedJoinRequests);
                 joinRequestRepository.deleteAll(teamJoinRequests);
 
@@ -1019,6 +1028,9 @@ public class StudentService {
                 projectRequestRepository.deleteAll(projectRequests);
 
                 teamRepository.delete(team);
+
+                reopenDeactivatedRequests(studentId);
+                return "Successfully left the team";
             }
         }
 
@@ -1160,7 +1172,7 @@ public class StudentService {
         Team team = student.getTeam();
 
         if (team == null) {
-            throw new RuntimeException("Student is not in a team");
+            return new ArrayList<>();
         }
 
         List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
@@ -1354,14 +1366,15 @@ public class StudentService {
                 if (email != null && email.contains("@")) {
                     String tail = email.split("@")[1].toLowerCase();
                     List<Institute> allInstitutes = instituteRepository.findAll();
-                    
+
                     for (Institute inst : allInstitutes) {
-                        if (inst.getTail() == null) continue;
+                        if (inst.getTail() == null)
+                            continue;
                         String instTail = inst.getTail().toLowerCase();
                         if (instTail.startsWith("@")) {
                             instTail = instTail.substring(1);
                         }
-                        
+
                         // Check if the email domain is the same or ends with "." + instTail
                         if (tail.equals(instTail) || tail.endsWith("." + instTail)) {
                             institutes.add(inst);

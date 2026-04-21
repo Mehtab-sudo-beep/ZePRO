@@ -232,7 +232,10 @@ public class StudentController {
         Team team = student.getTeam();
 
         if (team == null) {
-            throw new RuntimeException("Student is not in a team");
+            ProjectRequestStatusResponse emptyResponse = new ProjectRequestStatusResponse();
+            emptyResponse.setUpcomingRequests(new ArrayList<>());
+            emptyResponse.setCompletedRequests(new ArrayList<>());
+            return emptyResponse;
         }
 
         List<ProjectRequest> requests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
