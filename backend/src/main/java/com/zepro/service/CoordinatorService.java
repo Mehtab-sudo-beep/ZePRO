@@ -710,10 +710,30 @@ public class CoordinatorService {
     // DEADLINES TAB
     // =========================================================================
 
+    @Transactional(readOnly = true)
     public DepartmentDeadlinesDTO getDeadlines(Long departmentId, String degree) {
-        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
-                .orElse(new DepartmentDeadlines());
+        System.out.println("[CoordinatorService] 📅 Fetching deadlines for department: " + departmentId + ", degree: " + degree);
 
+        DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
+                .orElseGet(() -> {
+                    // Try to find if there's an old record with no degree (migration case)
+                    return departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+                        .stream()
+                        .filter(d -> d.getDegree() == null || d.getDegree().isEmpty())
+                        .findFirst()
+                        .orElseGet(() -> {
+                            DepartmentDeadlines newObj = new DepartmentDeadlines();
+                            Department dept = departmentrepository.findById(departmentId).orElse(null);
+                            newObj.setDepartment(dept);
+                            newObj.setDegree(degree);
+                            return newObj;
+                        });
+                });
+
+        return mapToDeadlinesDTO(deadlines);
+    }
+
+    private DepartmentDeadlinesDTO mapToDeadlinesDTO(DepartmentDeadlines deadlines) {
         DepartmentDeadlinesDTO dto = new DepartmentDeadlinesDTO();
         dto.setTeamFormationDeadline(deadlines.getTeamFormationDeadline());
         dto.setProjectRequestDeadline(deadlines.getProjectRequestDeadline());
@@ -724,18 +744,35 @@ public class CoordinatorService {
 
     @Transactional
     public void saveDeadlines(Long departmentId, DepartmentDeadlinesDTO request, String degree) {
+        System.out.println("[CoordinatorService] 💾 Saving deadlines for department: " + departmentId + ", degree: " + degree);
+        System.out.println("[CoordinatorService] Payload: TF=" + request.getTeamFormationDeadline() + 
+                           ", PR=" + request.getProjectRequestDeadline() + 
+                           ", MS=" + request.getMeetingSchedulingDeadline());
+
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found with ID: " + departmentId));
 
         DepartmentDeadlines deadlines = departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(departmentId, degree)
                 .orElseGet(() -> {
-                    DepartmentDeadlines newObj = new DepartmentDeadlines();
-                    newObj.setDepartment(dept);
-                    newObj.setDegree(degree);
-                    return newObj;
+                    // Migration: check for old record with no degree
+                    return departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
+                        .stream()
+                        .filter(d -> d.getDegree() == null || d.getDegree().isEmpty())
+                        .findFirst()
+                        .orElseGet(() -> {
+                            DepartmentDeadlines newObj = new DepartmentDeadlines();
+                            newObj.setDepartment(dept);
+                            newObj.setDegree(degree);
+                            return newObj;
+                        });
                 });
 
-        // ✅ Support partial updates: only update if field is present in DTO
+        // Ensure degree is set correctly if it was an old record
+        if (deadlines.getDegree() == null || deadlines.getDegree().isEmpty()) {
+            deadlines.setDegree(degree);
+        }
+
+        // ✅ Support partial updates
         if (request.getTeamFormationDeadline() != null) {
             deadlines.setTeamFormationDeadline(request.getTeamFormationDeadline());
         }
@@ -746,8 +783,13 @@ public class CoordinatorService {
             deadlines.setMeetingSchedulingDeadline(request.getMeetingSchedulingDeadline());
         }
 
-        departmentDeadlinesRepository.save(deadlines);
-        System.out.println("[CoordinatorService] ✅ Deadlines saved for department: " + departmentId + " (" + degree + ")");
+        try {
+            departmentDeadlinesRepository.save(deadlines);
+            System.out.println("[CoordinatorService] ✅ Deadlines saved successfully");
+        } catch (Exception e) {
+            System.out.println("[CoordinatorService] ❌ Error saving deadlines: " + e.getMessage());
+            throw new RuntimeException("Database error: " + e.getMessage());
+        }
 
         // ✅ ASYNC EMAIL DISPATCH (Filtered by degree)
         if (request.getTeamFormationDeadline() != null) {

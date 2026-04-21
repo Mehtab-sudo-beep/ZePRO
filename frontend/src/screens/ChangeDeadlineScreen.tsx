@@ -155,7 +155,9 @@ const ChangeDeadlinesScreen: React.FC = () => {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to save deadlines');
+      console.log('Error saving deadlines:', error);
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save deadlines';
+      showAlert('Error', errorMsg);
     } finally {
       setLoading(false);
     }

@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 import com.zepro.model.TeamJoinRequest;
 import java.util.ArrayList;
 import java.util.List;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import com.zepro.repository.InstituteRepository;
 import com.zepro.repository.DepartmentRepository;
 import com.zepro.repository.UserRepository;
@@ -1466,15 +1466,17 @@ public class StudentService {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public com.zepro.model.DepartmentDeadlines getDepartmentDeadlines(Long studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         if (student.getDepartment() == null) {
             return null;
         }
-        return departmentDeadlinesRepository.findByDepartment_DepartmentId(student.getDepartment().getDepartmentId())
-                .orElse(null);
+        return departmentDeadlinesRepository.findByDepartment_DepartmentIdAndDegree(
+            student.getDepartment().getDepartmentId(), 
+            student.getDegree()
+        ).orElse(null);
     }
 
     @Transactional

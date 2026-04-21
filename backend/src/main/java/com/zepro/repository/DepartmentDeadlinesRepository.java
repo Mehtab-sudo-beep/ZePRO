@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface DepartmentDeadlinesRepository extends JpaRepository<DepartmentDeadlines, Long> {
 
-    Optional<DepartmentDeadlines> findByDepartment_DepartmentId(Long departmentId);
+    java.util.List<DepartmentDeadlines> findByDepartment_DepartmentId(Long departmentId);
     Optional<DepartmentDeadlines> findByDepartment_DepartmentIdAndDegree(Long departmentId, String degree);
 }
