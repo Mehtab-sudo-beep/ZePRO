@@ -10,12 +10,19 @@ import {
   Modal,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
+
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as IntentLauncher from 'expo-intent-launcher';
+import { BASE_URL } from '../api/api';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AlertContext } from '../context/AlertContext';
+import { AuthContext } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -42,6 +49,7 @@ const ReceivedRequestsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { colors } = useContext(ThemeContext);
   const { showAlert } = useContext(AlertContext);
+  const { user } = useContext(AuthContext);
   const isDark = colors.background === '#111827';
 
   const [requests, setRequests] = useState<Request[]>([]);
@@ -182,6 +190,36 @@ const ReceivedRequestsScreen: React.FC = () => {
     }
   };
 
+  const openLink = async (url: string) => {
+    if (!url || url === 'N/A') return;
+    try {
+      const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+      const filename = encodeURIComponent(url.split('/').pop() || 'document.pdf');
+      const fileUri = `${FileSystem.documentDirectory}${filename}`;
+
+      const downloadedFile = await FileSystem.downloadAsync(fullUrl, fileUri, {
+        headers: { Authorization: `Bearer ${user?.token}` }
+      });
+
+      if (downloadedFile.status === 200) {
+        if (Platform.OS === 'android') {
+          const contentUri = await FileSystem.getContentUriAsync(downloadedFile.uri);
+          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+            data: contentUri,
+            flags: 1,
+            type: 'application/pdf',
+          });
+        } else {
+          await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
+        }
+      } else {
+        showAlert('Error', `Server error: ${downloadedFile.status}`);
+      }
+    } catch (err) {
+      showAlert('Error', 'Unable to fetch document.');
+    }
+  };
+
   const statusColor = (status: string) => {
     if (status === 'ACCEPTED' || status === 'APPROVED') return '#16A34A';
     if (status === 'REJECTED') return '#DC2626';
@@ -266,23 +304,20 @@ const ReceivedRequestsScreen: React.FC = () => {
                     </View>
                   ) : null}
 
-                  {req.resumeLink && req.resumeLink !== "N/A" ? (
-                    <View style={styles.detailRow}>
-                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Resume: </Text>
-                      <TouchableOpacity onPress={() => Linking.openURL(req.resumeLink!)}>
-                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>View Document</Text>
-                      </TouchableOpacity>
+                  {((req.resumeLink && req.resumeLink !== "N/A") || (req.marksheetLink && req.marksheetLink !== "N/A")) && (
+                    <View style={styles.docRow}>
+                      {req.resumeLink && req.resumeLink !== 'N/A' && (
+                        <TouchableOpacity style={styles.docBtn} onPress={() => openLink(req.resumeLink!)}>
+                          <Text style={styles.docBtnText}>📄 Resume</Text>
+                        </TouchableOpacity>
+                      )}
+                      {req.marksheetLink && req.marksheetLink !== 'N/A' && (
+                        <TouchableOpacity style={styles.docBtn} onPress={() => openLink(req.marksheetLink!)}>
+                          <Text style={styles.docBtnText}>📋 Marksheet</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                  ) : null}
-
-                  {req.marksheetLink && req.marksheetLink !== "N/A" ? (
-                    <View style={styles.detailRow}>
-                      <Text style={{ color: colors.subText, fontSize: 13, fontWeight: '600' }}>Marksheet: </Text>
-                      <TouchableOpacity onPress={() => Linking.openURL(req.marksheetLink!)}>
-                        <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' }}>View Document</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
+                  )}
 
                   {/* Show rejection reason if rejected */}
                   {req.status === 'REJECTED' && req.rejectionReason ? (
@@ -459,6 +494,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+
+  docRow: { flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 8 },
+  docBtn: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  docBtnText: { fontSize: 11, fontWeight: '600', color: '#374151' },
 
   reasonBox: {
     marginTop: 12,

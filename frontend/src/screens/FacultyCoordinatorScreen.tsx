@@ -226,7 +226,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
       const studentId = selectedStudent.id || selectedStudent.studentId;
       console.log('[FacultyCoordinatorDashboard] 🆕 Creating team:', newTeamName);
 
-      const result = await coordinatorApi.createTeam(newTeamName, String(studentId));
+      const result = await coordinatorApi.createTeam(newTeamName, String(studentId), selectedDegree);
       showLocalMsg("Team created successfully!", "success");
       setNewTeamName('');
       setShowCreateTeamModal(false);
@@ -919,7 +919,7 @@ const FacultyCoordinatorDashboard: React.FC = () => {
                 onPress={async () => {
                   setSelectedFacultyId(f.id);
                   try {
-                    const projects = await coordinatorApi.getFacultyProjects(f.id);
+                    const projects = await coordinatorApi.getFacultyProjects(f.id, selectedDegree);
                     setFacultyProjectsForTeam(projects.map((p: any) => ({ ...p, id: String(p.projectId) })));
                   } catch (err) {
                     showLocalMsg("Failed to load projects", "error");

@@ -496,10 +496,10 @@ public class FacultyCoordinatorController {
     }
 
     @GetMapping("/faculty-projects/{facultyId}")
-    public ResponseEntity<?> getFacultyProjects(@PathVariable Long facultyId, Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/faculty-projects/" + facultyId);
+    public ResponseEntity<?> getFacultyProjects(@PathVariable Long facultyId, Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 📋 GET /api/coordinator/faculty-projects/" + facultyId + "?degree=" + degree);
         try {
-            return ResponseEntity.ok(coordinatorService.getFacultyProjects(facultyId));
+            return ResponseEntity.ok(coordinatorService.getFacultyProjects(facultyId, degree));
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
@@ -519,8 +519,8 @@ public class FacultyCoordinatorController {
     }
 
     @PostMapping("/create-team")
-    public ResponseEntity<?> createTeam(@RequestBody CreateTeamRequest request,Authentication authentication) {
-        System.out.println("[FacultyCoordinatorController] 🆕 POST /api/coordinator/create-team");
+    public ResponseEntity<?> createTeam(@RequestBody CreateTeamRequest request,Authentication authentication, @RequestParam(required = false, defaultValue = "UG") String degree) {
+        System.out.println("[FacultyCoordinatorController] 🆕 POST /api/coordinator/create-team?degree=" + degree);
         try {
             String email = authentication.getName();
             Faculty faculty = facultyRepository.findByUser_Email(email)
@@ -533,7 +533,7 @@ public class FacultyCoordinatorController {
                 return ResponseEntity.status(400).body(null);
             }
 
-            CoordinatorTeamDetailDTO newTeam = coordinatorService.createTeamForStudent(request, departmentId);
+            CoordinatorTeamDetailDTO newTeam = coordinatorService.createTeamForStudent(request, departmentId, degree);
             return ResponseEntity.ok(newTeam);
         } catch (Exception e) {
             System.out.println("[FacultyCoordinatorController] ❌ Error: " + e.getMessage());

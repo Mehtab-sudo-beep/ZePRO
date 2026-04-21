@@ -23,6 +23,7 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     long countByIsAllocatedTrueAndDepartment_DepartmentId(Long departmentId);
     long countByIsAllocatedTrueAndDepartment_DepartmentIdAndDegree(Long departmentId, String degree);
     long countByIsAllocatedFalseAndDepartment_DepartmentId(Long departmentId);
+    long countByIsAllocatedFalseAndDepartment_DepartmentIdAndDegree(Long departmentId, String degree);
 
     long countByIsAllocatedFalse();
 

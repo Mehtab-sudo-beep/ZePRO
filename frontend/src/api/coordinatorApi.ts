@@ -65,16 +65,16 @@ export const coordinatorApi = {
   getAvailableTeamsToJoin: (degree: string = 'UG') =>
     API.get(`${PREFIX}/available-teams?degree=${degree}`).then(res => res.data),
 
-  getFacultyProjects: (facultyId: string) =>
-    API.get(`${PREFIX}/faculty-projects/${facultyId}`).then(res => res.data),
+  getFacultyProjects: (facultyId: string, degree: string = 'UG') =>
+    API.get(`${PREFIX}/faculty-projects/${facultyId}?degree=${degree}`).then(res => res.data),
 
   allocateTeamToFaculty: (teamId: string, facultyId: string, projectId: string) =>
     API.post(`${PREFIX}/allocate-team`, { teamId, facultyId, projectId }).then(res => res.data),
 
   // ✅ CREATE TEAM
-  createTeam: (teamName: string, studentId: string) => {
-    console.log('[coordinatorApi] 🆕 Creating team:', teamName, 'for student:', studentId);
-    return API.post(`${PREFIX}/create-team`, {
+  createTeam: (teamName: string, studentId: string, degree: string = 'UG') => {
+    console.log('[coordinatorApi] 🆕 Creating team:', teamName, 'for student:', studentId, 'degree:', degree);
+    return API.post(`${PREFIX}/create-team?degree=${degree}`, {
       teamName: teamName.trim(),
       studentId: String(studentId)
     }).then(res => res.data);

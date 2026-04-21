@@ -399,10 +399,11 @@ const DeadlineScreen: React.FC = () => {
   const isPGCoord = user?.isPGCoordinator === true;
   const isBothCoordinator = isUGCoord && isPGCoord;
   // Any coordinator (UG-only, PG-only, both, or admin) can create/edit deadlines
-  const isAnyCoordinator = isUGCoord || isPGCoord || user?.role === 'ADMIN';
+  const isAnyCoordinator = isUGCoord || isPGCoord || user?.role === 'ADMIN' || user?.role === 'FACULTY_COORDINATOR';
   // For card action buttons: is this user a coordinator for the CURRENTLY SELECTED degree?
   const isFacultyCoordinator = isAnyCoordinator && (
     user?.role === 'ADMIN' ||
+    user?.role === 'FACULTY_COORDINATOR' ||
     (selectedDegree === 'UG' && isUGCoord) ||
     (selectedDegree === 'PG' && isPGCoord)
   );

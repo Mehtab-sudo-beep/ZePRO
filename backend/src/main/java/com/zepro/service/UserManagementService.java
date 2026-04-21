@@ -67,19 +67,25 @@ public class UserManagementService {
                     }
                 }
 
-                // 2. Reopen Project Requests
+                // 2. Reject all Project Requests because faculty is removed
                 List<ProjectRequest> requests = projectRequestRepository.findByProjectProjectId(project.getProjectId());
                 for (ProjectRequest req : requests) {
-                    req.setStatus(RequestStatus.PENDING);
+                    req.setStatus(RequestStatus.REJECTED);
+                    req.setRejectionReason("Faculty is removed");
+                    req.setFaculty(null); // Prevent FK violation
                     projectRequestRepository.save(req);
                 }
 
-                // 3. Set Project Status back to IN_PROGRESS
-                project.setStatus("IN_PROGRESS");
+                // 3. Cancel all meetings for this project
+                List<Meeting> meetings = meetingRepository.findByProjectProjectId(project.getProjectId());
+                for (Meeting m : meetings) {
+                    m.setStatus(MeetingStatus.CANCELLED);
+                    meetingRepository.save(m);
+                }
+
+                // 4. Set Project Status to CLOSED
+                project.setStatus("CLOSED");
                 project.setTeam(null);
-                // Note: We keep the project but it has no faculty? Or do we delete?
-                // The user said "project status to inprogress", so we keep it.
-                // However, we must set faculty to null to avoid constraint violation on faculty delete.
                 project.setFaculty(null); 
                 projectRepository.save(project);
             }
@@ -128,9 +134,43 @@ public class UserManagementService {
 
                 student.setTeam(null);
 
-                // If team is now empty, dissolve it
+                // If team is now empty, dissolve it and delete it
                 if (team.getMembers().isEmpty()) {
                     dissolveTeam(team);
+                    
+                    // The team is being deleted. Let's find if it was allocated to a project.
+                    Project p = projectRepository.findByTeam(team);
+                    if (p != null) {
+                        p.setTeam(null);
+                        p.setStatus("IN_PROGRESS");
+                        projectRepository.save(p);
+                        
+                        // User request: requests that went rejected will be reopened, same with meetings
+                        List<ProjectRequest> otherRequests = projectRequestRepository.findByProjectProjectId(p.getProjectId());
+                        for (ProjectRequest req : otherRequests) {
+                            if (req.getStatus() == RequestStatus.REJECTED) {
+                                req.setStatus(RequestStatus.PENDING);
+                                projectRequestRepository.save(req);
+                            }
+                        }
+                        
+                        List<Meeting> otherMeetings = meetingRepository.findByProjectProjectId(p.getProjectId());
+                        for (Meeting m : otherMeetings) {
+                            if (m.getStatus() == MeetingStatus.CANCELLED) {
+                                m.setStatus(MeetingStatus.PENDING); // Reopen meetings
+                                meetingRepository.save(m);
+                            }
+                        }
+                    }
+
+                    // Delete all project requests for this team
+                    List<ProjectRequest> teamRequests = projectRequestRepository.findByTeamTeamId(team.getTeamId());
+                    projectRequestRepository.deleteAll(teamRequests);
+                    
+                    // Delete all meetings for this team
+                    List<Meeting> teamMeetings = meetingRepository.findByTeamTeamId(team.getTeamId());
+                    meetingRepository.deleteAll(teamMeetings);
+
                     teamRepository.delete(team);
                 } else {
                     teamRepository.save(team);
@@ -146,6 +186,7 @@ public class UserManagementService {
         System.out.println("[UserManagementService] 🌊 Dissolving Team: " + team.getTeamName());
         
         team.setStatus("pending");
+        team.setFaculty(null); // Prevent FK violation
         
         // Unallocate members
         for (Student s : team.getMembers()) {
@@ -155,23 +196,9 @@ public class UserManagementService {
             studentRepository.save(s);
         }
 
-        // Reopen rejected requests for this team (if any)
-        List<ProjectRequest> rejectedRequests = projectRequestRepository.findByTeamTeamIdAndStatus(team.getTeamId(), RequestStatus.REJECTED);
-        for (ProjectRequest req : rejectedRequests) {
-            req.setStatus(RequestStatus.PENDING);
-            projectRequestRepository.save(req);
-        }
-
         // Handle Meetings
         List<Meeting> meetings = meetingRepository.findByTeamTeamId(team.getTeamId());
         for (Meeting meeting : meetings) {
-            // Reopen meetings? Usually they are cancelled if guide/team is gone.
-            // User said "reopen them too if meetings are scheduled".
-            // This might mean making the slot available again? 
-            // Or if they were cancelled, mark them as SCHEDULED but maybe with no team?
-            // Actually, meetings are tied to teams. If team is pending, meetings should be cancelled.
-            // I'll set them to CANCELLED for now, as "reopen" is ambiguous.
-            // Wait! If the project goes back to IN_PROGRESS, maybe the coordinator wants the slot to be available.
             meeting.setStatus(MeetingStatus.CANCELLED);
             meetingRepository.save(meeting);
         }

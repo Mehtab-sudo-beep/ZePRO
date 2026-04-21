@@ -1099,13 +1099,14 @@ public class CoordinatorService {
 
     // ✅ NEW: GET FACULTY PROJECTS (OPEN OR IN_PROGRESS)
     @Transactional(readOnly = true)
-    public List<FacultyProjectDTO> getFacultyProjects(Long facultyId) {
-        System.out.println("[CoordinatorService] 📋 Fetching projects for faculty: " + facultyId);
+    public List<FacultyProjectDTO> getFacultyProjects(Long facultyId, String degree) {
+        System.out.println("[CoordinatorService] 📋 Fetching projects for faculty: " + facultyId + " degree: " + degree);
 
         List<Project> projects = projectRepository.findByFacultyFacultyId(facultyId)
                 .stream()
                 .filter(p -> p.getIsActive() &&
-                        ("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus())))
+                        ("OPEN".equals(p.getStatus()) || "IN_PROGRESS".equals(p.getStatus())) && 
+                        (degree == null || degree.equalsIgnoreCase(p.getDegree())))
                 .collect(Collectors.toList());
 
         List<FacultyProjectDTO> projectDTOs = projects.stream()
@@ -1213,8 +1214,8 @@ public class CoordinatorService {
 
     // ✅ NEW: CREATE TEAM FOR STUDENT
     @Transactional
-    public CoordinatorTeamDetailDTO createTeamForStudent(CreateTeamRequest request, Long departmentId) {
-        System.out.println("[CoordinatorService] 🆕 Creating new team: " + request.getTeamName());
+    public CoordinatorTeamDetailDTO createTeamForStudent(CreateTeamRequest request, Long departmentId, String degree) {
+        System.out.println("[CoordinatorService] 🆕 Creating new team: " + request.getTeamName() + " with degree: " + degree);
 
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
@@ -1230,7 +1231,7 @@ public class CoordinatorService {
         newTeam.setMembers(new java.util.ArrayList<>());
         newTeam.getMembers().add(student);
         newTeam.setTeamLead(student);
-        newTeam.setDegree(student.getDegree()); // ✅ SET DEGREE
+        newTeam.setDegree(degree); // ✅ SET DEGREE TO THE ONE PASSED IN REQUEST
         Department dept = departmentrepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Department not found"));
         newTeam.setDepartment(dept);

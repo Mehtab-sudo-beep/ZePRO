@@ -14,5 +14,6 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
     List<Meeting> findByTeamTeamId(Long teamId);
     List<Meeting> findByTeamTeamIdAndStatus(Long teamId, com.zepro.model.MeetingStatus status);
     List<Meeting> findByRequestProjectProjectIdAndStatus(Long projectId, String status);
+    List<Meeting> findByProjectProjectId(Long projectId);
 
 }
