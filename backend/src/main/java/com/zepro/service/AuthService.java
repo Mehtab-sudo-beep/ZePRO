@@ -253,8 +253,9 @@ public class AuthService {
         java.util.List<String> allowedTails = getAllowedTails();
 
         boolean isAllowed = allowedTails.stream().anyMatch(tail -> domain.equals(tail) || domain.endsWith("." + tail));
+        boolean isAdmin = com.zepro.model.UserRole.ADMIN.equals(request.getRole());
 
-        if (!isAllowed) {
+        if (!isAdmin && !isAllowed) {
             throw new RuntimeException("Registration is only allowed for verified institute domains.");
         }
 
