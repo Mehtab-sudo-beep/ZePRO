@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
+import { BASE_URL } from '../api/api';
 import { getAssignedProject } from '../api/studentApi';
 
 const Icon = ({ name, size = 18 }: { name: string; size?: number }) => {
@@ -85,7 +86,7 @@ const AllocatedProjectScreen: React.FC = () => {
   };
 
   const openDocument = (url: string) => {
-    const API_BASE = 'http://10.226.126.133:8080';
+    const API_BASE = BASE_URL;
     const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
     Linking.openURL(fullUrl).catch(err => console.error("Couldn't load page", err));
   };

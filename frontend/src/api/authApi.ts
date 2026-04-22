@@ -3,6 +3,7 @@ import API from './api';
 export const signup = (data: any) => {
   console.log('Signup data:', data);
   return API.post('/auth/signup', data);
+
 };
 
 export const getAllowedTails = () => {

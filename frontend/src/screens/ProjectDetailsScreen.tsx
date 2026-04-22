@@ -19,7 +19,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { sendProjectRequest, getDepartmentDeadlines, getProjectById } from '../api/studentApi';
 
-const API_BASE = 'http://10.226.126.133:8080';
+import { BASE_URL } from '../api/api';
 
 const ProjectDetailsScreen = () => {
   const { colors } = useContext(ThemeContext);
