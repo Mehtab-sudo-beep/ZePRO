@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { resetPasswordOtp } from '../api/authApi';
 import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
@@ -20,7 +21,8 @@ const ResetPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { showAlert } = React.useContext(AlertContext);
+  const { showAlert } = useContext(AlertContext);
+  const { colors } = useContext(ThemeContext);
 
   const handleReset = async () => {
     if (!newPassword || !confirmPassword) {
@@ -50,10 +52,10 @@ const ResetPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Set New Password</Text>
-        <Text style={styles.subtitle}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Set New Password</Text>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>
           Create a strong password for your account
         </Text>
 
@@ -61,28 +63,28 @@ const ResetPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
           placeholder="New Password"
           value={newPassword}
           onChangeText={setNewPassword}
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           secureTextEntry
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.subText}
         />
 
         <TextInput
           placeholder="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           secureTextEntry
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.subText}
         />
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: '#3b82f6' }]} 
+            style={[styles.actionBtn, { backgroundColor: colors.primary }]} 
             onPress={handleReset}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <Text style={styles.btnText}>Change Password</Text>
             )}
@@ -90,7 +92,7 @@ const ResetPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
         </View>
         
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backLink}>Back to Login</Text>
+          <Text style={[styles.backLink, { color: colors.primary }]}>Back to Login</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -102,14 +104,12 @@ export default ResetPasswordScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   card: {
     width: '100%',
-    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 25,
     elevation: 8,
@@ -123,23 +123,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#1f2937',
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
     marginBottom: 20,
     textAlign: 'center',
     lineHeight: 20,
   },
   input: {
-    color: '#111827',
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 8,
     padding: 14,
     marginBottom: 15,
-    backgroundColor: '#f9fafb',
     fontSize: 15,
   },
   buttonContainer: {
@@ -159,7 +154,6 @@ const styles = StyleSheet.create({
   backLink: {
     marginTop: 20,
     textAlign: 'center',
-    color: '#2563eb',
     fontWeight: '600',
   },
 });

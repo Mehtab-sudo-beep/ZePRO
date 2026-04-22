@@ -162,10 +162,44 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [loadingDepts, setLoadingDepts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ ADD THIS USEEFFECT - Track component mount/unmount
+  // ✅ TRACK MOUNT/UNMOUNT
   useEffect(() => {
     isMountedRef.current = true;
     console.log('[CompleteProfile] 📱 Component mounted');
+
+    const fetchCurrentStatus = async () => {
+      try {
+        const studentId = await AsyncStorage.getItem('studentId');
+        if (!studentId) return;
+
+        const res = await getProfileStatus(Number(studentId));
+        const data = res.data;
+
+        if (isMountedRef.current && data) {
+          if (data.phone) setPhone(data.phone);
+          if (data.rollNumber) setRollNumber(data.rollNumber);
+          if (data.cgpa) setCgpa(data.cgpa.toString());
+          if (data.year) setYear(data.year);
+          
+          if (data.instituteId) {
+            setSelectedInstitute({ 
+              instituteId: data.instituteId, 
+              instituteName: data.instituteName 
+            });
+          }
+          if (data.departmentId) {
+            setSelectedDepartment({ 
+              departmentId: data.departmentId, 
+              departmentName: data.departmentName 
+            });
+          }
+        }
+      } catch (err) {
+        console.log('[CompleteProfile] ❌ Error fetching current status:', err);
+      }
+    };
+
+    fetchCurrentStatus();
 
     return () => {
       isMountedRef.current = false;
@@ -182,11 +216,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           setInstitutes(res.data);
           console.log('[CompleteProfile] ✅ Institutes loaded:', res.data.length);
           
-          if (res.data.length === 1) {
-            console.log('[CompleteProfile] 🎯 Auto-selecting institute');
-            setSelectedInstitute(res.data[0]);
-            // No need to show selection block if only one
-          } else if (res.data.length === 0) {
+          if (res.data.length === 0) {
             showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{
               text: 'OK',
               onPress: async () => {
@@ -461,13 +491,6 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Institute *</Text>
             {loadingInstitutes ? (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
-            ) : institutes.length === 1 ? (
-              <View style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background, opacity: 0.8 }]}>
-                <Text style={[styles.selectorText, { color: colors.text }]}>
-                  {institutes[0].instituteName}
-                </Text>
-                <Text style={{ color: colors.primary, fontSize: 16 }}>✓</Text>
-              </View>
             ) : (
               <TouchableOpacity
                 style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}

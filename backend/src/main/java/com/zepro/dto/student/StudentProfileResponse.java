@@ -11,6 +11,7 @@ public class StudentProfileResponse {
     private String departmentName;
     private String resumeLink;
     private String marksheetLink;
+    private String phone;
     private boolean isProfileComplete;
 
     public StudentProfileResponse() {}
@@ -26,6 +27,7 @@ public class StudentProfileResponse {
             String departmentName,
             String resumeLink,
             String marksheetLink,
+            String phone,
             boolean isProfileComplete) {
         this.studentId = studentId;
         this.name = name;
@@ -37,8 +39,12 @@ public class StudentProfileResponse {
         this.departmentName = departmentName;
         this.resumeLink = resumeLink;
         this.marksheetLink = marksheetLink;
+        this.phone = phone;
         this.isProfileComplete = isProfileComplete;
     }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
     public Long getStudentId() { return studentId; }
     public void setStudentId(Long studentId) { this.studentId = studentId; }

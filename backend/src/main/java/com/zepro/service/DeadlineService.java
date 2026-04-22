@@ -181,10 +181,18 @@ public class DeadlineService {
             throw new RuntimeException("Coordinator can only update deadlines from their own department");
         }
 
-        deadline.setTitle(request.getTitle());
-        deadline.setDescription(request.getDescription());
-        deadline.setDeadlineDate(request.getDeadlineDate());
-        deadline.setRoleSpecificity(request.getRoleSpecificity());
+        if (request.getTitle() != null) {
+            deadline.setTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            deadline.setDescription(request.getDescription());
+        }
+        if (request.getDeadlineDate() != null) {
+            deadline.setDeadlineDate(request.getDeadlineDate());
+        }
+        if (request.getRoleSpecificity() != null) {
+            deadline.setRoleSpecificity(request.getRoleSpecificity());
+        }
 
         Deadline updatedDeadline = deadlineRepository.save(deadline);
         

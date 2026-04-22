@@ -380,8 +380,12 @@ public class StudentController {
 
     // Get team info for a student
     @GetMapping("/team-info/{studentId}")
-    public TeamInfoResponse getTeamInfo(@PathVariable("studentId") Long studentId) {
-        return studentService.getTeamInfo(studentId);
+    public org.springframework.http.ResponseEntity<TeamInfoResponse> getTeamInfo(@PathVariable("studentId") Long studentId) {
+        TeamInfoResponse response = studentService.getTeamInfo(studentId);
+        if (response == null) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        return org.springframework.http.ResponseEntity.ok(response);
     }
 
     @PostMapping("/send-join-request")

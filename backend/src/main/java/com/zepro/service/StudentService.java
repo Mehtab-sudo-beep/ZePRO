@@ -755,7 +755,7 @@ public class StudentService {
         Team team = student.getTeam();
 
         if (team == null) {
-            throw new RuntimeException("Student is not in a team");
+            return null;
         }
 
         TeamInfoResponse response = new TeamInfoResponse();
@@ -1245,6 +1245,7 @@ public class StudentService {
                 savedStudent.getDepartment() != null ? savedStudent.getDepartment().getDepartmentName() : null,
                 savedStudent.getResumeLink(),
                 savedStudent.getMarksheetLink(),
+                savedStudent.getUser().getPhone(),
                 true);
     }
 
@@ -1322,6 +1323,7 @@ public class StudentService {
                 student.getDepartment() != null ? student.getDepartment().getDepartmentName() : null,
                 student.getResumeLink(),
                 student.getMarksheetLink(),
+                student.getUser() != null ? student.getUser().getPhone() : "",
                 isComplete);
     }
 

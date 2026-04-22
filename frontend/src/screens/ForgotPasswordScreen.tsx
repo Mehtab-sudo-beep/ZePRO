@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,15 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { forgotPassword } from '../api/authApi';
 import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const { showAlert } = React.useContext(AlertContext);
+  const { showAlert } = useContext(AlertContext);
+  const { colors } = useContext(ThemeContext);
 
   const handleSendOTP = async () => {
     if (!email) {
@@ -39,11 +41,11 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Forgot Password</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Forgot Password</Text>
 
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.subText }]}>
           Enter your email and choose a method to recover your account
         </Text>
 
@@ -51,20 +53,20 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
           placeholder="Email"
           value={email}
           onChangeText={setEmail}
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.subText}
         />
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
-            style={[styles.actionBtn, { backgroundColor: '#3b82f6' }]} 
+            style={[styles.actionBtn, { backgroundColor: colors.primary }]} 
             onPress={handleSendOTP}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <Text style={styles.btnText}>Send OTP</Text>
             )}
@@ -72,7 +74,7 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.backLink}>Back to Login</Text>
+          <Text style={[styles.backLink, { color: colors.primary }]}>Back to Login</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -84,7 +86,6 @@ export default ForgotPasswordScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -92,7 +93,6 @@ const styles = StyleSheet.create({
 
   card: {
     width: '100%',
-    backgroundColor: '#ffffff',
     borderRadius: 14,
     padding: 25,
     elevation: 8,
@@ -107,25 +107,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#1f2937',
   },
 
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
     marginBottom: 20,
     textAlign: 'center',
     lineHeight: 20,
   },
 
   input: {
-    color: '#111827',
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 8,
     padding: 14,
     marginBottom: 20,
-    backgroundColor: '#f9fafb',
     fontSize: 15,
   },
 
@@ -150,7 +145,6 @@ const styles = StyleSheet.create({
   backLink: {
     marginTop: 20,
     textAlign: 'center',
-    color: '#2563eb',
     fontWeight: '600',
   },
 });

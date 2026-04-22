@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Image,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,7 +39,7 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [rescheduleForm, setRescheduleForm] = useState<Partial<any>>({});
   const [activeFilter, setActiveFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
-  
+
   // ✅ NEW: Separate date/time states for reschedule modal
   const [scheduledDate, setScheduledDate] = useState(new Date());
   const [hasSelectedScheduledDate, setHasSelectedScheduledDate] = useState(false);
@@ -254,10 +255,10 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.actionBtnOutline, { borderColor: '#EF4444' }]}
+                    style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
                     onPress={() => handleCancelMeeting(selectedMeeting)}
                   >
-                    <Text style={[styles.actionBtnOutlineText, { color: '#EF4444' }]}>Cancel Meeting</Text>
+                    <Text style={styles.actionBtnText}>Cancel Meeting</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -285,13 +286,13 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.actionBtnOutline, { borderColor: '#EF4444' }]}
+                      style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
                       onPress={() => {
                         setRejectReason('');
                         setShowRejectModal(true);
                       }}
                     >
-                      <Text style={[styles.actionBtnOutlineText, { color: '#EF4444' }]}>Reject Project</Text>
+                      <Text style={styles.actionBtnText}>Reject Project</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -309,11 +310,11 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                     <Text style={{
                       fontWeight: '700',
                       fontSize: 15,
-                      color: selectedMeeting.requestStatus === 'ACCEPTED' ? '#7C3AED' : '#D97706',
+                      color: selectedMeeting.requestStatus === 'ACCEPTED' ? '#5805e8ff' : '#D97706',
                     }}>
                       {selectedMeeting.requestStatus === 'ACCEPTED'
-                        ? '✅ Project has been Accepted'
-                        : '❌ Project has been Rejected'}
+                        ? 'Project has been Accepted'
+                        : 'Project has been Rejected'}
                     </Text>
                     {selectedMeeting.requestStatus === 'REJECTED' && (selectedMeeting.rejectionReason || selectedMeeting.reason) && (
                       <Text style={{ marginTop: 8, fontSize: 13, color: '#D97706', textAlign: 'center' }}>
@@ -522,6 +523,8 @@ const FacultyViewMeetingsScreen: React.FC = () => {
   );
 
   /* ── Main Render ──────────────────────────────────────── */
+  const isDark = colors.background === '#111827';
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
@@ -590,9 +593,9 @@ const FacultyViewMeetingsScreen: React.FC = () => {
                   </Text>
 
                   <View style={styles.cardMeta}>
-                    <MetaChip icon="📅" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
-                    <MetaChip icon="⏰" text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'} colors={colors} />
-                    <MetaChip icon="📍" text={meeting.location || 'Online'} colors={colors} />
+                    <MetaChip icon={isDark ? require('../assets/calendar-white.png') : require('../assets/calendar.png')} text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleDateString() : 'TBD'} colors={colors} />
+                    <MetaChip icon={isDark ? require('../assets/clock-white.png') : require('../assets/clock.png')} text={meeting.meetingTime ? new Date(meeting.meetingTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'} colors={colors} />
+                    <MetaChip icon={isDark ? require('../assets/location-white.png') : require('../assets/location.png')} text={meeting.location || 'Online'} colors={colors} />
                   </View>
 
                   <Text style={[styles.cardMembers, { color: colors.subText }]}>
@@ -601,11 +604,11 @@ const FacultyViewMeetingsScreen: React.FC = () => {
 
                   {(meeting.status === 'SCHEDULED' || meeting.status === 'PENDING') && (
                     <TouchableOpacity
-                      style={[styles.quickEditBtn, { borderColor: colors.primary }]}
+                      style={[styles.quickEditBtn, { backgroundColor: colors.primary, borderWidth: 0 }]}
                       onPress={() => openReschedule(meeting)}
                     >
-                      <Text style={[styles.quickEditText, { color: colors.primary }]}>
-                        ↻ Reschedule
+                      <Text style={[styles.quickEditText, { color: '#FFFFFF' }]}>
+                        Reschedule
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -634,9 +637,10 @@ const DetailRow = ({ label, value, colors }: { label: string; value: string; col
   </View>
 );
 
-const MetaChip = ({ icon, text, colors }: { icon: string; text: string; colors: any }) => (
+const MetaChip = ({ icon, text, colors }: { icon: any; text: string; colors: any }) => (
   <View style={[styles.metaChip, { backgroundColor: colors.background }]}>
-    <Text style={[styles.metaChipText, { color: colors.subText }]}>{icon} {text}</Text>
+    {icon ? <Image source={icon} style={{ width: 14, height: 14, tintColor: colors.subText, marginRight: 4 }} /> : null}
+    <Text style={[styles.metaChipText, { color: colors.subText }]}>{text}</Text>
   </View>
 );
 

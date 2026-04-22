@@ -21,6 +21,7 @@ import {
   completeFacultyProfile,
   getAllInstitutes,
   getDepartmentsByInstitute,
+  getFacultyProfileStatus
 } from '../api/facultyApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CompleteFacultyProfile'>;
@@ -163,6 +164,44 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
     isMountedRef.current = true;
     console.log('[CompleteFacultyProfile] 📱 Component mounted');
 
+    const fetchCurrentStatus = async () => {
+      try {
+        const facultyId = await AsyncStorage.getItem('facultyId');
+        const token = await AsyncStorage.getItem('token');
+        if (!facultyId || !token) return;
+
+        const res = await getFacultyProfileStatus(Number(facultyId), token);
+        const data = res.data;
+
+        if (isMountedRef.current && data) {
+          if (data.phone) setPhone(data.phone);
+          if (data.employeeId) setEmployeeId(data.employeeId);
+          if (data.designation) setDesignation(data.designation);
+          if (data.specialization) setSpecialization(data.specialization);
+          if (data.experience) setExperience(data.experience);
+          if (data.qualification) setQualification(data.qualification);
+          if (data.cabinNo) setCabinNo(data.cabinNo);
+
+          if (data.instituteId) {
+            setSelectedInstitute({
+              instituteId: data.instituteId,
+              instituteName: data.instituteName
+            });
+          }
+          if (data.departmentId) {
+            setSelectedDepartment({
+              departmentId: data.departmentId,
+              departmentName: data.departmentName
+            });
+          }
+        }
+      } catch (err) {
+        console.log('[CompleteFacultyProfile] ❌ Error fetching current status:', err);
+      }
+    };
+
+    fetchCurrentStatus();
+
     return () => {
       isMountedRef.current = false;
       console.log('[CompleteFacultyProfile] 📱 Component unmounted');
@@ -180,34 +219,30 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
           return;
         }
         const res = await getAllInstitutes(token);
-        
+
         if (isMountedRef.current) {
           console.log('[CompleteFacultyProfile] ✅ Institutes response:', res);
           console.log('[CompleteFacultyProfile] Status:', res.status);
           console.log('[CompleteFacultyProfile] Data:', res.data);
           console.log('[CompleteFacultyProfile] Data type:', typeof res.data);
           console.log('[CompleteFacultyProfile] Is Array:', Array.isArray(res.data));
-          
+
           if (Array.isArray(res.data) && res.data.length > 0) {
             console.log('[CompleteFacultyProfile] ✅ Setting institutes:', res.data);
             setInstitutes(res.data);
-            if (res.data.length === 1) {
-               console.log('[CompleteFacultyProfile] 🎯 Auto-selecting institute');
-               setSelectedInstitute(res.data[0]);
-            }
           } else {
             console.log('[CompleteFacultyProfile] ⚠️  Empty institutes array');
             setInstitutes([]);
-            showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{ 
-               text: 'OK', 
-               onPress: async () => {
-                 try {
-                   await AsyncStorage.clear();
-                 } catch (e) {}
-                 setUser(null);
-                 navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
-               }
-             }]);
+            showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{
+              text: 'OK',
+              onPress: async () => {
+                try {
+                  await AsyncStorage.clear();
+                } catch (e) { }
+                setUser(null);
+                navigation.reset({ index: 0, routes: [{ name: 'Login' as any }] });
+              }
+            }]);
           }
         }
       } catch (e: any) {
@@ -219,7 +254,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
         console.log('[CompleteFacultyProfile] Response status:', e.response?.status);
         console.log('[CompleteFacultyProfile] Response data:', e.response?.data);
         console.log('[CompleteFacultyProfile] Full error:', JSON.stringify(e, null, 2));
-        
+
         if (isMountedRef.current) {
           showAlert('Error', `Failed to load institutes: ${e.message}`, [{ text: 'OK' }]);
           setInstitutes([]);
@@ -243,16 +278,16 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
       try {
         console.log('[CompleteFacultyProfile] 📡 Fetching departments...');
         console.log('[CompleteFacultyProfile] Institute ID:', selectedInstitute.instituteId);
-        
+
         const res = await getDepartmentsByInstitute(selectedInstitute.instituteId);
-        
+
         if (isMountedRef.current) {
           console.log('[CompleteFacultyProfile] ✅ Departments response:', res);
           console.log('[CompleteFacultyProfile] Status:', res.status);
           console.log('[CompleteFacultyProfile] Data:', res.data);
           console.log('[CompleteFacultyProfile] Data type:', typeof res.data);
           console.log('[CompleteFacultyProfile] Is Array:', Array.isArray(res.data));
-          
+
           if (Array.isArray(res.data) && res.data.length > 0) {
             console.log('[CompleteFacultyProfile] ✅ Setting departments:', res.data);
             setDepartments(res.data);
@@ -270,7 +305,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
         console.log('[CompleteFacultyProfile] Response status:', e.response?.status);
         console.log('[CompleteFacultyProfile] Response data:', e.response?.data);
         console.log('[CompleteFacultyProfile] Full error:', JSON.stringify(e, null, 2));
-        
+
         if (isMountedRef.current) {
           showAlert('Error', `Failed to load departments: ${e.message}`, [{ text: 'OK' }]);
           setDepartments([]);
@@ -311,8 +346,8 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const facultyId = await AsyncStorage.getItem('facultyId');
       const token = await AsyncStorage.getItem('token');
-      
-      if (!facultyId || !token) 
+
+      if (!facultyId || !token)
         throw new Error('Faculty ID or token not found. Please log in again.');
 
       console.log('\n[CompleteFacultyProfile] ═══════════════════════════════════════');
@@ -350,7 +385,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
       console.log('[CompleteFacultyProfile] Status Code:', saveRes.status);
       console.log('[CompleteFacultyProfile] Response Data:', JSON.stringify(saveRes.data, null, 2));
       console.log('[CompleteFacultyProfile] Is Profile Complete:', saveRes.data?.isProfileComplete);
-      
+
       // ✅ SKIP VERIFICATION - FORCE NAVIGATION
       console.log('\n[CompleteFacultyProfile] ✅✅✅ PROFILE SAVED - NAVIGATING TO FACULTY HOME');
       console.log('[CompleteFacultyProfile] ═══════════════════════════════════════\n');
@@ -526,13 +561,6 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Institute *</Text>
             {loadingInstitutes ? (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
-            ) : institutes.length === 1 ? (
-              <View style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background, opacity: 0.8 }]}>
-                <Text style={[styles.selectorText, { color: colors.text }]}>
-                  {institutes[0].instituteName}
-                </Text>
-                <Text style={{ color: colors.primary, fontSize: 16 }}>✓</Text>
-              </View>
             ) : (
               <TouchableOpacity
                 style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
@@ -570,8 +598,8 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
                   {selectedDepartment
                     ? selectedDepartment.departmentName
                     : selectedInstitute
-                    ? 'Select department'
-                    : 'Select institute first'}
+                      ? 'Select department'
+                      : 'Select institute first'}
                 </Text>
                 <Text style={{ color: colors.subText, fontSize: 18 }}>›</Text>
               </TouchableOpacity>

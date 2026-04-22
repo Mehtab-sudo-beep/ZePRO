@@ -43,6 +43,8 @@ public class AuthService {
     private final FileUploadService fileUploadService;
     private final DepartmentRepository departmentRepository;
     private final InstituteRepository instituteRepository;
+    private final StudentService studentService;
+    private final FacultyService facultyService;
 
     public AuthService(UserRepository userRepository,
             StudentRepository studentRepository,
@@ -53,7 +55,9 @@ public class AuthService {
             EmailService emailService,
             FileUploadService fileUploadService,
             DepartmentRepository departmentRepository,
-            InstituteRepository instituteRepository) {
+            InstituteRepository instituteRepository,
+            StudentService studentService,
+            FacultyService facultyService) {
 
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -65,6 +69,8 @@ public class AuthService {
         this.fileUploadService = fileUploadService;
         this.departmentRepository = departmentRepository;
         this.instituteRepository = instituteRepository;
+        this.studentService = studentService;
+        this.facultyService = facultyService;
     }
 
     // ✅ Google Login Endpoint
@@ -147,6 +153,8 @@ public class AuthService {
             boolean isTeamLead = false;
             boolean isFC = false;
 
+            boolean isProfileComplete = true;
+
             if (user.getRole() == UserRole.STUDENT) {
                 Student student = studentRepository
                         .findByUser(user)
@@ -155,6 +163,7 @@ public class AuthService {
                 studentId = student.getStudentId();
                 isInTeam = student.isInTeam();
                 isTeamLead = student.isTeamLead();
+                isProfileComplete = studentService.isProfileComplete(student);
             }
 
             if (user.getRole() == UserRole.FACULTY) {
@@ -164,6 +173,7 @@ public class AuthService {
 
                 facultyId = faculty.getFacultyId();
                 isFC = (faculty.getIsFC() != null && faculty.getIsFC());
+                isProfileComplete = facultyService.isFacultyProfileComplete(faculty);
             }
 
             if (user.getRole() == UserRole.ADMIN) {
@@ -185,7 +195,8 @@ public class AuthService {
                     isFC,
                     user.isEmailNotifications(),
                     user.isPushNotifications(),
-                    user.getProfilePictureUrl());
+                    user.getProfilePictureUrl(),
+                    isProfileComplete);
         } catch (Exception e) {
             throw new RuntimeException("Google authentication failed: " + e.getMessage(), e);
         }
@@ -204,7 +215,6 @@ public class AuthService {
                 student.setTeamLead(false);
                 student.setDepartment(dept);
                 student.setInstitute(inst);
-                student.setRollNumber(rawPassword); 
                 studentRepository.save(student);
                 break;
 
@@ -213,7 +223,6 @@ public class AuthService {
                 faculty.setUser(user);
                 faculty.setDepartment(dept);
                 faculty.setInstitute(inst);
-                faculty.setEmployeeId(rawPassword); 
                 facultyRepository.save(faculty);
                 break;
 
@@ -282,6 +291,7 @@ public class AuthService {
         Long facultyId = null;
         boolean isInTeam = false;
         boolean isTeamLead = false;
+        boolean isProfileComplete = true;
         if (user.getRole() == UserRole.STUDENT) {
             Student student = studentRepository
                     .findByUser(user)
@@ -289,6 +299,7 @@ public class AuthService {
             studentId = student.getStudentId();
             isInTeam = student.isInTeam();
             isTeamLead = student.isTeamLead();
+            isProfileComplete = studentService.isProfileComplete(student);
         }
         boolean isFC = false;
         if (user.getRole() == UserRole.FACULTY) {
@@ -297,6 +308,7 @@ public class AuthService {
                     .orElseThrow(() -> new RuntimeException("Faculty profile not found"));
             facultyId = faculty.getFacultyId();
             isFC = (faculty.getIsFC() != null && faculty.getIsFC());
+            isProfileComplete = facultyService.isFacultyProfileComplete(faculty);
         }
         if (user.getRole() == UserRole.ADMIN) {
             adminRepository
@@ -316,7 +328,8 @@ public class AuthService {
                 isFC,
                 user.isEmailNotifications(),
                 user.isPushNotifications(),
-                user.getProfilePictureUrl());
+                user.getProfilePictureUrl(),
+                isProfileComplete);
     }
 
     // ------------------------------------------------

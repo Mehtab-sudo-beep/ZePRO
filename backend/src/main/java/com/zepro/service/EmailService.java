@@ -199,12 +199,13 @@ public class EmailService {
                 + greetingRole
                 + " in our system.<br>To <a href='#'>unsubscribe</a> or change your email preferences please visit your profile.</p>"
                 +
-                "    <p style='margin-top: 20px;'><b>ZePRO Project Management System</b><br>Level 3, Global HQ, Bangalore, 560102<br>© 2026 ZePRO Tech</p>"
+                "    <p style='margin-top: 20px;'><b>ZePRO Project Management System</b></p>"
                 +
                 "  </div>" +
                 "</body>" +
                 "</html>";
     }
+
     public void sendOtpEmail(String toEmail, String name, String otp) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -227,15 +228,18 @@ public class EmailService {
     private String buildOtpEmailTemplate(String name, String otp) {
         String safeName = (name != null && !name.isEmpty()) ? name : "User";
         return "<!DOCTYPE html><html><head><style>" +
-               "body { font-family: 'Inter', sans-serif; background-color: #f5f5f5; padding: 20px; }" +
-               ".container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; text-align: center; border-radius:10px; }" +
-               ".otp { display: inline-block; padding: 12px 24px; background-color: #f8f9fa; border: 2px dashed #3b82f6; color: #3b82f6; font-size: 24px; letter-spacing: 5px; border-radius: 6px; margin: 20px 0; font-weight: bold; }" +
-               "</style></head><body><div class='container'>" +
-               "<h2>Reset Your Password</h2>" +
-               "<p>Hello " + safeName + ",</p>" +
-               "<p>You requested to reset your password. Use the following OTP to proceed. It is valid for 10 minutes.</p>" +
-               "<div class='otp'>" + otp + "</div>" +
-               "<p>If you didn't request this, ignore this email.</p>" +
-               "</div></body></html>";
+                "body { font-family: 'Inter', sans-serif; background-color: #f5f5f5; padding: 20px; }" +
+                ".container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; text-align: center; border-radius:10px; }"
+                +
+                ".otp { display: inline-block; padding: 12px 24px; background-color: #f8f9fa; border: 2px dashed #3b82f6; color: #3b82f6; font-size: 24px; letter-spacing: 5px; border-radius: 6px; margin: 20px 0; font-weight: bold; }"
+                +
+                "</style></head><body><div class='container'>" +
+                "<h2>Reset Your Password</h2>" +
+                "<p>Hello " + safeName + ",</p>" +
+                "<p>You requested to reset your password. Use the following OTP to proceed. It is valid for 10 minutes.</p>"
+                +
+                "<div class='otp'>" + otp + "</div>" +
+                "<p>If you didn't request this, ignore this email.</p>" +
+                "</div></body></html>";
     }
 }

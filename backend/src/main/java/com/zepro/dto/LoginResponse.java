@@ -15,6 +15,7 @@ public class LoginResponse {
     private boolean emailNotifications;
     private boolean pushNotifications;
     private String profilePictureUrl;
+    private boolean profileComplete;
 
     public LoginResponse(String token, String role, Long facultyId) {
         this.token = token;
@@ -37,7 +38,7 @@ public class LoginResponse {
 
     public LoginResponse(String token, String role, Long facultyId, Long studentId,
                          boolean isInTeam, boolean isTeamLead, String email, String name, String phone, boolean isFC,
-                         boolean emailNotifications, boolean pushNotifications, String profilePictureUrl) {
+                         boolean emailNotifications, boolean pushNotifications, String profilePictureUrl, boolean profileComplete) {
         this.token = token;
         this.role = role;
         this.facultyId = facultyId;
@@ -51,6 +52,11 @@ public class LoginResponse {
         this.emailNotifications = emailNotifications;
         this.pushNotifications = pushNotifications;
         this.profilePictureUrl = profilePictureUrl;
+        this.profileComplete = profileComplete;
+    }
+
+    public boolean isProfileComplete() {
+        return profileComplete;
     }
 
     public String getEmail() { return email; }

@@ -55,7 +55,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const processLoginSession = async (data: any) => {
     const {
       token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, fc: isFC, profilePictureUrl
+      email: resEmail, name, phone, fc: isFC, profilePictureUrl, profileComplete
     } = data;
 
     // Save basic info
@@ -71,7 +71,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     // Update Global Auth Context
     setUser({
       token, role, studentId, facultyId, isInTeam, isTeamLead,
-      email: resEmail, name, phone, isFC, profilePictureUrl
+      email: resEmail, name, phone, isFC, profilePictureUrl, profileComplete
     });
 
     if (role === 'STUDENT') {
@@ -79,31 +79,15 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       await AsyncStorage.setItem('user', JSON.stringify(studentData));
       setStudentUser(studentData);
 
-      try {
-        const profileStatusRes = await getProfileStatus(studentId);
-        const profileStatus = profileStatusRes.data;
-        const isComplete = profileStatus.isProfileComplete || profileStatus.profileComplete;
-
-        navigation.reset({
-          index: 0,
-          routes: [{ name: isComplete ? 'StudentHome' : 'CompleteProfile' as any }],
-        });
-      } catch (err) {
-        navigation.reset({ index: 0, routes: [{ name: 'CompleteProfile' as any }] });
-      }
+      navigation.reset({
+        index: 0,
+        routes: [{ name: profileComplete ? 'StudentHome' : 'CompleteProfile' as any }],
+      });
     }
     else if (role === 'FACULTY') {
-      try {
-        const facultyProfileRes = await getFacultyProfileStatus(facultyId, token);
-        const facultyProfile = facultyProfileRes.data;
-        const isComplete = facultyProfile.isProfileComplete || facultyProfile.profileComplete;
-
-        if (isComplete) {
-          navigation.replace('FacultyHome');
-        } else {
-          navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
-        }
-      } catch (err) {
+      if (profileComplete) {
+        navigation.replace('FacultyHome');
+      } else {
         navigation.reset({ index: 0, routes: [{ name: 'CompleteFacultyProfile' as any }] });
       }
     }

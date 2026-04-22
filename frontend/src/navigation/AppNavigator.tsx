@@ -151,13 +151,16 @@ const AppNavigator = () => {
   const getInitialRoute = () => {
     if (!user) return 'Login';
     if (user.role === 'ADMIN') return 'InstituteList';
-    if (user.role === 'FACULTY') return 'FacultyHome';
     
     // For students, check if profile is complete
     if (user.role === 'STUDENT') {
-      // It defaults to StudentHome, but LoginScreen logic redirects if not complete.
-      return 'StudentHome';
+      return user.profileComplete ? 'StudentHome' : 'CompleteProfile';
     }
+    
+    if (user.role === 'FACULTY') {
+      return user.profileComplete ? 'FacultyHome' : 'CompleteFacultyProfile';
+    }
+    
     return 'StudentHome';
   };
   return (

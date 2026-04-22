@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "scheme": "zepro",
     "orientation": "portrait",
-    "icon": "./src/assets/icon.png",
+    "icon": "./src/assets/resized-image.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/avatar.png",
+        "foregroundImage": "./src/assets/resized-image.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

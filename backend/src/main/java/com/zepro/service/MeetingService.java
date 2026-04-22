@@ -31,6 +31,7 @@ import com.zepro.repository.FacultyRepository;
 import java.util.Optional;
 import java.util.ArrayList;
 import com.zepro.repository.*;
+
 @Service
 public class MeetingService {
 
@@ -43,7 +44,7 @@ public class MeetingService {
     private final FacultyService facultyService;
     private final TeamRepository teamRepository;
     private final DeactivatedMeetingRepository deactivatedMeetingRepository;
-    private final com.zepro.repository.DepartmentDeadlinesRepository departmentDeadlinesRepository;
+    private final DepartmentDeadlinesRepository departmentDeadlinesRepository;
     private final EmailService emailService;
     private final FacultyRepository facultyRepository;
     private final ProjectRequestRepository projectRequestRepository;
@@ -83,14 +84,16 @@ public class MeetingService {
     // DEADLINE CHECKER
     // ------------------------------------------------
     private void checkMeetingSchedulingDeadline(Long departmentId, LocalDateTime proposedTime) {
-        if (departmentId == null || proposedTime == null) return;
+        if (departmentId == null || proposedTime == null)
+            return;
         departmentDeadlinesRepository.findByDepartment_DepartmentId(departmentId)
-            .ifPresent(deadlines -> {
-                if (deadlines.getMeetingSchedulingDeadline() != null && 
-                    proposedTime.isAfter(deadlines.getMeetingSchedulingDeadline())) {
-                    throw new RuntimeException("The selected meeting date cannot be after the official department deadline.");
-                }
-            });
+                .ifPresent(deadlines -> {
+                    if (deadlines.getMeetingSchedulingDeadline() != null &&
+                            proposedTime.isAfter(deadlines.getMeetingSchedulingDeadline())) {
+                        throw new RuntimeException(
+                                "The selected meeting date cannot be after the official department deadline.");
+                    }
+                });
     }
 
     // ✅ SCHEDULE MEETING
@@ -103,12 +106,12 @@ public class MeetingService {
                 .orElseThrow(() -> new RuntimeException("Project request not found"));
 
         Project project = projectRequest.getProject();
-        
+
         // ✅ CHECK 1: Project status must NOT be ASSIGNED or CLOSE
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot schedule meeting. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot schedule meeting. Project has been closed");
         }
@@ -119,8 +122,9 @@ public class MeetingService {
         }
 
         // ✅ CHECK 3: Meeting Scheduling Deadline
-        Long departmentId = projectRequest.getFaculty().getDepartment() != null 
-            ? projectRequest.getFaculty().getDepartment().getDepartmentId() : null;
+        Long departmentId = projectRequest.getFaculty().getDepartment() != null
+                ? projectRequest.getFaculty().getDepartment().getDepartmentId()
+                : null;
         checkMeetingSchedulingDeadline(departmentId, request.getMeetingTime());
 
         // ✅ Create meeting
@@ -131,7 +135,6 @@ public class MeetingService {
         meeting.setLocation(request.getLocation());
         meeting.setTitle(request.getTitle());
         meeting.setStatus(MeetingStatus.SCHEDULED);
-        
 
         meetingRepository.save(meeting);
 
@@ -147,10 +150,10 @@ public class MeetingService {
 
         // ✅ UPDATE MAX SLOTS WHEN SCHEDULING
         if (projectRequest.getTeam() != null && projectRequest.getProject() != null) {
-            int teamSize = projectRequest.getTeam().getMembers() != null 
-                ? projectRequest.getTeam().getMembers().size() 
-                : 0;
-            
+            int teamSize = projectRequest.getTeam().getMembers() != null
+                    ? projectRequest.getTeam().getMembers().size()
+                    : 0;
+
             facultyService.updateMaximumSlotsReached(projectRequest.getProject().getProjectId(), teamSize);
             System.out.println("[MeetingService] 📊 Updated max slots for project: " + teamSize);
 
@@ -159,12 +162,11 @@ public class MeetingService {
                 for (Student student : projectRequest.getTeam().getMembers()) {
                     if (student.getUser() != null) {
                         notificationService.createAndSendNotification(
-                            student.getUser(),
-                            "Meeting Scheduled",
-                            "A new meeting has been scheduled for project: " + project.getTitle(),
-                            "MeetingDetails",
-                            meeting.getRequest().getRequestId().toString()
-                        );
+                                student.getUser(),
+                                "Meeting Scheduled",
+                                "A new meeting has been scheduled for project: " + project.getTitle(),
+                                "MeetingDetails",
+                                meeting.getRequest().getRequestId().toString());
                     }
                 }
             }
@@ -181,14 +183,14 @@ public class MeetingService {
 
         Meeting meeting = meetingRepository.findById(meetingId)
                 .orElseThrow(() -> new RuntimeException("Meeting not found"));
-        
+
         Project project = meeting.getRequest().getProject();
 
         // ✅ Check 1: Project status must NOT be ASSIGNED or CLOSE
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot cancel meeting. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot cancel meeting. Project has been closed");
         }
@@ -199,7 +201,7 @@ public class MeetingService {
         }
 
         System.out.println("[MeetingService] ❌ Cancelling meeting: " + meetingId);
-        
+
         meeting.setStatus(MeetingStatus.CANCELLED);
         meetingRepository.save(meeting);
 
@@ -207,20 +209,19 @@ public class MeetingService {
         ProjectRequest request = meeting.getRequest();
         if (request != null && request.getStatus() == RequestStatus.SCHEDULED) {
             request.setStatus(RequestStatus.CANCELLED);
-            requestRepository.save(request);            
+            requestRepository.save(request);
             System.out.println("[MeetingService] 🔄 Request reverted to CANCELLED");
-            
+
             // Notify team members
             if (request.getTeam() != null && request.getTeam().getMembers() != null) {
                 for (Student student : request.getTeam().getMembers()) {
                     if (student.getUser() != null) {
                         notificationService.createAndSendNotification(
-                            student.getUser(),
-                            "Meeting Cancelled",
-                            "The meeting for project " + project.getTitle() + " was cancelled.",
-                            "ScheduledMeetings",
-                            null
-                        );
+                                student.getUser(),
+                                "Meeting Cancelled",
+                                "The meeting for project " + project.getTitle() + " was cancelled.",
+                                "ScheduledMeetings",
+                                null);
                     }
                 }
             }
@@ -242,7 +243,7 @@ public class MeetingService {
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot complete meeting. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot complete meeting. Project has been closed");
         }
@@ -253,7 +254,7 @@ public class MeetingService {
         }
 
         System.out.println("[MeetingService] ✅ Completing meeting: " + meetingId);
-        
+
         meeting.setStatus(MeetingStatus.DONE);
         meetingRepository.save(meeting);
 
@@ -280,9 +281,9 @@ public class MeetingService {
 
     // ✅ GET ALL MEETINGS (ONLY FOR NON-CLOSED PROJECTS)
     public List<MeetingResponse> getAllMeetings(Long facultyId) {
-        
+
         System.out.println("[MeetingService] 📡 Fetching all meetings for faculty: " + facultyId);
-        
+
         return meetingRepository
                 .findByRequestFacultyFacultyId(facultyId)
                 .stream()
@@ -290,11 +291,12 @@ public class MeetingService {
                     // ✅ Only include meetings whose project status is NOT CLOSE
                     String projectStatus = meeting.getRequest().getProject().getStatus();
                     boolean isNotClosed = !("CLOSE".equals(projectStatus));
-                    
+
                     if (!isNotClosed) {
-                        System.out.println("[MeetingService] 🚫 Filtering out meeting for closed project: " + meeting.getMeetingId());
+                        System.out.println("[MeetingService] 🚫 Filtering out meeting for closed project: "
+                                + meeting.getMeetingId());
                     }
-                    
+
                     return isNotClosed;
                 })
                 .map(this::mapToResponse)
@@ -316,7 +318,7 @@ public class MeetingService {
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot accept. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot accept. Project has been closed");
         }
@@ -353,37 +355,40 @@ public class MeetingService {
         // ✅ REJECT ALL OTHER PENDING/SCHEDULED REQUESTS FOR THIS PROJECT
         List<ProjectRequest> otherRequests = requestRepository.findByProjectProjectId(project.getProjectId());
         for (ProjectRequest other : otherRequests) {
-            if (!other.getRequestId().equals(requestId) && 
-                (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
-                
+            if (!other.getRequestId().equals(requestId) &&
+                    (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
+
                 other.setStatus(RequestStatus.REJECTED);
                 other.setRejectionReason("Allotted to other team");
                 requestRepository.save(other);
-                
+
                 // ✅ CANCEL related meetings with reason "Allotted to other team"
                 meetingRepository.findByRequestRequestId(other.getRequestId()).ifPresent(meeting -> {
-                    System.out.println("[MeetingService] ❌ Cancelling meeting for rejected request: " + meeting.getMeetingId());
-                    
+                    System.out.println(
+                            "[MeetingService] ❌ Cancelling meeting for rejected request: " + meeting.getMeetingId());
+
                     meeting.setStatus(MeetingStatus.CANCELLED);
                     meetingRepository.save(meeting);
                 });
             }
         }
 
-        // ✅ REJECT ALL OTHER PENDING/SCHEDULED REQUESTS FROM THIS TEAM FOR OTHER PROJECTS
+        // ✅ REJECT ALL OTHER PENDING/SCHEDULED REQUESTS FROM THIS TEAM FOR OTHER
+        // PROJECTS
         List<ProjectRequest> otherRequestsByTeam = requestRepository.findByTeamTeamId(request.getTeam().getTeamId());
         for (ProjectRequest other : otherRequestsByTeam) {
-            if (!other.getRequestId().equals(requestId) && 
-                (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
-                
+            if (!other.getRequestId().equals(requestId) &&
+                    (other.getStatus() == RequestStatus.PENDING || other.getStatus() == RequestStatus.SCHEDULED)) {
+
                 other.setStatus(RequestStatus.REJECTED);
                 other.setRejectionReason("One project is allowed per team");
                 requestRepository.save(other);
-                
+
                 // ✅ CANCEL related meetings
                 meetingRepository.findByRequestRequestId(other.getRequestId()).ifPresent(meeting -> {
-                    System.out.println("[MeetingService] ❌ Cancelling meeting for team's other project: " + meeting.getMeetingId());
-                    
+                    System.out.println("[MeetingService] ❌ Cancelling meeting for team's other project: "
+                            + meeting.getMeetingId());
+
                     meeting.setStatus(MeetingStatus.CANCELLED);
                     meetingRepository.save(meeting);
                 });
@@ -396,9 +401,10 @@ public class MeetingService {
                     .filter(s -> s.getUser() != null && s.getUser().getEmail() != null)
                     .map(s -> s.getUser().getEmail())
                     .toList();
-            
-            String facultyName = (faculty != null && faculty.getUser() != null && faculty.getUser().getName() != null) 
-                    ? faculty.getUser().getName() : "Your Faculty";
+
+            String facultyName = (faculty != null && faculty.getUser() != null && faculty.getUser().getName() != null)
+                    ? faculty.getUser().getName()
+                    : "Your Faculty";
             String projectName = project.getTitle() != null ? project.getTitle() : "Project";
 
             emailService.sendProjectAcceptanceEmail(studentEmails, projectName, facultyName);
@@ -407,12 +413,11 @@ public class MeetingService {
             for (Student student : request.getTeam().getMembers()) {
                 if (student.getUser() != null) {
                     notificationService.createAndSendNotification(
-                        student.getUser(),
-                        "Project Accepted! 🎉",
-                        "Your request for project '" + project.getTitle() + "' was accepted by " + facultyName,
-                        "AllocatedProject",
-                        null
-                    );
+                            student.getUser(),
+                            "Project Accepted! 🎉",
+                            "Your request for project '" + project.getTitle() + "' was accepted by " + facultyName,
+                            "AllocatedProject",
+                            null);
                 }
             }
         }
@@ -435,7 +440,7 @@ public class MeetingService {
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot reject. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot reject. Project has been closed");
         }
@@ -445,18 +450,18 @@ public class MeetingService {
         requestRepository.save(request);
 
         System.out.println("[MeetingService] ✅ Project REJECTED with reason: " + rejectionReason);
-        
+
         // Notify team members
         if (request.getTeam() != null && request.getTeam().getMembers() != null) {
             for (Student student : request.getTeam().getMembers()) {
                 if (student.getUser() != null) {
                     notificationService.createAndSendNotification(
-                        student.getUser(),
-                        "Project Request Rejected",
-                        "Your request for project '" + project.getTitle() + "' was rejected. Reason: " + rejectionReason,
-                        "TeamProjectRequests",
-                        null
-                    );
+                            student.getUser(),
+                            "Project Request Rejected",
+                            "Your request for project '" + project.getTitle() + "' was rejected. Reason: "
+                                    + rejectionReason,
+                            "TeamProjectRequests",
+                            null);
                 }
             }
         }
@@ -477,7 +482,7 @@ public class MeetingService {
         if ("ASSIGNED".equals(project.getStatus())) {
             throw new RuntimeException("Cannot reschedule meeting. Project is already assigned to another team");
         }
-        
+
         if ("CLOSE".equals(project.getStatus())) {
             throw new RuntimeException("Cannot reschedule meeting. Project has been closed");
         }
@@ -488,8 +493,9 @@ public class MeetingService {
         }
 
         // ✅ Check 3: Meeting Scheduling Deadline
-        Long departmentId = meeting.getRequest().getFaculty().getDepartment() != null 
-            ? meeting.getRequest().getFaculty().getDepartment().getDepartmentId() : null;
+        Long departmentId = meeting.getRequest().getFaculty().getDepartment() != null
+                ? meeting.getRequest().getFaculty().getDepartment().getDepartmentId()
+                : null;
         checkMeetingSchedulingDeadline(departmentId, req.getMeetingTime());
 
         meeting.setMeetingLink(req.getMeetingLink());
@@ -507,12 +513,12 @@ public class MeetingService {
             for (Student student : meeting.getRequest().getTeam().getMembers()) {
                 if (student.getUser() != null) {
                     notificationService.createAndSendNotification(
-                        student.getUser(),
-                        "Meeting Rescheduled",
-                        "The meeting for project '" + project.getTitle() + "' was rescheduled to " + meeting.getMeetingTime().toString(),
-                        "MeetingDetails",
-                        meeting.getRequest().getRequestId().toString()
-                    );
+                            student.getUser(),
+                            "Meeting Rescheduled",
+                            "The meeting for project '" + project.getTitle() + "' was rescheduled to "
+                                    + meeting.getMeetingTime().toString(),
+                            "MeetingDetails",
+                            meeting.getRequest().getRequestId().toString());
                 }
             }
         }
@@ -543,7 +549,6 @@ public class MeetingService {
 
         if (project != null) {
             response.setProjectTitle(project.getTitle());
-            
 
             if (meeting.getRequest() != null) {
                 response.setRequestStatus(meeting.getRequest().getStatus().name());
@@ -578,7 +583,7 @@ public class MeetingService {
     @Transactional
     public void assignProjectAndSendEmail(Long projectId, Long teamId) {
         System.out.println("[MeetingService] 📧 Assigning project and sending email to team students");
-        
+
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
@@ -588,7 +593,7 @@ public class MeetingService {
 
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-        
+
         Faculty faculty = project.getFaculty();
 
         // 1. Link Project to Team
@@ -630,17 +635,17 @@ public class MeetingService {
 
             if (!studentEmails.isEmpty()) {
                 String projectName = project.getTitle();
-                String facultyName = faculty != null && faculty.getUser() != null 
-                        ? faculty.getUser().getName() 
+                String facultyName = faculty != null && faculty.getUser() != null
+                        ? faculty.getUser().getName()
                         : "Faculty";
 
                 emailService.sendProjectAcceptanceEmail(
-                    new ArrayList<>(studentEmails),
-                    projectName,
-                    facultyName
-                );
-                
-                System.out.println("[MeetingService] ✅ Project assignment email sent to " + studentEmails.size() + " students");
+                        new ArrayList<>(studentEmails),
+                        projectName,
+                        facultyName);
+
+                System.out.println(
+                        "[MeetingService] ✅ Project assignment email sent to " + studentEmails.size() + " students");
             }
         }
     }
