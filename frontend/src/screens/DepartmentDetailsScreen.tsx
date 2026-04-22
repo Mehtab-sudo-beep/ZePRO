@@ -37,6 +37,15 @@ interface UserItem {
 }
 
 type TabType = 'FACULTY' | 'STUDENTS';
+const Icon = ({ name, size = 16, colors }: any) => {
+  const isDark = colors.background === '#111827';
+  const icons: any = {
+    search: isDark
+      ? require('../assets/search-white.png')
+      : require('../assets/search.png'),
+  };
+  return <Image source={icons[name]} style={{ width: size, height: size, resizeMode: 'contain' }} />;
+};
 
 const DepartmentDetailsScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -287,6 +296,7 @@ const DepartmentDetailsScreen: React.FC = () => {
         {/* SEARCH */}
         <View style={styles.searchWrap}>
           <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="search" colors={colors} size={18} />
             <TextInput
               placeholder={`Search ${activeTab.toLowerCase()}...`}
               placeholderTextColor={colors.subText}
@@ -352,8 +362,16 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, fontWeight: '600', color: '#94a3b8', marginTop: 4, textTransform: 'uppercase' },
 
   searchWrap: { paddingHorizontal: 16, marginBottom: 16 },
-  searchBox: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 12, height: 48, justifyContent: 'center' },
-  searchInput: { fontSize: 14, padding: 0 },
+  searchBox: { 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    paddingHorizontal: 12, 
+    height: 48, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
 
   tabRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 16 },
   tabItem: { flex: 1, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },

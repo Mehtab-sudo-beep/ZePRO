@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlertContext } from '../context/AlertContext';
 import { BASE_URL } from '../api/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
@@ -21,18 +22,33 @@ const MoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
+  const { showAlert } = useContext(AlertContext);
   const isDark = colors.background === '#111827';
+  const divider = isDark ? '#374151' : '#E5E7EB';
 
-  const logout = async () => {
-    try {
-      await GoogleSignin.signOut();
-    } catch (e) {
-      // Ignore if not signed in with Google
-    }
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("studentId");
-    await setUser(null);
-    navigation.replace("Login");
+  const handleLogout = () => {
+    showAlert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await GoogleSignin.signOut();
+            } catch (e) {
+              // Ignore if not signed in with Google
+            }
+            await AsyncStorage.removeItem("token");
+            await AsyncStorage.removeItem("studentId");
+            await setUser(null);
+            navigation.replace("Login");
+          },
+        },
+      ]
+    );
   };
 
   if (!user || user.role !== 'STUDENT') return null;
@@ -48,11 +64,7 @@ const MoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={
-              user?.profilePictureUrl
-                ? { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` }
-                : require('../assets/avatar.png')
-            }
+            source={require('../assets/avatar.png')}
             style={[
               styles.profileImage,
               {
@@ -104,7 +116,7 @@ const MoreScreen: React.FC = () => {
           <MenuItem
             title="Log Out"
             danger
-            onPress={logout}
+            onPress={handleLogout}
             colors={colors}
           />
         </ScrollView>

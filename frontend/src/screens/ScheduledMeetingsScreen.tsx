@@ -266,10 +266,18 @@ const ScheduledMeetingsScreen: React.FC = () => {
                         </Text>
                       </View>
                       
-                      <View style={[styles.statusPill, { backgroundColor: meeting.statusColor + '15' }]}>
-                        <Text style={{ color: meeting.statusColor, fontSize: 11, fontWeight: '700' }}>
-                          {meeting.response.toUpperCase()}
-                        </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {isAccepted && (
+                          <Image
+                            source={isDark ? require('../assets/trophy-white.png') : require('../assets/trophy.png')}
+                            style={{ width: 16, height: 16, resizeMode: 'contain' }}
+                          />
+                        )}
+                        <View style={[styles.statusPill, { backgroundColor: meeting.statusColor + '15' }]}>
+                          <Text style={{ color: meeting.statusColor, fontSize: 11, fontWeight: '700' }}>
+                            {meeting.response.toUpperCase()}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                     

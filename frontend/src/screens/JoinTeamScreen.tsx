@@ -148,7 +148,7 @@ const JoinTeamScreen: React.FC = () => {
   if (selectedTeam) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-        
+
         {/* HEADER */}
         <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: divider }]}>
           <TouchableOpacity onPress={() => setSelectedTeam(null)}>
@@ -163,7 +163,7 @@ const JoinTeamScreen: React.FC = () => {
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          
+
           {/* CARD */}
           <View style={[styles.card, { backgroundColor: colors.card }]}>
             <Text style={[styles.teamName, { color: colors.text }]}>
@@ -204,7 +204,7 @@ const JoinTeamScreen: React.FC = () => {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.btnText}>
-                {selectedTeam.alreadyRequested ? '✓ Request Sent' : 'Send Join Request'}
+                {selectedTeam.alreadyRequested ? 'Request Sent' : 'Send Join Request'}
               </Text>
             )}
           </TouchableOpacity>

@@ -91,10 +91,18 @@ const SentRequestsScreen: React.FC = () => {
                   <Text style={[styles.teamName, { color: colors.text }]}>
                     {req.teamName}
                   </Text>
-                  <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '18' }]}>
-                    <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
-                      {req.status}
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {req.status === 'ACCEPTED' && (
+                      <Image
+                        source={isDark ? require('../assets/trophy-white.png') : require('../assets/trophy.png')}
+                        style={{ width: 18, height: 18, resizeMode: 'contain' }}
+                      />
+                    )}
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor(req.status) + '18' }]}>
+                      <Text style={[styles.statusText, { color: statusColor(req.status) }]}>
+                        {req.status}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 

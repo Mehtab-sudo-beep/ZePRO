@@ -275,7 +275,6 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({
 
   return (
     <TouchableOpacity activeOpacity={0.82} onPress={() => onPress(item)} style={[styles.card, { backgroundColor: colors.card }]}>
-      <View style={[styles.cardAccent, { backgroundColor: status.color }]} />
       <View style={styles.cardBody}>
         <View style={styles.cardTopRow}>
           <View style={{ flex: 1, marginRight: 8 }}>
@@ -308,25 +307,28 @@ const DeadlineCard: React.FC<DeadlineCardProps> = ({
         {isFacultyCoordinator && (
           <View style={[styles.cardActions, { borderTopColor: colors.border }]}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}
+              style={[styles.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
               onPress={(e) => { e.stopPropagation?.(); onEdit(item); }}
             >
-              <Image source={isDark ? Icons.editWhite : Icons.edit} style={[styles.actionIcon, { tintColor: colors.primary }]} />
-              <Text style={[styles.actionLabel, { color: colors.primary }]}>Edit</Text>
+              <Image source={Icons.editWhite} style={[styles.actionIcon, { tintColor: '#FFFFFF' }]} />
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: item.isActive ? '#F59E0B15' : '#10B98115', borderColor: item.isActive ? '#F59E0B40' : '#10B98140' }]}
+              style={[styles.actionBtn, { backgroundColor: item.isActive ? '#F59E0B' : '#10B981', borderColor: item.isActive ? '#F59E0B' : '#10B981' }]}
               onPress={(e) => { e.stopPropagation?.(); onToggle(item); }}
             >
-              <Image source={item.isActive ? Icons.toggleOff : Icons.toggleOn} style={[styles.actionIcon, { tintColor: item.isActive ? '#F59E0B' : '#10B981' }]} />
-              <Text style={[styles.actionLabel, { color: item.isActive ? '#F59E0B' : '#10B981' }]}>{item.isActive ? 'Deactivate' : 'Activate'}</Text>
+              <Image 
+                source={item.isActive ? Icons.toggleOff : Icons.toggleOn} 
+                style={[styles.actionIcon, { tintColor: '#FFFFFF' }]} 
+              />
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>{item.isActive ? 'Deactivate' : 'Activate'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: '#EF444415', borderColor: '#EF444440' }]}
+              style={[styles.actionBtn, { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
               onPress={(e) => { e.stopPropagation?.(); onDelete(item); }}
             >
-              <Image source={isDark ? Icons.deleteWhite : Icons.delete} style={[styles.actionIcon, { tintColor: '#EF4444' }]} />
-              <Text style={[styles.actionLabel, { color: '#EF4444' }]}>Delete</Text>
+              <Image source={Icons.deleteWhite} style={[styles.actionIcon, { tintColor: '#FFFFFF' }]} />
+              <Text style={[styles.actionLabel, { color: '#FFFFFF' }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
   emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   listContent: { padding: 16, paddingBottom: 32, gap: 12 },
-  card: { borderRadius: 14, flexDirection: 'row', overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6 },
+  card: { borderRadius: 14, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6 },
   cardAccent: { width: 4, alignSelf: 'stretch' },
   cardBody: { flex: 1, padding: 14 },
   cardTopRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },

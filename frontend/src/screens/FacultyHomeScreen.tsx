@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -116,6 +117,7 @@ const FacultyHomeScreen: React.FC = () => {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showMenu, setShowMenu] = useState(false);
   const { showAlert } = useContext(AlertContext);
 
   const handleLogout = () => {
@@ -204,17 +206,7 @@ const FacultyHomeScreen: React.FC = () => {
           </View>
           <TouchableOpacity
             style={[styles.avatarBadge, { backgroundColor: accentSoft, overflow: 'hidden' }]}
-            onPress={() => {
-              showAlert(
-                'Account Options',
-                'What would you like to do?',
-                [
-                  { text: 'Profile', onPress: () => navigation.navigate('FacultyProfile') },
-                  { text: 'Logout', style: 'destructive', onPress: handleLogout },
-                  { text: 'Cancel', style: 'cancel' }
-                ]
-              );
-            }}
+            onPress={() => setShowMenu(true)}
           >
             {(user.profilePictureUrl || profile?.profilePictureUrl) ? (
               <Image
@@ -322,6 +314,40 @@ const FacultyHomeScreen: React.FC = () => {
             <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Profile Menu Popup */}
+        <Modal
+          visible={showMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowMenu(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowMenu(false)}
+          >
+            <View style={[styles.menuContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+               <TouchableOpacity 
+                 style={styles.menuItem} 
+                 onPress={() => { setShowMenu(false); navigation.navigate('FacultyProfile'); }}
+               >
+                 <Image source={isDark ? require('../assets/user-white.png') : require('../assets/user.png')} style={styles.menuIcon} />
+                 <Text style={[styles.menuText, { color: colors.text }]}>Profile</Text>
+               </TouchableOpacity>
+               
+               <View style={[styles.menuDivider, { backgroundColor: colors.border }]} />
+               
+               <TouchableOpacity 
+                 style={styles.menuItem} 
+                 onPress={() => { setShowMenu(false); handleLogout(); }}
+               >
+                 <Image source={require('../assets/leave.png')} style={[styles.menuIcon, { tintColor: '#ef4444' }]} />
+                 <Text style={[styles.menuText, { color: '#ef4444' }]}>Logout</Text>
+               </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -451,5 +477,44 @@ const styles = StyleSheet.create({
     height: 3,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  menuContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    width: 170,
+    borderRadius: 16,
+    padding: 6,
+    borderWidth: 1,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 12,
+  },
+  menuIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  menuDivider: {
+    height: 1,
+    marginHorizontal: 8,
+    marginVertical: 2,
   },
 });

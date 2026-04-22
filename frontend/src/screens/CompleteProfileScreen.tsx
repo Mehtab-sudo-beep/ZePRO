@@ -180,17 +180,17 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           if (data.rollNumber) setRollNumber(data.rollNumber);
           if (data.cgpa) setCgpa(data.cgpa.toString());
           if (data.year) setYear(data.year);
-          
+
           if (data.instituteId) {
-            setSelectedInstitute({ 
-              instituteId: data.instituteId, 
-              instituteName: data.instituteName 
+            setSelectedInstitute({
+              instituteId: data.instituteId,
+              instituteName: data.instituteName
             });
           }
           if (data.departmentId) {
-            setSelectedDepartment({ 
-              departmentId: data.departmentId, 
-              departmentName: data.departmentName 
+            setSelectedDepartment({
+              departmentId: data.departmentId,
+              departmentName: data.departmentName
             });
           }
         }
@@ -215,7 +215,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
         if (isMountedRef.current) {
           setInstitutes(res.data);
           console.log('[CompleteProfile] ✅ Institutes loaded:', res.data.length);
-          
+
           if (res.data.length === 0) {
             showAlert('Invalid Domain', 'Your email domain is not registered to any institute. You cannot proceed.', [{
               text: 'OK',
@@ -278,7 +278,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
     if (!phone.trim()) return 'Phone number is required.';
     if (phone.length !== 10)
       return 'Please enter a valid 10-digit phone number.';
-    
+
     if (!rollNumber.trim()) return 'Roll number is required.';
     const cgpaNum = parseFloat(cgpa);
     if (isNaN(cgpaNum) || cgpaNum < 0 || cgpaNum > 10)
@@ -350,7 +350,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
       console.log('\n[CompleteProfile] ✅ SAVE RESPONSE RECEIVED');
       console.log('[CompleteProfile] Status Code:', saveRes.status);
       console.log('[CompleteProfile] Response Data:', JSON.stringify(saveRes.data, null, 2));
-      
+
       // ✅ SKIP VERIFICATION - FORCE NAVIGATION
       console.log('\n[CompleteProfile] ✅✅✅ PROFILE SAVED - NAVIGATING TO STUDENT HOME');
       console.log('[CompleteProfile] ═══════════════════════════════════════\n');
@@ -528,8 +528,8 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
                   {selectedDepartment
                     ? selectedDepartment.departmentName
                     : selectedInstitute
-                    ? 'Select department'
-                    : 'Select institute first'}
+                      ? 'Select department'
+                      : 'Select institute first'}
                 </Text>
                 <Text style={{ color: colors.subText, fontSize: 18 }}>›</Text>
               </TouchableOpacity>
@@ -544,14 +544,14 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           {/* Resume */}
           <View style={styles.fieldWrap}>
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Resume (PDF/Image) *</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
               onPress={() => pickDocument(setResumeFile)}
             >
               <Text style={[styles.selectorText, { color: resumeFile ? colors.text : colors.subText }]} numberOfLines={1}>
                 {resumeFile ? resumeFile.name : 'Upload Resume Document'}
               </Text>
-              <Text style={{ color: colors.subText, fontSize: 18 }}>📂</Text>
+              <Text style={{ color: colors.subText, fontSize: 18 }}>+</Text>
             </TouchableOpacity>
           </View>
 
@@ -560,14 +560,14 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           {/* Marksheet */}
           <View style={styles.fieldWrap}>
             <Text style={[styles.fieldLabel, { color: colors.subText }]}>Marksheet (PDF/Image) *</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.selector, { borderColor: colors.border, backgroundColor: colors.background }]}
               onPress={() => pickDocument(setMarksheetFile)}
             >
               <Text style={[styles.selectorText, { color: marksheetFile ? colors.text : colors.subText }]} numberOfLines={1}>
                 {marksheetFile ? marksheetFile.name : 'Upload Marksheet Document'}
               </Text>
-              <Text style={{ color: colors.subText, fontSize: 18 }}>📂</Text>
+              <Text style={{ color: colors.subText, fontSize: 18 }}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -582,7 +582,7 @@ const CompleteProfileScreen: React.FC<Props> = ({ navigation }) => {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Save & Continue →</Text>
+            <Text style={styles.submitText}>Save & Continue</Text>
           )}
         </TouchableOpacity>
 

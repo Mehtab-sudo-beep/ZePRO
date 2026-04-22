@@ -633,6 +633,9 @@ public class AdminService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public byte[] generateAdminReportPdf(Long instituteId, Long departmentId) {
         try {
+            Institute institute = instituteRepository.findById(instituteId)
+                    .orElseThrow(() -> new RuntimeException("Institute not found"));
+
             List<Department> targetDepartments = new java.util.ArrayList<>();
             if (departmentId != null && departmentId > 0) {
                 Department dept = departmentRepository.findById(departmentId)
@@ -683,17 +686,17 @@ public class AdminService {
                 contentStream.fill();
 
                 contentStream.setNonStrokingColor(java.awt.Color.WHITE);
-                drawCenteredText(contentStream, "ZePRO", org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 28,
+                drawCenteredText(contentStream, institute.getInstituteName(), org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 24,
                         pageWidth, yPosition - 40);
                 drawCenteredText(contentStream, "Project Registration & Oversight System",
                         org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN, 12, pageWidth, yPosition - 60);
-                drawCenteredText(contentStream, "Admin Teams Report",
+                drawCenteredText(contentStream, "Teams Report",
                         org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_BOLD, 18, pageWidth, yPosition - 85);
 
                 yPosition -= 140;
 
                 // --- SUMMARY BOX ---
-                float summaryHeight = 65;
+                float summaryHeight = 85; // Increased height to accommodate admin details
                 float summaryWidth = pageWidth - (2 * margin);
                 contentStream.setNonStrokingColor(lightBlue);
                 contentStream.addRect(margin, yPosition - summaryHeight, summaryWidth, summaryHeight);
@@ -715,6 +718,7 @@ public class AdminService {
                 float row1Y = yPosition - 20;
                 float row2Y = yPosition - 38;
                 float row3Y = yPosition - 56;
+                float row4Y = yPosition - 74;
 
                 drawTextWithFont(contentStream, "Department:", boldFont, fontSize, col1X, row1Y);
                 drawTextWithFont(contentStream, limitText(department.getDepartmentName(), 100), regFont, fontSize,
@@ -723,18 +727,23 @@ public class AdminService {
                 drawTextWithFont(contentStream, "Generated on:", boldFont, fontSize, col2X, row1Y);
                 drawTextWithFont(contentStream, dateStr, regFont, fontSize, col2ValX, row1Y);
 
-                drawTextWithFont(contentStream, "Total Teams:", boldFont, fontSize, col1X, row2Y);
-                drawTextWithFont(contentStream, String.valueOf(allTeams.size()), regFont, fontSize, col1ValX, row2Y);
+                drawTextWithFont(contentStream, "Admin Block:", boldFont, fontSize, col1X, row2Y);
+                drawTextWithFont(contentStream, "Primary Contact", regFont, fontSize, col1ValX, row2Y);
 
-                drawTextWithFont(contentStream, "Total Members:", boldFont, fontSize, col2X, row2Y);
-                drawTextWithFont(contentStream, String.valueOf(totalMembersInTeams), regFont, fontSize, col2ValX,
-                        row2Y);
+                drawTextWithFont(contentStream, "Admin Email:", boldFont, fontSize, col2X, row2Y);
+                drawTextWithFont(contentStream, institute.getEmail() != null ? institute.getEmail() : "N/A", regFont, fontSize, col2ValX, row2Y);
 
-                drawTextWithFont(contentStream, "Allocated:", boldFont, fontSize, col1X, row3Y);
-                drawTextWithFont(contentStream, String.valueOf(allocated), regFont, fontSize, col1ValX, row3Y);
+                drawTextWithFont(contentStream, "Admin Phone:", boldFont, fontSize, col1X, row3Y);
+                drawTextWithFont(contentStream, institute.getPhoneNumber() != null ? institute.getPhoneNumber() : "N/A", regFont, fontSize, col1ValX, row3Y);
 
-                drawTextWithFont(contentStream, "Unallocated:", boldFont, fontSize, col2X, row3Y);
-                drawTextWithFont(contentStream, String.valueOf(unallocated), regFont, fontSize, col2ValX, row3Y);
+                drawTextWithFont(contentStream, "Location:", boldFont, fontSize, col2X, row3Y);
+                drawTextWithFont(contentStream, "Admin Block", regFont, fontSize, col2ValX, row3Y);
+
+                drawTextWithFont(contentStream, "Total Teams:", boldFont, fontSize, col1X, row4Y);
+                drawTextWithFont(contentStream, String.valueOf(allTeams.size()), regFont, fontSize, col1ValX, row4Y);
+
+                drawTextWithFont(contentStream, "Allocated:", boldFont, fontSize, col2X, row4Y);
+                drawTextWithFont(contentStream, String.valueOf(allocated) + " / " + String.valueOf(allocated + unallocated), regFont, fontSize, col2ValX, row4Y);
 
                 yPosition -= (summaryHeight + 40);
 

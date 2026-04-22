@@ -37,6 +37,15 @@ interface Institute {
   website: string;
   tail: string;
 }
+const Icon = ({ name, size = 16, colors }: any) => {
+  const isDark = colors.background === '#111827';
+  const icons: any = {
+    search: isDark
+      ? require('../assets/search-white.png')
+      : require('../assets/search.png'),
+  };
+  return <Image source={icons[name]} style={{ width: size, height: size, resizeMode: 'contain' }} />;
+};
 
 const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useContext(AuthContext);
@@ -82,12 +91,12 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       console.log('[InstituteList] 📡 Fetching institutes...');
-      
+
       const response = await getInstitutes();
       console.log('[InstituteList] ✅ Institutes loaded:', response.data);
-      
+
       setInstitutes(response.data || []);
-      
+
       // ✅ LOAD STATS TOO
       await loadStats();
     } catch (error: any) {
@@ -169,13 +178,16 @@ const InstituteListScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Search */}
         <View style={styles.searchWrapper}>
-          <TextInput
-            style={[styles.searchInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-            placeholder="Search institutes..."
-            placeholderTextColor={colors.subText}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="search" colors={colors} size={18} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search Institutes"
+              placeholderTextColor={colors.subText}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
         </View>
 
         {/* ✅ ADD Button - Navigate to AddInstituteScreen */}
@@ -274,8 +286,8 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
             active === 'home'
               ? require('../assets/home-color.png')
               : isDark
-              ? require('../assets/home-white.png')
-              : require('../assets/home.png')
+                ? require('../assets/home-white.png')
+                : require('../assets/home.png')
           }
           style={styles.tabIcon}
         />
@@ -290,8 +302,8 @@ export const BottomTab = ({ navigation, active }: { navigation: any; active: str
             active === 'more'
               ? require('../assets/more-color.png')
               : isDark
-              ? require('../assets/more-white.png')
-              : require('../assets/more.png')
+                ? require('../assets/more-white.png')
+                : require('../assets/more.png')
           }
           style={styles.tabIcon}
         />
@@ -335,12 +347,19 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, marginTop: 4 },
 
   searchWrapper: { paddingHorizontal: 16, paddingTop: 16 },
-  searchInput: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
     borderWidth: 1,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
   },
 
   addWrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },

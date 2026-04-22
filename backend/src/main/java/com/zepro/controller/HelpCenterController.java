@@ -28,6 +28,8 @@ public class HelpCenterController {
     private StudentRepository studentRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private com.zepro.repository.InstituteRepository instituteRepository;
 
     @GetMapping
     public ResponseEntity<HelpCenterResponse> getHelpCenterData(Principal principal) {
@@ -42,17 +44,31 @@ public class HelpCenterController {
 
         // Admin details (take the first admin)
         List<Admin> admins = adminRepository.findAll();
+        com.zepro.model.Institute institute = instituteRepository.findAll().stream().findFirst().orElse(null);
+
         if (!admins.isEmpty()) {
             Admin admin = admins.get(0);
             response.setAdminName(admin.getUser().getName());
-            response.setAdminEmail(admin.getUser().getEmail());
-            response.setAdminOffice("Admin Block"); // Custom logic or field
-            response.setAdminPhone(admin.getUser().getPhone() != null ? admin.getUser().getPhone() : "N/A");
+            
+            if (institute != null) {
+                response.setAdminEmail(institute.getEmail());
+                response.setAdminPhone(institute.getPhoneNumber() != null ? institute.getPhoneNumber() : "N/A");
+            } else {
+                response.setAdminEmail(admin.getUser().getEmail());
+                response.setAdminPhone(admin.getUser().getPhone() != null ? admin.getUser().getPhone() : "N/A");
+            }
+            
+            response.setAdminOffice("Admin Block");
         } else {
              response.setAdminName("Admin");
-             response.setAdminEmail("admin@college.edu");
+             if (institute != null) {
+                 response.setAdminEmail(institute.getEmail());
+                 response.setAdminPhone(institute.getPhoneNumber() != null ? institute.getPhoneNumber() : "N/A");
+             } else {
+                 response.setAdminEmail("admin@college.edu");
+                 response.setAdminPhone("N/A");
+             }
              response.setAdminOffice("Admin Block");
-             response.setAdminPhone("N/A");
         }
 
         // Find the user's department

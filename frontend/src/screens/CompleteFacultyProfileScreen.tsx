@@ -619,7 +619,7 @@ const CompleteFacultyProfileScreen: React.FC<Props> = ({ navigation }) => {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Save & Continue →</Text>
+            <Text style={styles.submitText}>Save & Continue</Text>
           )}
         </TouchableOpacity>
 

@@ -104,7 +104,6 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Brand */}
         <View style={styles.brandContainer}>
-          <Text style={[styles.brandTitle, { color: colors.text }]}>ZePRO</Text>
           <Text style={[styles.brandSubtitle, { color: colors.subText }]}>Add a member to your department</Text>
         </View>
 
@@ -115,7 +114,7 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Name */}
           <Text style={[styles.label, { color: colors.text }]}>Full Name *</Text>
           <TextInput
-            placeholder="e.g. Ravi Kumar"
+            placeholder="e.g. John Doe"
             placeholderTextColor={colors.subText}
             value={name}
             onChangeText={setName}
@@ -125,7 +124,7 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Email */}
           <Text style={[styles.label, { color: colors.text }]}>Email *</Text>
           <TextInput
-            placeholder="e.g. ravi@gmail.com"
+            placeholder="e.g. [EMAIL_ADDRESS]"
             placeholderTextColor={colors.subText}
             value={email}
             onChangeText={setEmail}
@@ -158,14 +157,6 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={[styles.roleText, { color: role === 'FACULTY' ? '#fff' : colors.text }]}>🏫 Faculty</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Info box */}
-          <View style={[styles.infoBox, { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' }]}>
-            <Text style={styles.infoText}>
-              ℹ️  The user will log in with their email. The initial password is the part of the email before the @ symbol. They can change it later.
-            </Text>
-          </View>
-
           {/* Submit */}
           <TouchableOpacity
             style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }]}

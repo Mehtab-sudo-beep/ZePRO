@@ -222,11 +222,6 @@ const DeadlineDetailScreen: React.FC = () => {
     }
   };
 
-  const handleEdit = () => {
-    // Navigate back and trigger edit — pass deadlineId so the list screen can open edit modal
-    navigation.navigate('Deadlines', { editDeadlineId: deadline.deadlineId });
-  };
-
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -359,26 +354,6 @@ const DeadlineDetailScreen: React.FC = () => {
         {/* ── Actions (Faculty Coordinator only) ────────────────────────────── */}
         {isFacultyCoordinator && (
           <View style={styles.actionsSection}>
-            {/* Edit */}
-            <TouchableOpacity
-              style={[styles.actionRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={handleEdit}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.actionIconWrap, { backgroundColor: colors.primary + '15' }]}>
-                <Image
-                  source={isDark ? Icons.editWhite : Icons.edit}
-                  style={[styles.actionIcon, { tintColor: colors.primary }]}
-                />
-              </View>
-              <View style={styles.actionTextWrap}>
-                <Text style={[styles.actionTitle, { color: colors.text }]}>Edit Deadline</Text>
-                <Text style={[styles.actionSubtitle, { color: colors.subText }]}>
-                  Modify title, date, role or description
-                </Text>
-              </View>
-              <Text style={[styles.actionChevron, { color: colors.subText }]}>›</Text>
-            </TouchableOpacity>
 
             {/* Toggle Active */}
             <TouchableOpacity

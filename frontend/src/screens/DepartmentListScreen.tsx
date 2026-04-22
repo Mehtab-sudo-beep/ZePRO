@@ -9,6 +9,7 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ThemeContext } from '../theme/ThemeContext';
@@ -43,6 +44,15 @@ interface DepartmentStats {
   facultyCount: number;
   projectCount: number;
 }
+const Icon = ({ name, size = 16, colors }: any) => {
+  const isDark = colors.background === '#111827';
+  const icons: any = {
+    search: isDark
+      ? require('../assets/search-white.png')
+      : require('../assets/search.png'),
+  };
+  return <Image source={icons[name]} style={{ width: size, height: size, resizeMode: 'contain' }} />;
+};
 
 const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
   const { instituteId, instituteName } = route.params;
@@ -69,7 +79,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
       console.log('[DepartmentList] 📊 Fetching stats for dept:', deptId);
       const statsRes = await getDepartmentStats(deptId);
       console.log('[DepartmentList] ✅ Stats loaded:', statsRes.data);
-      
+
       setDepartmentStats(prev => ({
         ...prev,
         [deptId]: {
@@ -178,7 +188,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
       showAlert('Success', `${response.data.departmentName} added successfully!`, [
         {
           text: 'OK',
-          onPress: () => {},
+          onPress: () => { },
           style: 'default',
         }
       ]);
@@ -211,7 +221,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
             const newStats = { ...departmentStats };
             delete newStats[id];
             setDepartmentStats(newStats);
-            
+
             showAlert('Success', 'Department deleted successfully');
           } catch (error: any) {
             console.log('[DepartmentList] ❌ Error:', error.message);
@@ -266,13 +276,16 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Search */}
         <View style={styles.searchWrapper}>
-          <TextInput
-            style={[styles.searchInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
-            placeholder="Search departments..."
-            placeholderTextColor={colors.subText}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="search" colors={colors} size={18} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search Departments"
+              placeholderTextColor={colors.subText}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
         </View>
 
         {/* Add Button */}
@@ -302,7 +315,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
             ) : (
               filtered.map(dept => {
                 const stats = departmentStats[dept.departmentId] || { studentCount: 0, facultyCount: 0, projectCount: 0 };
-                
+
                 return (
                   <TouchableOpacity
                     key={dept.departmentId}
@@ -370,7 +383,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
 
         {/* Add Modal */}
-                <Modal visible={showAddModal} transparent animationType="slide">
+        <Modal visible={showAddModal} transparent animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.modalHeader}>
@@ -514,12 +527,19 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, marginTop: 4 },
 
   searchWrapper: { paddingHorizontal: 16, paddingTop: 16 },
-  searchInput: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
     borderWidth: 1,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
   },
 
   addWrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
