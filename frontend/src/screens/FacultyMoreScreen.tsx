@@ -84,7 +84,11 @@ const FacultyMoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={require('../assets/avatar.png')}
+            source={
+              (profile?.profilePictureUrl || user?.profilePictureUrl)
+                ? { uri: (profile?.profilePictureUrl || user?.profilePictureUrl).startsWith('http') ? (profile?.profilePictureUrl || user?.profilePictureUrl) : `${BASE_URL}${(profile?.profilePictureUrl || user?.profilePictureUrl)}` }
+                : require('../assets/avatar.png')
+            }
             style={[
               styles.profileImage,
               { borderColor: colors.card, backgroundColor: colors.card },

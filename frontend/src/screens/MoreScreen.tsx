@@ -64,7 +64,11 @@ const MoreScreen: React.FC = () => {
         {/* Profile Section */}
         <View style={[styles.profileHeader, { backgroundColor: colors.card }]}>
           <Image
-            source={require('../assets/avatar.png')}
+            source={
+              user?.profilePictureUrl
+                ? { uri: user.profilePictureUrl.startsWith('http') ? user.profilePictureUrl : `${BASE_URL}${user.profilePictureUrl}` }
+                : require('../assets/avatar.png')
+            }
             style={[
               styles.profileImage,
               {
