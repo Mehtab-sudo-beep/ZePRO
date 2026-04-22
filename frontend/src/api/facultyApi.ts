@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API = 'http://10.180.172.134:8080';
+const API = 'http://4.186.27.158';
 
 // ✅ GET ALL INSTITUTES
 export const getAllInstitutes = (token: string) => {
