@@ -506,7 +506,7 @@ const StudentHomeScreen: React.FC = () => {
           >
             <Image
               source={require('../assets/bell.png')}
-              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+              style={{ width: 24, height: 24, resizeMode: 'contain', tintColor: isDark ? '#ffffff' : undefined }}
             />
             {unreadCount > 0 && (
               <View

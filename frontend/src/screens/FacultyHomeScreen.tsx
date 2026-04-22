@@ -15,6 +15,8 @@ import { ThemeContext } from '../theme/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { AlertContext } from '../context/AlertContext';
+import { BASE_URL } from '../api/api';
 
 import {
   getPendingRequests,
@@ -104,7 +106,7 @@ const ActionRow = ({
 );
 
 const FacultyHomeScreen: React.FC = () => {
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const isDark = colors.background === '#111827';
   const navigation = useNavigation<NavProp>();
@@ -114,6 +116,31 @@ const FacultyHomeScreen: React.FC = () => {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useContext(AlertContext);
+
+  const handleLogout = () => {
+    showAlert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try { await import('@react-native-google-signin/google-signin').then(m => m.GoogleSignin.signOut()); } catch (e) {}
+            await import('@react-native-async-storage/async-storage').then(m => {
+              m.default.removeItem('token');
+              m.default.removeItem('role');
+              m.default.removeItem('facultyId');
+            });
+            setUser(null);
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          },
+        },
+      ]
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -176,12 +203,29 @@ const FacultyHomeScreen: React.FC = () => {
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.avatarBadge, { backgroundColor: accentSoft }]}
-            onPress={() => navigation.navigate('FacultyProfile')}
+            style={[styles.avatarBadge, { backgroundColor: accentSoft, overflow: 'hidden' }]}
+            onPress={() => {
+              showAlert(
+                'Account Options',
+                'What would you like to do?',
+                [
+                  { text: 'Profile', onPress: () => navigation.navigate('FacultyProfile') },
+                  { text: 'Logout', style: 'destructive', onPress: handleLogout },
+                  { text: 'Cancel', style: 'cancel' }
+                ]
+              );
+            }}
           >
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {(user.name ?? 'F').charAt(0).toUpperCase()}
-            </Text>
+            {(user.profilePictureUrl || profile?.profilePictureUrl) ? (
+              <Image
+                source={{ uri: (user.profilePictureUrl || profile.profilePictureUrl).startsWith('http') ? (user.profilePictureUrl || profile.profilePictureUrl) : `${BASE_URL}${(user.profilePictureUrl || profile.profilePictureUrl)}` }}
+                style={{ width: '100%', height: '100%' }}
+              />
+            ) : (
+              <Text style={[styles.avatarText, { color: colors.primary }]}>
+                {(user.name ?? 'F').charAt(0).toUpperCase()}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -240,7 +284,7 @@ const FacultyHomeScreen: React.FC = () => {
               colors={colors}
               accentSoft={accentSoft}
               onPress={() => navigation.navigate('FacultyMeetings')}
-              badge={meetings.length > 0 ? `${meetings.length}` : undefined}
+              badge={meetings.filter(m => m.status === 'PENDING').length > 0 ? `${meetings.filter(m => m.status === 'PENDING').length}` : undefined}
             />
           </View>
           <View style={{ height: 16 }} />
