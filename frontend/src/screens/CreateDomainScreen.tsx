@@ -6,17 +6,18 @@ import {
   Text,
   StyleSheet,
   Alert,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   Animated,
   Modal,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { createDomain, getDomains } from '../api/facultyApi';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -78,6 +79,7 @@ const CreateDomainScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors, theme } = useContext(ThemeContext);
   const navigation = useNavigation<NavProp>();
+  const { showAlert } = useContext(AlertContext);
 
   const [name, setName] = useState('');
   const [domains, setDomains] = useState<any[]>([]);
@@ -107,7 +109,7 @@ const CreateDomainScreen = () => {
     const domainName = name.trim();
 
     if (!domainName) {
-      Alert.alert('Required', 'Domain name cannot be empty');
+      showAlert('Required', 'Domain name cannot be empty');
       return;
     }
 
@@ -116,7 +118,7 @@ const CreateDomainScreen = () => {
     );
 
     if (exists) {
-      Alert.alert('Exists', 'This domain already exists');
+      showAlert('Exists', 'This domain already exists');
       return;
     }
 
@@ -131,7 +133,7 @@ const CreateDomainScreen = () => {
       }, 2000);
     } catch (err) {
       console.log('[CreateDomainScreen] Error:', err);
-      Alert.alert('Error', 'Failed to create domain');
+      showAlert('Error', 'Failed to create domain');
       setLoading(false);
     }
   };
@@ -218,9 +220,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

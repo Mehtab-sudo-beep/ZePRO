@@ -466,6 +466,8 @@ public class FacultyService {
         projectRepository.save(project);
     }
 
+
+
     private ProjectResponse getProjectResponse(Project p,Faculty faculty) {
         String domainStr = "";
         String subdomainStr = "";
@@ -552,6 +554,13 @@ public class FacultyService {
                     ProjectResponse response = new ProjectResponse();
 
                     response.setRequestId(request.getRequestId());
+
+                    Project project = request.getProject();
+                    if (project != null) {
+                        response.setProjectId(project.getProjectId());
+                        response.setTitle(project.getTitle());
+                        response.setDescription(project.getDescription());
+                    }
 
                     Team team = request.getTeam();
 
@@ -797,6 +806,7 @@ public class FacultyService {
                     List<Institute> allInstitutes = instituteRepository.findAll();
                     
                     for (Institute inst : allInstitutes) {
+                        if (inst.getTail() == null) continue;
                         String instTail = inst.getTail().toLowerCase();
                         if (instTail.startsWith("@")) {
                             instTail = instTail.substring(1);

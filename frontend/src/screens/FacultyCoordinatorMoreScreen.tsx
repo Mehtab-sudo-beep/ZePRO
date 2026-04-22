@@ -15,12 +15,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
 import { BASE_URL } from '../api/api';
+import { AlertContext } from '../context/AlertContext';
 
 const FacultyCoordinatorMoreScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { user, setUser, loading } = useContext(AuthContext);
   const { colors } = useContext(ThemeContext);
   const isDark = colors.background === '#111827';
+  const { showAlert } = useContext(AlertContext);
 
   // ── Refresh user from AsyncStorage on every screen focus ─────────────────
   useFocusEffect(
@@ -65,7 +67,7 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
-    Alert.alert(
+    showAlert(
       'Confirm Logout',
       'Are you sure you want to log out?',
       [
@@ -84,8 +86,7 @@ const FacultyCoordinatorMoreScreen: React.FC = () => {
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ],
-      { cancelable: true },
+      ]
     );
   };
 

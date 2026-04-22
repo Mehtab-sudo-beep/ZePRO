@@ -54,6 +54,7 @@ import ProjectDetailsScreen from '../screens/ProjectDetailsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import OAuthSignupScreen from '../screens/OAuthSignupScreen';
 import AddUserScreen from '../screens/AddUserScreen';
+import AdminReportScreen from '../screens/AdminReportScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -123,6 +124,7 @@ export type RootStackParamList = {
     instituteId: string;
     instituteName: string;
   };
+  AdminReport: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -146,8 +148,24 @@ const AppNavigator = () => {
     );
   }
 
+  const getInitialRoute = () => {
+    if (!user) return 'Login';
+    if (user.role === 'ADMIN') return 'InstituteList';
+    if (user.role === 'FACULTY') return 'FacultyHome';
+    
+    // For students, check if profile is complete
+    if (user.role === 'STUDENT') {
+      // It defaults to StudentHome, but LoginScreen logic redirects if not complete.
+      return 'StudentHome';
+    }
+    return 'StudentHome';
+  };
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }}>
+    <Stack.Navigator 
+      key={user ? user.role : 'unauth'} 
+      screenOptions={{ headerShown: false, animation: 'fade_from_bottom' }} 
+      initialRouteName={getInitialRoute()}
+    >
       {!user ? (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
@@ -201,6 +219,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="OAuthSignup" component={OAuthSignupScreen} />
           <Stack.Screen name="AddUser" component={AddUserScreen} />
+          <Stack.Screen name="AdminReport" component={AdminReportScreen} />
         </>
       )}
     </Stack.Navigator>

@@ -166,7 +166,16 @@ const FacultyProjectsScreen = () => {
   };
 
   const handleDeleteProject = async (project: any) => {
-    Alert.alert(
+    if (project.status === 'ASSIGNED') {
+      showAlert('Cannot Delete', 'You cannot delete an allocated project.');
+      return;
+    }
+    if (project.isActive) {
+      showAlert('Cannot Delete', 'First deactivate this project and then do the delete option.');
+      return;
+    }
+
+    showAlert(
       "Delete Project",
       `Are you sure you want to delete "${project.title}"?`,
       [
@@ -228,7 +237,7 @@ const FacultyProjectsScreen = () => {
   };
 
   const handleDeleteAllDocs = async () => {
-    Alert.alert(
+    showAlert(
       "Delete All Documents",
       "Are you sure you want to delete all uploaded documents for this project?",
       [

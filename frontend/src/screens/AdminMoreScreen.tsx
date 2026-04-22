@@ -109,6 +109,12 @@ const AdminMoreScreen: React.FC = () => {
 
 
           <MenuItem
+            title="Download Reports"
+            onPress={() => navigation.navigate('AdminReport')}
+            colors={colors}
+          />
+
+          <MenuItem
             title="Settings"
             onPress={() => navigation.navigate('Settings')}
             colors={colors}

@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 
 import {
   getFacultyProfile,
@@ -60,6 +61,7 @@ const FacultyProfileScreen: React.FC = () => {
 
   const [profile, setProfile] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useContext(AlertContext);
 
   const [editModal, setEditModal] = useState(false);
   const [editField, setEditField] = useState<any>(null);
@@ -95,11 +97,11 @@ const FacultyProfileScreen: React.FC = () => {
         const res = await uploadProfilePicture(formData);
         const newUrl = res.data;
         setUser({ ...user, profilePictureUrl: newUrl });
-        Alert.alert('Success', 'Profile picture updated');
+        showAlert('Success', 'Profile picture updated');
         setPicModal(false);
       } catch (err) {
         console.log('Upload error:', err);
-        Alert.alert('Error', 'Failed to upload picture');
+        showAlert('Error', 'Failed to upload picture');
       }
     }
   };
@@ -113,7 +115,7 @@ const FacultyProfileScreen: React.FC = () => {
         setProfile(data);
       } catch (err) {
         console.log('❌ PROFILE ERROR:', err);
-        Alert.alert('Error', 'Failed to load profile');
+        showAlert('Error', 'Failed to load profile');
       } finally {
         setLoading(false);
       }
@@ -130,7 +132,7 @@ const FacultyProfileScreen: React.FC = () => {
   // ✅ UPDATE PROFILE
   const saveEdit = async () => {
     if (!editValue.trim()) {
-      Alert.alert('Error', 'Field cannot be empty.');
+      showAlert('Error', 'Field cannot be empty.');
       return;
     }
 
@@ -149,10 +151,10 @@ const FacultyProfileScreen: React.FC = () => {
         setUser({ ...user, name: data.name });
       }
 
-      Alert.alert('Success', 'Profile updated successfully.');
+      showAlert('Success', 'Profile updated successfully.');
     } catch (err) {
       console.log('❌ UPDATE ERROR:', err);
-      Alert.alert('Error', 'Update failed');
+      showAlert('Error', 'Update failed');
     }
 
     setEditModal(false);

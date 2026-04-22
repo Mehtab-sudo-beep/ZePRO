@@ -253,6 +253,30 @@ public class AdminController {
         }
     }
 
+    @DeleteMapping("/user/{id}")
+    public ResponseEntity<?> deleteUser(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        // ✅ ADMIN CHECK
+        if (!isAdmin(authentication)) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Only ADMIN can delete users");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+        }
+
+        try {
+            adminService.deleteUser(id);
+            Map<String, Object> result = new HashMap<>();
+            result.put("message", "User deleted successfully");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to delete user: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
     // ✅ GET FACULTY BY DEPARTMENT
     @GetMapping("/department/{departmentId}/faculty")
     public ResponseEntity<?> getFacultyByDepartment(
@@ -486,6 +510,33 @@ public class AdminController {
             System.out.println("[AdminController] ❌ Error: " + e.getMessage());
             return ResponseEntity.status(500)
                     .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ ADMIN TEAMS REPORT PDF
+    @GetMapping("/institutes/{instituteId}/report/pdf")
+    public ResponseEntity<byte[]> getAdminTeamsReportPdf(
+            @PathVariable Long instituteId,
+            @RequestParam(required = false) Long departmentId,
+            Authentication authentication) {
+
+        System.out.println("\n========== ADMIN TEAMS REPORT PDF ==========");
+        System.out.println("[AdminController] 📋 GET /admin/institutes/" + instituteId + "/report/pdf?departmentId=" + departmentId);
+
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
+
+        try {
+            byte[] pdf = adminService.generateAdminReportPdf(instituteId, departmentId);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"admin_teams_report.pdf\"")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            System.out.println("[AdminController] ❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

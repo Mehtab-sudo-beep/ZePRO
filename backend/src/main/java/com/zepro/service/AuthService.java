@@ -252,7 +252,7 @@ public class AuthService {
         String domain = email.substring(email.indexOf("@") + 1);
         java.util.List<String> allowedTails = getAllowedTails();
 
-        boolean isAllowed = allowedTails.stream().anyMatch(tail -> domain.equals(tail) || domain.endsWith("." + tail));
+        boolean isAllowed = allowedTails.isEmpty() || allowedTails.stream().anyMatch(tail -> domain.equals(tail) || domain.endsWith("." + tail));
         boolean isAdmin = com.zepro.model.UserRole.ADMIN.equals(request.getRole());
 
         if (!isAdmin && !isAllowed) {

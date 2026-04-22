@@ -12,8 +12,14 @@ public interface ProjectRequestRepository extends JpaRepository<ProjectRequest, 
 
     List<ProjectRequest> findByTeamTeamId(Long teamId);
 
+    List<ProjectRequest> findByTeamTeamIdAndStatus(Long teamId, RequestStatus status);
+
     boolean existsByTeamTeamIdAndProjectProjectId(Long teamId, Long projectId);
+
     List<ProjectRequest> findByStatusAndProjectFacultyFacultyId(RequestStatus status, Long facultyId);
+
     List<ProjectRequest> findByFacultyFacultyIdAndStatus(Long facultyId, RequestStatus status);
+
     List<ProjectRequest> findByProjectProjectId(Long projectId);
+
 }

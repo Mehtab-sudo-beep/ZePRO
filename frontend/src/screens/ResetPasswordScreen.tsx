@@ -11,6 +11,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { resetPasswordOtp } from '../api/authApi';
+import { AlertContext } from '../context/AlertContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ResetPassword'>;
 
@@ -19,29 +20,30 @@ const ResetPasswordScreen: React.FC<Props> = ({ route, navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showAlert } = React.useContext(AlertContext);
 
   const handleReset = async () => {
     if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields');
+      showAlert('Error', 'Please fill all fields');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      showAlert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     try {
       setLoading(true);
       await resetPasswordOtp({ email, otp, newPassword });
-      Alert.alert('Success', 'Your password has been reset successfully.', [
+      showAlert('Success', 'Your password has been reset successfully.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to reset password. Please try again.');
+      showAlert('Error', error.response?.data?.error || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);
     }

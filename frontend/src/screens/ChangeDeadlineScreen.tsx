@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { coordinatorApi } from '../api/coordinatorApi';
+import { AlertContext } from '../context/AlertContext';
 
 interface Deadlines {
   teamFormationDeadline: string;
@@ -23,6 +24,7 @@ interface Deadlines {
 
 const ChangeDeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showAlert } = useContext(AlertContext);
 
   const [deadlines, setDeadlines] = useState<{
     teamFormationDeadline: Date | null;
@@ -70,7 +72,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
       });
     } catch (error: any) {
       console.log('Error fetching deadlines', error);
-      Alert.alert('Error', error.message || 'Failed to fetch deadlines');
+      showAlert('Error', error.message || 'Failed to fetch deadlines');
     } finally {
       setFetching(false);
     }
@@ -125,13 +127,13 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
       await coordinatorApi.saveDeadlines(payload);
       
-      Alert.alert(
+      showAlert(
         '✅ Deadlines Updated',
         'All deadlines have been successfully updated.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save deadlines');
+      showAlert('Error', error.message || 'Failed to save deadlines');
     } finally {
       setLoading(false);
     }
@@ -141,9 +143,9 @@ const ChangeDeadlinesScreen: React.FC = () => {
     setEmailLoading(true);
     try {
       const response = await coordinatorApi.sendDepartmentDeadlineEmail();
-      Alert.alert('✅ Success', response.message || 'Emails sent successfully.');
+      showAlert('✅ Success', response.message || 'Emails sent successfully.');
     } catch (error: any) {
-      Alert.alert('❌ Error', error.message || 'Failed to send emails. Make sure there are deadlines configured.');
+      showAlert('❌ Error', error.message || 'Failed to send emails. Make sure there are deadlines configured.');
     } finally {
       setEmailLoading(false);
     }

@@ -21,6 +21,7 @@ import { getProjectRequestsStatus, getAssignedProject, getTeamInfo, getDepartmen
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getUnreadCount } from '../api/notificationApi';
+import { AlertContext } from '../context/AlertContext';
 
 type StudentHomeNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -192,6 +193,7 @@ const StudentHomeScreen: React.FC = () => {
   const [deadlines, setDeadlines] = useState<any>(null);
   const [isTeamFormationLocked, setIsTeamFormationLocked] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { showAlert } = useContext(AlertContext);
 
 
   useFocusEffect(
@@ -321,11 +323,11 @@ const StudentHomeScreen: React.FC = () => {
 
   const handleLeaveTeam = () => {
     if (studentUser.isAllocated) {
-      Alert.alert("Cannot Leave Team", "You cannot leave the team after a project has been allocated.");
+      showAlert("Cannot Leave Team", "You cannot leave the team after a project has been allocated.");
       return;
     }
 
-    Alert.alert(
+    showAlert(
       "Leave Team?",
       "Are you sure you want to leave this team? If you are the only member, the team will be deleted.",
       [
@@ -337,14 +339,14 @@ const StudentHomeScreen: React.FC = () => {
             try {
               if (!studentUser?.studentId) return;
               await leaveTeam(Number(studentUser.studentId));
-              Alert.alert("Success", "You have left the team.");
+              showAlert("Success", "You have left the team.");
 
               const updatedUser = { ...studentUser, isInTeam: false, isTeamLead: false };
               setStudentUser(updatedUser);
               setUser(updatedUser as any);
               setTeamInfo(null);
             } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.error || "Could not leave team.");
+              showAlert("Error", err?.response?.data?.error || "Could not leave team.");
             }
           }
         }
@@ -353,7 +355,7 @@ const StudentHomeScreen: React.FC = () => {
   };
 
   const handleAssignLeader = (newLeadId: number, memberName: string) => {
-    Alert.alert(
+    showAlert(
       "Transfer Leadership",
       `Are you sure you want to make ${memberName} the new Team Leader? You will become a regular member.`,
       [
@@ -365,7 +367,7 @@ const StudentHomeScreen: React.FC = () => {
             try {
               if (!studentUser?.studentId) return;
               await assignTeamLeader(Number(studentUser.studentId), newLeadId);
-              Alert.alert("Success", "Leadership transferred successfully.");
+              showAlert("Success", "Leadership transferred successfully.");
 
               const res = await getTeamInfo(Number(studentUser.studentId));
               setTeamInfo(res.data);
@@ -374,7 +376,7 @@ const StudentHomeScreen: React.FC = () => {
               setStudentUser(updatedUser);
               setUser(updatedUser as any);
             } catch (err: any) {
-              Alert.alert("Error", err?.response?.data?.error || "Could not assign new leader.");
+              showAlert("Error", err?.response?.data?.error || "Could not assign new leader.");
             }
           }
         }
@@ -441,7 +443,7 @@ const StudentHomeScreen: React.FC = () => {
       setProjectStatus(res);
     } catch (err: any) {
       setProjectStatus(null);
-      Alert.alert('Error', err?.response?.data?.message || 'Could not fetch status');
+      showAlert('Error', err?.response?.data?.message || 'Could not fetch status');
     } finally {
       setLoadingStatus(false);
     }
@@ -549,7 +551,7 @@ const StudentHomeScreen: React.FC = () => {
                   accentSoft={isTeamFormationLocked ? 'transparent' : accentSoft}
                   onPress={() => {
                     if (isTeamFormationLocked) {
-                      Alert.alert("Locked", "The deadline for forming a team has passed.");
+                      showAlert("Locked", "The deadline for forming a team has passed.");
                       return;
                     }
                     navigation.navigate('CreateTeam');
@@ -564,7 +566,7 @@ const StudentHomeScreen: React.FC = () => {
                   accentSoft={isTeamFormationLocked ? 'transparent' : accentSoft}
                   onPress={() => {
                     if (isTeamFormationLocked) {
-                      Alert.alert("Locked", "The deadline for joining a team has passed.");
+                      showAlert("Locked", "The deadline for joining a team has passed.");
                       return;
                     }
                     navigation.navigate('JoinTeam');

@@ -26,10 +26,8 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [rollNumber, setRollNumber] = useState('');
   const [role, setRole] = useState<'STUDENT' | 'FACULTY' | ''>('');
   const [loading, setLoading] = useState(false);
-  const [securePass, setSecurePass] = useState(true);
 
   const handleAddUser = async () => {
     if (!name.trim()) {
@@ -40,10 +38,6 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
       showAlert('Error', 'Valid email is required');
       return;
     }
-    if (!rollNumber.trim()) {
-      showAlert('Error', 'Roll number is required — it will be used as the password');
-      return;
-    }
     if (!role) {
       showAlert('Error', 'Please select a role');
       return;
@@ -51,10 +45,11 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
 
     try {
       setLoading(true);
+      const generatedPassword = email.trim().split('@')[0];
       await signup({
         name: name.trim(),
         email: email.trim().toLowerCase(),
-        password: rollNumber.trim(),
+        password: generatedPassword,
         role: role as any,
         instituteId: parseInt(instituteId),
         departmentId: parseInt(departmentId),
@@ -62,7 +57,7 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
 
       showAlert(
         'User Added',
-        `${name} has been registered as ${role}.\nPassword is their roll number: ${rollNumber}`,
+        `${name} has been registered as ${role}.\nPassword has been set to: ${generatedPassword}`,
         [
           {
             text: 'Add Another',
@@ -70,7 +65,6 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
             onPress: () => {
               setName('');
               setEmail('');
-              setRollNumber('');
               setRole('');
             },
           },
@@ -116,7 +110,7 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>User Details</Text>
-          <Text style={[styles.cardSub, { color: colors.subText }]}>Roll number will be set as the default password</Text>
+          <Text style={[styles.cardSub, { color: colors.subText }]}>Password will be set to the part of the email before the @ symbol.</Text>
 
           {/* Name */}
           <Text style={[styles.label, { color: colors.text }]}>Full Name *</Text>
@@ -139,27 +133,6 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
             keyboardType="email-address"
             style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           />
-
-          {/* Roll Number / Password */}
-          <Text style={[styles.label, { color: colors.text }]}>Roll Number * <Text style={styles.labelHint}>(used as password)</Text></Text>
-          <View style={[styles.passwordContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <TextInput
-              placeholder="e.g. 21CS001"
-              placeholderTextColor={colors.subText}
-              value={rollNumber}
-              onChangeText={setRollNumber}
-              secureTextEntry={securePass}
-              autoCapitalize="characters"
-              style={[styles.passwordInput, { color: colors.text }]}
-            />
-            <TouchableOpacity onPress={() => setSecurePass(!securePass)} style={{ padding: 4 }}>
-              <Image
-                source={theme === 'dark' ? require('../assets/eye-white.png') : require('../assets/eye.png')}
-                style={{ width: 20, height: 20, opacity: securePass ? 0.4 : 1 }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
 
           {/* Role */}
           <Text style={[styles.label, { color: colors.text }]}>Role *</Text>
@@ -189,7 +162,7 @@ const AddUserScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* Info box */}
           <View style={[styles.infoBox, { backgroundColor: '#EEF2FF', borderColor: '#4F46E5' }]}>
             <Text style={styles.infoText}>
-              ℹ️  The user will log in with their email and roll number as the initial password. They can change it later.
+              ℹ️  The user will log in with their email. The initial password is the part of the email before the @ symbol. They can change it later.
             </Text>
           </View>
 
@@ -255,16 +228,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
   },
-
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-  },
-  passwordInput: { flex: 1, paddingVertical: 12, fontSize: 14 },
 
   roleRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   roleBtn: {

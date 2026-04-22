@@ -11,26 +11,28 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { forgotPassword } from '../api/authApi';
+import { AlertContext } from '../context/AlertContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ForgotPassword'>;
 
 const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showAlert } = React.useContext(AlertContext);
 
   const handleSendOTP = async () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email');
+      showAlert('Error', 'Please enter your email');
       return;
     }
     
     try {
       setLoading(true);
       await forgotPassword({ email });
-      Alert.alert('OTP Sent', 'Please check your email for the OTP.');
+      showAlert('OTP Sent', 'Please check your email for the OTP.');
       navigation.navigate('VerifyOTP', { email });
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to send OTP.');
+      showAlert('Error', error.response?.data?.error || 'Failed to send OTP.');
     } finally {
       setLoading(false);
     }

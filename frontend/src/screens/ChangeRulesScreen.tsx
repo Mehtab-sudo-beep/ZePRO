@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { AlertContext } from '../context/AlertContext';
 
 interface Rules {
   maxTeamSize: number;
@@ -20,6 +21,7 @@ interface Rules {
 
 const AdminChangeRulesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { showAlert } = useContext(AlertContext);
 
   const [rules, setRules] = useState<Rules>({
     maxTeamSize: 4,
@@ -30,16 +32,16 @@ const AdminChangeRulesScreen: React.FC = () => {
 
   const handleSaveRules = () => {
     if (!tempRules.maxTeamSize || tempRules.maxTeamSize <= 0) {
-      Alert.alert('Error', 'Please enter a valid max team size');
+      showAlert('Error', 'Please enter a valid max team size');
       return;
     }
     if (!tempRules.maxStudentsPerFaculty || tempRules.maxStudentsPerFaculty <= 0) {
-      Alert.alert('Error', 'Please enter a valid max students per faculty');
+      showAlert('Error', 'Please enter a valid max students per faculty');
       return;
     }
 
     setRules(tempRules);
-    Alert.alert('Success', 'Rules updated successfully!');
+    showAlert('Success', 'Rules updated successfully!');
   };
 
   return (

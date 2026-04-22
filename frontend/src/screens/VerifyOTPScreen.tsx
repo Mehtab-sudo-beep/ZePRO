@@ -11,6 +11,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { verifyOtp, forgotPassword } from '../api/authApi';
+import { AlertContext } from '../context/AlertContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerifyOTP'>;
 
@@ -19,10 +20,11 @@ const VerifyOTPScreen: React.FC<Props> = ({ route, navigation }) => {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const { showAlert } = React.useContext(AlertContext);
 
   const handleVerify = async () => {
     if (!otp) {
-      Alert.alert('Error', 'Please enter the OTP');
+      showAlert('Error', 'Please enter the OTP');
       return;
     }
 
@@ -32,10 +34,10 @@ const VerifyOTPScreen: React.FC<Props> = ({ route, navigation }) => {
       if (res.data.valid) {
         navigation.navigate('ResetPassword', { email, otp });
       } else {
-        Alert.alert('Error', 'Invalid or expired OTP.');
+        showAlert('Error', 'Invalid or expired OTP.');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Verification failed. Please try again.');
+      showAlert('Error', error.response?.data?.error || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -45,9 +47,9 @@ const VerifyOTPScreen: React.FC<Props> = ({ route, navigation }) => {
     try {
       setResending(true);
       await forgotPassword({ email });
-      Alert.alert('OTP Resent', 'Please check your email.');
+      showAlert('OTP Resent', 'Please check your email.');
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to resend OTP.');
+      showAlert('Error', error.response?.data?.error || 'Failed to resend OTP.');
     } finally {
       setResending(false);
     }

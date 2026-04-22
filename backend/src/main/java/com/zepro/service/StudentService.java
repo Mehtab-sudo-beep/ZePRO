@@ -1338,6 +1338,7 @@ public class StudentService {
                     List<Institute> allInstitutes = instituteRepository.findAll();
                     
                     for (Institute inst : allInstitutes) {
+                        if (inst.getTail() == null) continue;
                         String instTail = inst.getTail().toLowerCase();
                         if (instTail.startsWith("@")) {
                             instTail = instTail.substring(1);

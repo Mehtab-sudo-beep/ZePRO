@@ -13,14 +13,14 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlertContext } from '../context/AlertContext';
 import { ThemeContext } from '../theme/ThemeContext';
-import { getFacultyByDepartment, assignFacultyCoordinator, removeFacultyCoordinator, getDepartmentStats, getStudentsByDepartment } from '../api/departmentApi';
+import { getFacultyByDepartment, assignFacultyCoordinator, removeFacultyCoordinator, getDepartmentStats, getStudentsByDepartment, deleteUser } from '../api/departmentApi';
 
 const { width } = Dimensions.get('window');
 
@@ -97,10 +97,12 @@ const DepartmentDetailsScreen: React.FC = () => {
     } catch (e) {}
   }, [departmentId]);
 
-  useEffect(() => {
-    loadData();
-    loadStats();
-  }, [loadData, loadStats]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      loadStats();
+    }, [loadData, loadStats])
+  );
 
   const handleAssignCoordinator = async (faculty: UserItem) => {
     showAlert(
@@ -149,6 +151,33 @@ const DepartmentDetailsScreen: React.FC = () => {
     );
   };
 
+  const handleRemoveUser = (userId: string, name: string, role: string) => {
+    showAlert(
+      'Remove User',
+      `Are you sure you want to completely remove ${name} from the system?\n\nWARNING: For Faculty, this deletes their projects. For Students, this removes them from their team and revokes their team's project allocation if applicable.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await deleteUser(userId);
+              showAlert('Success', 'User removed successfully');
+              loadData();
+              loadStats();
+            } catch (error: any) {
+              showAlert('Error', 'Failed to remove user');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const filteredList = (activeTab === 'FACULTY' ? facultyList : studentList).filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -186,21 +215,33 @@ const DepartmentDetailsScreen: React.FC = () => {
           )}
         </View>
         
-        {isFaculty && (
-          <View style={[styles.cardFooter, { borderTopColor: divider }]}>
+        <View style={[styles.cardFooter, { borderTopColor: divider }]}>
+          <View style={styles.footerButtons}>
+            {isFaculty && (
+              <TouchableOpacity 
+                onPress={() => isCoordinator ? handleRemoveCoordinator() : handleAssignCoordinator(item)}
+                style={[
+                  styles.solidButton, 
+                  { backgroundColor: isCoordinator ? '#DC2626' : colors.primary }
+                ]}
+              >
+                <Text style={styles.solidButtonText}>
+                  {isCoordinator ? 'Remove Coordinator' : 'Set as Coordinator'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
             <TouchableOpacity 
-              onPress={() => isCoordinator ? handleRemoveCoordinator() : handleAssignCoordinator(item)}
+              onPress={() => handleRemoveUser(item.userId, item.name, isFaculty ? 'Faculty' : 'Student')}
               style={[
-                styles.solidButton, 
-                { backgroundColor: isCoordinator ? '#DC2626' : colors.primary }
+                styles.outlineButton, 
+                { borderColor: '#DC2626' }
               ]}
             >
-              <Text style={styles.solidButtonText}>
-                {isCoordinator ? 'Remove Coordinator' : 'Set as Coordinator'}
-              </Text>
+              <Text style={[styles.outlineButtonText, { color: '#DC2626' }]}>Remove User</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </View>
       </View>
     );
   };
@@ -218,6 +259,12 @@ const DepartmentDetailsScreen: React.FC = () => {
           <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{departmentName}</Text>
           <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={1}>{instituteName}</Text>
         </View>
+        <TouchableOpacity 
+          style={[styles.addUserBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.navigate('AddUser', { departmentId: String(departmentId), departmentName: String(departmentName), instituteId: String(instituteId), instituteName: String(instituteName) })}
+        >
+          <Text style={styles.addUserBtnText}>+ Add</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
@@ -296,6 +343,8 @@ const styles = StyleSheet.create({
   backIcon: { width: 22, height: 22, resizeMode: 'contain' },
   headerTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 12, marginTop: 1 },
+  addUserBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 8 },
+  addUserBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
   statsContainer: { flexDirection: 'row', gap: 12, padding: 16 },
   statBox: { flex: 1, padding: 16, borderRadius: 16, alignItems: 'center', elevation: 2 },
@@ -317,8 +366,11 @@ const styles = StyleSheet.create({
   pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 },
   pillText: { fontSize: 10, fontWeight: '800' },
   cardFooter: { marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  footerButtons: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
   solidButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignSelf: 'flex-start' },
   solidButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  outlineButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, alignSelf: 'flex-start' },
+  outlineButtonText: { fontSize: 12, fontWeight: '700' },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#94a3b8', fontStyle: 'italic' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

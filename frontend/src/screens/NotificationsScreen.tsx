@@ -60,9 +60,9 @@ const NotificationsScreen: React.FC = () => {
   const handleNotificationPress = async (item: Notification) => {
     if (!item.isRead) {
       try {
-        await markAsRead(item.notificationId);
+        await markAsRead(item.id);
         setNotifications(prev =>
-          prev.map(n => (n.notificationId === item.notificationId ? { ...n, isRead: true } : n))
+          prev.map(n => (n.id === item.id ? { ...n, isRead: true } : n))
         );
       } catch (error) {
         console.error('Failed to mark as read', error);
@@ -118,7 +118,7 @@ const NotificationsScreen: React.FC = () => {
             {!item.isRead && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
           </View>
           <Text style={[styles.message, { color: colors.subText }]} numberOfLines={2}>
-            {item.message}
+            {item.body}
           </Text>
           <Text style={[styles.time, { color: colors.subText }]}>
             {format(new Date(item.createdAt), 'MMM d, h:mm a')}
@@ -147,7 +147,7 @@ const NotificationsScreen: React.FC = () => {
       ) : (
         <FlatList
           data={notifications}
-          keyExtractor={item => item.notificationId.toString()}
+          keyExtractor={item => item.id.toString()}
           renderItem={renderItem}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />

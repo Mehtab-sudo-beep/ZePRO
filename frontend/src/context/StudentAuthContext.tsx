@@ -37,7 +37,11 @@ export const StudentAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         if (stored) {
           const parsed = JSON.parse(stored);
-          setStudentUser(parsed);
+          if (parsed.role === 'STUDENT') {
+            setStudentUser(parsed);
+          } else {
+            setStudentUser(null);
+          }
         } else {
           setStudentUser(null);
         }

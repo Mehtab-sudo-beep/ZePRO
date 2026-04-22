@@ -65,16 +65,10 @@ const ProjectListScreen: React.FC = () => {
   const [requestedProjects, setRequestedProjects] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 🔥 Sort states
   const [filterModal, setFilterModal] = useState(false);
-  const [facultyFilter, setFacultyFilter] = useState('');
-  const [domainFilter, setDomainFilter] = useState('');
-  const [subDomainFilter, setSubDomainFilter] = useState('');
+  const [searchCategory, setSearchCategory] = useState<'ALL' | 'FACULTY' | 'DOMAIN' | 'SUBDOMAIN'>('ALL');
 
-  // Extract unique lists
-  const uniqueFaculties = Array.from(new Set(projects.map(p => p.facultyName))).filter(Boolean);
-  const uniqueDomains = Array.from(new Set(projects.map(p => p.domain))).filter(Boolean);
-  const uniqueSubDomains = Array.from(new Set(projects.map(p => p.subdomain))).filter(Boolean);
+
 
   // ✅ LOAD PROJECTS WITH ERROR HANDLING
   const loadProjects = async () => {
@@ -128,16 +122,21 @@ const ProjectListScreen: React.FC = () => {
   const filteredProjects = projects.filter(project => {
     const query = search.toLowerCase();
 
-    const matchesSearch = project.title?.toLowerCase().includes(query) ||
-      project.domain?.toLowerCase().includes(query) ||
-      project.subdomain?.toLowerCase().includes(query) ||
-      project.facultyName?.toLowerCase().includes(query);
+    if (!query) return true;
 
-    const matchesFaculty = facultyFilter ? project.facultyName === facultyFilter : true;
-    const matchesDomain = domainFilter ? project.domain === domainFilter : true;
-    const matchesSubDomain = subDomainFilter ? project.subdomain === subDomainFilter : true;
-
-    return matchesSearch && matchesFaculty && matchesDomain && matchesSubDomain;
+    if (searchCategory === 'FACULTY') {
+      return project.facultyName?.toLowerCase().includes(query);
+    } else if (searchCategory === 'DOMAIN') {
+      return project.domain?.toLowerCase().includes(query);
+    } else if (searchCategory === 'SUBDOMAIN') {
+      return project.subdomain?.toLowerCase().includes(query);
+    } else {
+      // ALL
+      return project.title?.toLowerCase().includes(query) ||
+        project.domain?.toLowerCase().includes(query) ||
+        project.subdomain?.toLowerCase().includes(query) ||
+        project.facultyName?.toLowerCase().includes(query);
+    }
   });
 
   /* ================= CARD ================= */
@@ -222,17 +221,21 @@ const ProjectListScreen: React.FC = () => {
 
         {/* SEARCH */}
         {/* SEARCH AND FILTER */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border, flex: 1, marginBottom: 0 }]}>
+        <View style={styles.searchRow}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Icon name="search" colors={colors} />
-
             <TextInput
-              placeholder="Search projects..."
+              placeholder={searchCategory === 'ALL' ? "Search projects..." : `Search by ${searchCategory.toLowerCase()}...`}
               placeholderTextColor={colors.subText}
               value={search}
               onChangeText={setSearch}
               style={[styles.searchInput, { color: colors.text }]}
             />
+            {searchCategory !== 'ALL' && (
+              <TouchableOpacity onPress={() => setSearchCategory('ALL')} style={styles.clearBadge}>
+                <Text style={styles.clearBadgeText}>✕ {searchCategory}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <TouchableOpacity
@@ -241,7 +244,7 @@ const ProjectListScreen: React.FC = () => {
           >
             <Image
               source={isDark ? require('../assets/sort-white.png') : require('../assets/sort.png')}
-              style={{ width: 20, height: 20, resizeMode: 'contain' }}
+              style={{ width: 18, height: 18, resizeMode: 'contain' }}
             />
           </TouchableOpacity>
         </View>
@@ -267,75 +270,45 @@ const ProjectListScreen: React.FC = () => {
         )}
 
         {/* FILTER MODAL */}
-        <Modal visible={filterModal} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-
+        <Modal visible={filterModal} transparent animationType="fade">
+          <TouchableOpacity activeOpacity={1} style={styles.modalOverlay} onPress={() => setFilterModal(false)}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.card }]} onStartShouldSetResponder={() => true}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Sort & Filter</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Search By</Text>
                 <TouchableOpacity onPress={() => setFilterModal(false)} style={styles.modalCloseBtn}>
                   <Text style={[styles.modalCloseText, { color: colors.text }]}>✕</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.label, { color: colors.subText }]}>Faculty</Text>
-              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
-                <Picker
-                  selectedValue={facultyFilter}
-                  onValueChange={(val) => setFacultyFilter(val)}
-                  style={{ color: colors.text }}
-                  dropdownIconColor={colors.text}
-                >
-                  <Picker.Item label="All Faculties" value="" />
-                  {uniqueFaculties.map((f: any, idx) => (
-                    <Picker.Item key={idx} label={f} value={f} />
-                  ))}
-                </Picker>
+              <View style={styles.categoryList}>
+                {(['ALL', 'FACULTY', 'DOMAIN', 'SUBDOMAIN'] as const).map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.categoryOption,
+                      { borderBottomColor: divider },
+                      searchCategory === cat && { backgroundColor: colors.primary + '15' }
+                    ]}
+                    onPress={() => {
+                      setSearchCategory(cat);
+                      setFilterModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.categoryOptionText,
+                      { color: colors.text },
+                      searchCategory === cat && { color: colors.primary, fontWeight: '700' }
+                    ]}>
+                      {cat === 'ALL' ? 'All Fields' : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                    </Text>
+                    {searchCategory === cat && (
+                      <View style={[styles.checkCircle, { backgroundColor: colors.primary }]} />
+                    )}
+                  </TouchableOpacity>
+                ))}
               </View>
-
-              <Text style={[styles.label, { color: colors.subText }]}>Domain</Text>
-              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
-                <Picker
-                  selectedValue={domainFilter}
-                  onValueChange={(val) => setDomainFilter(val)}
-                  style={{ color: colors.text }}
-                  dropdownIconColor={colors.text}
-                >
-                  <Picker.Item label="All Domains" value="" />
-                  {uniqueDomains.map((d: any, idx) => (
-                    <Picker.Item key={idx} label={d} value={d} />
-                  ))}
-                </Picker>
-              </View>
-
-              <Text style={[styles.label, { color: colors.subText }]}>Subdomain</Text>
-              <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
-                <Picker
-                  selectedValue={subDomainFilter}
-                  onValueChange={(val) => setSubDomainFilter(val)}
-                  style={{ color: colors.text }}
-                  dropdownIconColor={colors.text}
-                >
-                  <Picker.Item label="All Subdomains" value="" />
-                  {uniqueSubDomains.map((sd: any, idx) => (
-                    <Picker.Item key={idx} label={sd} value={sd} />
-                  ))}
-                </Picker>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 24 }]}
-                onPress={() => {
-                  setFacultyFilter('');
-                  setDomainFilter('');
-                  setSubDomainFilter('');
-                }}
-              >
-                <Text style={styles.btnText}>Clear Filters</Text>
-              </TouchableOpacity>
-
             </View>
-          </View>
+          </TouchableOpacity>
         </Modal>
 
       </View>
@@ -370,20 +343,37 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
 
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 44,
     gap: 8,
-    marginBottom: 12,
   },
-
   searchInput: {
     flex: 1,
     fontSize: 14,
+    padding: 0,
+  },
+  clearBadge: {
+    backgroundColor: '#EF444420',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  clearBadgeText: {
+    fontSize: 10,
+    color: '#EF4444',
+    fontWeight: '700',
   },
 
   card: {
@@ -419,8 +409,8 @@ const styles = StyleSheet.create({
   },
 
   filterBtn: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
@@ -460,27 +450,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginLeft: 4,
+  categoryList: {
+    marginTop: 4,
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  primaryBtn: {
-    paddingVertical: 12,
-    borderRadius: 12,
+  categoryOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
-  btnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+  categoryOptionText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  checkCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

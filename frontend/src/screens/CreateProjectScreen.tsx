@@ -10,16 +10,17 @@ import {
   Modal,
   FlatList,
   Pressable,
-  SafeAreaView,
   StatusBar,
   Animated,
   Dimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { createProject, getDomains, getSubDomains, getAllocationRules, uploadProjectDocuments } from '../api/facultyApi';
 import * as DocumentPicker from 'expo-document-picker';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -148,6 +149,7 @@ const CreateProjectScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors, theme } = useContext(ThemeContext);
   const navigation = useNavigation<NavProp>();
+  const { showAlert } = useContext(AlertContext);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -197,7 +199,7 @@ const CreateProjectScreen = () => {
       }
     } catch (err) {
       console.log('[CreateProjectScreen] Error:', err);
-      Alert.alert('Error', 'Failed to load domains');
+      showAlert('Error', 'Failed to load domains');
     }
   };
 
@@ -220,20 +222,20 @@ const CreateProjectScreen = () => {
 
   const handleCreate = async () => {
     if (!title.trim()) {
-      Alert.alert('Required', 'Project title is required');
+      showAlert('Required', 'Project title is required');
       return;
     }
     if (!domainId) {
-      Alert.alert('Required', 'Please select a domain');
+      showAlert('Required', 'Please select a domain');
       return;
     }
     if (!subDomainId) {
-      Alert.alert('Required', 'Please select a subdomain');
+      showAlert('Required', 'Please select a subdomain');
       return;
     }
     const slotCount = parseInt(slots, 10);
     if (isNaN(slotCount) || slotCount < 1 || slotCount > maxTeamSize) {
-      Alert.alert('Invalid', `Slots must be between 1 and ${maxTeamSize}`);
+      showAlert('Invalid', `Slots must be between 1 and ${maxTeamSize}`);
       return;
     }
 
@@ -277,7 +279,7 @@ const CreateProjectScreen = () => {
       }, 2000);
     } catch (err) {
       console.log('[CreateProjectScreen] Error:', err);
-      Alert.alert('Error', 'Failed to create project');
+      showAlert('Error', 'Failed to create project');
       setLoading(false);
     }
   };
@@ -412,7 +414,7 @@ const CreateProjectScreen = () => {
               ]}
               onPress={() => {
                 if (!domainId) {
-                  Alert.alert('Select Domain First', 'Please choose a domain');
+                  showAlert('Select Domain First', 'Please choose a domain');
                   return;
                 }
                 setSubDomainModal(true);
@@ -516,7 +518,7 @@ const CreateProjectScreen = () => {
         data={domains}
         onSelect={(item: PickerItem) => {
           if (item.domainId === null) {
-            Alert.alert('No Domains', 'Create a domain first');
+            showAlert('No Domains', 'Create a domain first');
             return;
           }
           setDomainId(item.domainId || null);
@@ -535,7 +537,7 @@ const CreateProjectScreen = () => {
         data={subDomains}
         onSelect={(item: PickerItem) => {
           if (item.subDomainId === null) {
-            Alert.alert('No SubDomains', 'Create a subdomain first');
+            showAlert('No SubDomains', 'Create a subdomain first');
             return;
           }
           setSubDomainId(item.subDomainId || null);
@@ -558,9 +560,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

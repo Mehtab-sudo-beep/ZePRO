@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../api/api';
 import { useState, useEffect } from 'react';
@@ -24,6 +25,7 @@ const FacultyMoreScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const isDark = colors.background === '#111827';
   const [profile, setProfile] = useState<any>(null);
+  const { showAlert } = useContext(AlertContext);
 
   useEffect(() => {
   const loadProfile = async () => {
@@ -47,7 +49,7 @@ const FacultyMoreScreen: React.FC = () => {
 }, []);
 
   const handleLogout = () => {
-    Alert.alert(
+    showAlert(
       'Confirm Logout',
       'Are you sure you want to log out?',
       [
@@ -64,8 +66,7 @@ const FacultyMoreScreen: React.FC = () => {
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ],
-      { cancelable: true },
+      ]
     );
   };
 

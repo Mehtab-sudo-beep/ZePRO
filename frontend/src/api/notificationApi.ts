@@ -1,9 +1,9 @@
 import API from './api';
 
 export interface Notification {
-  notificationId: number;
+  id: number;
   title: string;
-  message: string;
+  body: string;
   targetScreen?: string;
   targetId?: string;
   isRead: boolean;

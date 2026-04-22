@@ -65,3 +65,9 @@ export const getStudentsByDepartment = (departmentId: string) => {
   console.log('📡 GET /admin/department/' + departmentId + '/students');
   return API.get(`/admin/department/${departmentId}/students`);
 };
+
+// ✅ DELETE USER
+export const deleteUser = (userId: string) => {
+  console.log('🗑 DELETE /admin/user/' + userId);
+  return API.delete(`/admin/user/${userId}`);
+};

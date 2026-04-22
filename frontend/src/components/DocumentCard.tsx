@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as IntentLauncher from 'expo-intent-launcher';
 import { BASE_URL } from '../api/api';
+import { AlertContext } from '../context/AlertContext';
 
 interface DocumentCardProps {
   label: string;
@@ -15,6 +16,7 @@ interface DocumentCardProps {
 }
 
 const DocumentCard: React.FC<DocumentCardProps> = ({ label, value, colors, user, onEdit }) => {
+  const { showAlert } = useContext(AlertContext);
   if (!value) {
     return (
       <View style={[styles.container, { borderColor: colors.border, backgroundColor: colors.card }]}>
@@ -58,7 +60,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ label, value, colors, user,
                 const base64 = await FileSystem.readAsStringAsync(downloadedFile.uri, { encoding: FileSystem.EncodingType.Base64 });
                 const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, filename, 'application/pdf');
                 await FileSystem.writeAsStringAsync(newFileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-                Alert.alert('Success', 'File downloaded successfully.');
+                showAlert('Success', 'File downloaded successfully.');
               }
            } else {
               if (await Sharing.isAvailableAsync()) {
@@ -84,16 +86,16 @@ const DocumentCard: React.FC<DocumentCardProps> = ({ label, value, colors, user,
             if (await Sharing.isAvailableAsync()) {
               await Sharing.shareAsync(downloadedFile.uri, { UTI: 'public.data', mimeType: 'application/pdf' });
             } else {
-              Alert.alert('Error', 'No application available to open this format.');
+              showAlert('Error', 'No application available to open this format.');
             }
           }
         }
       } else {
-        Alert.alert('Error', `Server returned status: ${downloadedFile.status}`);
+        showAlert('Error', `Server returned status: ${downloadedFile.status}`);
       }
     } catch (err: any) {
       console.log('Error processing document', err);
-      Alert.alert('Error', `Failed to process document: ${err.message}`);
+      showAlert('Error', `Failed to process document: ${err.message}`);
     }
   };
 

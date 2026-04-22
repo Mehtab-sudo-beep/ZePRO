@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 
 import {
   getStudentProfile,
@@ -66,6 +67,7 @@ const ProfileScreen: React.FC = () => {
 
   const [profile, setProfile] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useContext(AlertContext);
 
   const [modal, setModal] = useState(false);
   const [editField, setEditField] = useState<any>(null);
@@ -105,11 +107,11 @@ const ProfileScreen: React.FC = () => {
         const res = await uploadProfilePicture(formData);
         const newUrl = res.data;
         setUser({ ...user, profilePictureUrl: newUrl });
-        Alert.alert('Success', 'Profile picture updated');
+        showAlert('Success', 'Profile picture updated');
         setPicModal(false);
       } catch (err) {
         console.log('Upload error:', err);
-        Alert.alert('Error', 'Failed to upload picture');
+        showAlert('Error', 'Failed to upload picture');
       }
     }
   };
@@ -140,7 +142,7 @@ const ProfileScreen: React.FC = () => {
       }
     } catch (err) {
       console.log('Error picking document', err);
-      Alert.alert('Error', 'Failed to pick document');
+      showAlert('Error', 'Failed to pick document');
     }
   };
 
@@ -173,9 +175,9 @@ const ProfileScreen: React.FC = () => {
       }
 
       setModal(false);
-      Alert.alert('Updated successfully');
+      showAlert('Updated successfully');
     } catch (err) {
-      Alert.alert('Error', 'Failed to update profile');
+      showAlert('Error', 'Failed to update profile');
       console.log(err);
     }
   };

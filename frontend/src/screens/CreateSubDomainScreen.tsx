@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   Alert,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   Modal,
@@ -14,10 +13,12 @@ import {
   Dimensions,
   ImageStyle
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { createSubDomain, getDomains, getSubDomains } from '../api/facultyApi';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../theme/ThemeContext';
+import { AlertContext } from '../context/AlertContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -87,6 +88,7 @@ const CreateSubDomainScreen = () => {
   const { user } = useContext(AuthContext);
   const { colors, theme } = useContext(ThemeContext);
   const navigation = useNavigation<NavProp>();
+  const { showAlert } = useContext(AlertContext);
 
   const [name, setName] = useState('');
   const [success, setSuccess] = useState(false);
@@ -119,7 +121,7 @@ const CreateSubDomainScreen = () => {
       );
     } catch (err) {
       console.log('[CreateSubDomainScreen] Error:', err);
-      Alert.alert('Error', 'Failed to load domains');
+      showAlert('Error', 'Failed to load domains');
     }
   };
 
@@ -142,12 +144,12 @@ const CreateSubDomainScreen = () => {
     const subDomainName = name.trim();
 
     if (!domainId) {
-      Alert.alert('Required', 'Please select a domain');
+      showAlert('Required', 'Please select a domain');
       return;
     }
 
     if (!subDomainName) {
-      Alert.alert('Required', 'SubDomain name is required');
+      showAlert('Required', 'SubDomain name is required');
       return;
     }
 
@@ -156,7 +158,7 @@ const CreateSubDomainScreen = () => {
     );
 
     if (exists) {
-      Alert.alert('Exists', 'This subdomain already exists');
+      showAlert('Exists', 'This subdomain already exists');
       return;
     }
 
@@ -172,7 +174,7 @@ const CreateSubDomainScreen = () => {
       }, 2000);
     } catch (err) {
       console.log('[CreateSubDomainScreen] Error:', err);
-      Alert.alert('Error', 'Failed to create subdomain');
+      showAlert('Error', 'Failed to create subdomain');
       setLoading(false);
     }
   };
@@ -286,9 +288,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
