@@ -67,7 +67,7 @@ const FacultyRequestsScreen = () => {
     try {
       setLoading(true);
       const data = await getPendingRequests(user!.token);
-      
+
       // Group by projectId
       const grouped = data.reduce((acc: any, curr: any) => {
         const pid = curr.projectId;
@@ -82,11 +82,11 @@ const FacultyRequestsScreen = () => {
         acc[pid].requests.push(curr);
         return acc;
       }, {});
-      
+
       if (isMounted.current) {
         const groupedArray = Object.values(grouped);
         setGroupedRequests(groupedArray);
-        
+
         // Update selectedProject if it's open
         if (selectedProject) {
           const updatedProj = groupedArray.find((p: any) => p.projectId === selectedProject.projectId);
@@ -107,8 +107,8 @@ const FacultyRequestsScreen = () => {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
       const deadlines = res.data;
-      const meetingDeadline = deadlines.find((d: any) => 
-        d.title.toLowerCase().includes('meeting') || 
+      const meetingDeadline = deadlines.find((d: any) =>
+        d.title.toLowerCase().includes('meeting') ||
         d.title.toLowerCase().includes('schedule')
       );
       if (meetingDeadline && isMounted.current) {
@@ -199,7 +199,7 @@ const FacultyRequestsScreen = () => {
       const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
       const filename = encodeURIComponent(url.split('/').pop() || 'document.pdf');
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      
+
       const downloadedFile = await FileSystem.downloadAsync(fullUrl, fileUri, {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
@@ -297,18 +297,15 @@ const FacultyRequestsScreen = () => {
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text style={[styles.sectionHeading, { color: colors.subText }]}>TEAM REQUESTS</Text>
-            
+
             {selectedProject?.requests.map((r: any) => (
               <View key={r.requestId} style={[styles.requestCard, { backgroundColor: colors.card }]}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setExpandedTeam(expandedTeam === r.teamId ? null : r.teamId)}
                   style={styles.requestHeader}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.teamName, { color: colors.text }]}>{r.teamName || `Team ${r.teamId}`}</Text>
-                    <Text style={[styles.memberCount, { color: colors.subText }]}>
-                      {r.teamMembers?.length || 0} Members
-                    </Text>
                   </View>
                   <Text style={{ color: colors.subText, fontSize: 18 }}>
                     {expandedTeam === r.teamId ? '▼' : '▶'}
@@ -325,7 +322,7 @@ const FacultyRequestsScreen = () => {
                           </Text>
                           <Text style={[styles.memberSub, { color: colors.subText }]}>{m.rollNo} | {m.cgpa ? m.cgpa.toFixed(2) : 'N/A'} CGPA</Text>
                         </View>
-                        
+
                         <View style={styles.docRow}>
                           {m.resumeLink && m.resumeLink !== 'N/A' && (
                             <TouchableOpacity style={styles.docBtn} onPress={() => openLink(m.resumeLink)}>
@@ -344,13 +341,13 @@ const FacultyRequestsScreen = () => {
                 )}
 
                 <View style={styles.requestActions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                     onPress={() => setSelectedRequest(r)}
                   >
                     <Text style={styles.actionBtnText}>Schedule Meeting</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
                     onPress={() => confirmCancel(r.requestId, r.teamName || `Team ${r.teamId}`)}
                   >
@@ -388,13 +385,13 @@ const FacultyRequestsScreen = () => {
               />
 
               <View style={styles.pickerRow}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.miniPicker, { borderColor: colors.border }]}
                   onPress={() => setShowDate(true)}
                 >
                   <Text style={{ color: colors.text }}>{hasSelectedDate ? formatDate(date) : 'Select Date'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.miniPicker, { borderColor: colors.border }]}
                   onPress={() => setShowTime(true)}
                 >
@@ -414,26 +411,26 @@ const FacultyRequestsScreen = () => {
                   mode="date"
                   minimumDate={new Date()}
                   maximumDate={maxDate}
-                  onChange={(e, d) => { setShowDate(false); if(d){ setDate(d); setHasSelectedDate(true); } }}
+                  onChange={(e, d) => { setShowDate(false); if (d) { setDate(d); setHasSelectedDate(true); } }}
                 />
               )}
               {showTime && (
                 <DateTimePicker
                   value={date}
                   mode="time"
-                  onChange={(e, d) => { setShowTime(false); if(d){ setDate(d); setHasSelectedDate(true); } }}
+                  onChange={(e, d) => { setShowTime(false); if (d) { setDate(d); setHasSelectedDate(true); } }}
                 />
               )}
 
               <View style={styles.modalFooter}>
-                <TouchableOpacity 
-                  style={[styles.footerBtn, { backgroundColor: '#9CA3AF' }]} 
+                <TouchableOpacity
+                  style={[styles.footerBtn, { backgroundColor: '#9CA3AF' }]}
                   onPress={() => setSelectedRequest(null)}
                 >
                   <Text style={styles.footerBtnText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.footerBtn, { backgroundColor: '#10B981' }]} 
+                <TouchableOpacity
+                  style={[styles.footerBtn, { backgroundColor: '#10B981' }]}
                   onPress={() => handleSchedule(selectedRequest.requestId)}
                 >
                   <Text style={styles.footerBtnText}>Confirm</Text>

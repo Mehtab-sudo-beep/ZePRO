@@ -58,6 +58,7 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
   const { instituteId, instituteName } = route.params;
   const { showAlert } = useContext(AlertContext);
   const { colors, theme } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentStats, setDepartmentStats] = useState<Record<string, DepartmentStats>>({});
@@ -250,7 +251,10 @@ const DepartmentListScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
+            <Image
+              source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>{instituteName}</Text>
@@ -510,8 +514,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
   },
-  backBtn: { marginRight: 12, width: 40, justifyContent: 'center', alignItems: 'center' },
-  backArrow: { fontSize: 32, fontWeight: '300' },
+  backBtn: { marginRight: 12, padding: 4, justifyContent: 'center', alignItems: 'center' },
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
   headerTitle: { fontSize: 22, fontWeight: 'bold' },
   headerSubtitle: { fontSize: 13, marginTop: 2 },
 

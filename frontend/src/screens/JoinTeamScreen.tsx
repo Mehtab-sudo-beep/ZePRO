@@ -8,6 +8,8 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -25,6 +27,29 @@ interface Team {
   alreadyRequested: boolean;
 }
 
+const Icon = ({ name, size = 16, colors }: any) => {
+  const isDark = colors.background === '#111827';
+
+  const icons: any = {
+    search: isDark
+      ? require('../assets/search-white.png')
+      : require('../assets/search.png'),
+    sort: isDark
+      ? require('../assets/sort-white.png')
+      : require('../assets/sort.png'),
+    user: isDark
+      ? require('../assets/user-white.png')
+      : require('../assets/user.png'),
+    team: isDark
+      ? require('../assets/team-white.png')
+      : require('../assets/team.png'),
+  };
+
+  return (
+    <Image source={icons[name]} style={{ width: size, height: size, resizeMode: 'contain' }} />
+  );
+};
+
 const JoinTeamScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const isDark = colors.background === '#111827';
@@ -37,6 +62,10 @@ const JoinTeamScreen: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
+
+  const [search, setSearch] = useState('');
+  const [filterModal, setFilterModal] = useState(false);
+  const [searchCategory, setSearchCategory] = useState<'ALL' | 'TEAM NAME' | 'LEADER' | 'MEMBERS'>('ALL');
 
   // ✅ LOAD TEAMS WITH ERROR HANDLING
   const loadTeams = async () => {
@@ -144,6 +173,25 @@ const JoinTeamScreen: React.FC = () => {
     }
   };
 
+  // ✅ FILTERING LOGIC
+  const filteredTeams = teams.filter(team => {
+    const query = search.toLowerCase();
+    if (!query) return true;
+
+    if (searchCategory === 'TEAM NAME') {
+      return team.teamName.toLowerCase().includes(query);
+    } else if (searchCategory === 'LEADER') {
+      return team.teamLead.toLowerCase().includes(query);
+    } else if (searchCategory === 'MEMBERS') {
+      return team.members.some(m => m.toLowerCase().includes(query));
+    } else {
+      // ALL
+      return team.teamName.toLowerCase().includes(query) ||
+        team.teamLead.toLowerCase().includes(query) ||
+        team.members.some(m => m.toLowerCase().includes(query));
+    }
+  });
+
   // ================= DETAILS SCREEN =================
   if (selectedTeam) {
     return (
@@ -230,23 +278,51 @@ const JoinTeamScreen: React.FC = () => {
           Join Team
         </Text>
         <Text style={[styles.headerSubtitle, { color: colors.subText }]}>
-          {teams.length} teams
+          {filteredTeams.length} teams
         </Text>
+      </View>
+
+      <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+        {/* SEARCH AND FILTER */}
+        <View style={styles.searchRow}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="search" colors={colors} />
+            <TextInput
+              placeholder={searchCategory === 'ALL' ? "Search teams..." : `Search by ${searchCategory.toLowerCase()}...`}
+              placeholderTextColor={colors.subText}
+              value={search}
+              onChangeText={setSearch}
+              style={[styles.searchInput, { color: colors.text }]}
+            />
+            {searchCategory !== 'ALL' && (
+              <TouchableOpacity onPress={() => setSearchCategory('ALL')} style={styles.clearBadge}>
+                <Text style={styles.clearBadgeText}>✕ {searchCategory}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.filterBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => setFilterModal(true)}
+          >
+            <Icon name="sort" size={18} colors={colors} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : teams.length === 0 ? (
+      ) : filteredTeams.length === 0 ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: colors.subText, fontSize: 16 }}>
-            No teams available in your department
+            {teams.length === 0 ? 'No teams available in your department' : 'No results matching your search'}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={teams}
+          data={filteredTeams}
           keyExtractor={item => item.teamId.toString()}
           contentContainerStyle={styles.content}
           renderItem={({ item }) => (
@@ -254,34 +330,85 @@ const JoinTeamScreen: React.FC = () => {
               style={[styles.card, { backgroundColor: colors.card }]}
               onPress={() => setSelectedTeam(item)}
             >
-              <Text style={[styles.teamName, { color: colors.text }]}>
-                {item.teamName}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[styles.teamIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <Icon name="team" colors={colors} size={20} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.teamName, { color: colors.text }]}>
+                    {item.teamName}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <Icon name="user" colors={colors} size={12} />
+                    <Text style={{ color: colors.subText, fontSize: 12 }}>{item.teamLead}</Text>
+                  </View>
+                </View>
+              </View>
 
               {item.description && (
-                <Text style={[styles.desc, { color: colors.subText }]} numberOfLines={2}>
+                <Text style={[styles.desc, { color: colors.subText, marginTop: 12 }]} numberOfLines={2}>
                   {item.description}
                 </Text>
               )}
 
-              <Text style={[styles.meta, { color: colors.subText }]}>
-                Leader: {item.teamLead}
-              </Text>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                <Text style={[styles.meta, { color: colors.subText }]}>
-                  Members: {item.members.length}
-                </Text>
-                {item.alreadyRequested && (
-                  <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>
-                    ✓ Requested
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+                <View style={{ backgroundColor: isDark ? '#1F2937' : '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                  <Text style={{ color: colors.subText, fontSize: 11, fontWeight: '600' }}>
+                    {item.members.length} MEMBERS
                   </Text>
+                </View>
+                {item.alreadyRequested && (
+                  <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
+                    <Text style={{ color: '#1E40AF', fontWeight: '700', fontSize: 10 }}>✓ REQUESTED</Text>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
           )}
         />
       )}
+
+      {/* FILTER MODAL */}
+      <Modal visible={filterModal} transparent animationType="fade">
+        <TouchableOpacity activeOpacity={1} style={styles.modalOverlay} onPress={() => setFilterModal(false)}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Search By</Text>
+              <TouchableOpacity onPress={() => setFilterModal(false)} style={styles.modalCloseBtn}>
+                <Text style={[styles.modalCloseText, { color: colors.text }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.categoryList}>
+              {(['ALL', 'TEAM NAME', 'LEADER', 'MEMBERS'] as const).map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryOption,
+                    { borderBottomColor: divider },
+                    searchCategory === cat && { backgroundColor: colors.primary + '15' }
+                  ]}
+                  onPress={() => {
+                    setSearchCategory(cat);
+                    setFilterModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.categoryOptionText,
+                    { color: colors.text },
+                    searchCategory === cat && { color: colors.primary, fontWeight: '700' }
+                  ]}>
+                    {cat === 'ALL' ? 'All Fields' : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                  </Text>
+                  {searchCategory === cat && (
+                    <View style={[styles.checkCircle, { backgroundColor: colors.primary }]} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -366,5 +493,107 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     resizeMode: 'contain',
+  },
+
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 44,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+  },
+  filterBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearBadge: {
+    backgroundColor: '#EF444420',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  clearBadgeText: {
+    fontSize: 10,
+    color: '#EF4444',
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: -4 },
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalCloseText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  categoryList: {
+    marginTop: 4,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  categoryOptionText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  checkCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  teamIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

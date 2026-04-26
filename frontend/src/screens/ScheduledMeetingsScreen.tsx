@@ -33,9 +33,13 @@ const Icon = ({ name, size = 16, colors }: any) => {
     close: isDark
       ? require('../assets/close-white.png')
       : require('../assets/close.png'),
+
+    search: isDark
+      ? require('../assets/search-white.png')
+      : require('../assets/search.png'),
   };
 
-  return <Image source={icons[name]} style={{ width: size, height: size }} />;
+  return <Image source={icons[name]} style={{ width: size, height: size, resizeMode: 'contain' }} />;
 };
 
 type TabType = 'UPCOMING' | 'COMPLETED';
@@ -200,11 +204,12 @@ const ScheduledMeetingsScreen: React.FC = () => {
         {/* SEARCH */}
         <View style={{ padding: 16, paddingBottom: 8 }}>
           <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="search" size={18} colors={colors} />
             <TextInput
-              placeholder="Search meetings..."
+              placeholder="Search Meeting..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              style={[ styles.searchInput, { color: colors.text } ]}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholderTextColor={colors.subText}
             />
           </View>
@@ -265,7 +270,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
                           {meeting.faculty}
                         </Text>
                       </View>
-                      
+
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         {isAccepted && (
                           <Image
@@ -280,7 +285,7 @@ const ScheduledMeetingsScreen: React.FC = () => {
                         </View>
                       </View>
                     </View>
-                    
+
                     {(meeting.domain || meeting.subDomain) ? (
                       <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
                         {meeting.domain ? (
@@ -302,10 +307,10 @@ const ScheduledMeetingsScreen: React.FC = () => {
 
                     {meeting.date ? (
                       <View style={[styles.dateWrap, { borderTopColor: divider }]}>
-                           <Icon name="clock" colors={colors} size={14} />
-                           <Text style={{ color: colors.subText, fontSize: 13, marginLeft: 6 }}>
-                             {meeting.date} • {meeting.time}
-                           </Text>
+                        <Icon name="clock" colors={colors} size={14} />
+                        <Text style={{ color: colors.subText, fontSize: 13, marginLeft: 6 }}>
+                          {meeting.date} • {meeting.time}
+                        </Text>
                       </View>
                     ) : null}
                   </View>
@@ -314,44 +319,44 @@ const ScheduledMeetingsScreen: React.FC = () => {
             })
           )}
         </ScrollView>
-          <View
-  style={[
-    styles.bottomTab,
-    { backgroundColor: colors.card, borderColor: colors.border },
-  ]}
->
-  <TouchableOpacity
-    style={styles.tabItem1}
-    onPress={() => navigation.navigate('StudentHome')}
-  >
-    <Image
-      source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
-      style={styles.tabIcon}
-    />
-    <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
-  </TouchableOpacity>
+        <View
+          style={[
+            styles.bottomTab,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.tabItem1}
+            onPress={() => navigation.navigate('StudentHome')}
+          >
+            <Image
+              source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tab, { color: colors.subText }]}>Home</Text>
+          </TouchableOpacity>
 
-  <View style={styles.tabItem1}>
-    <Image
-      source={require('../assets/meeting-color.png')}
-      style={styles.tabIcon}
-    />
-    <Text style={[styles.tabActive, { color: colors.primary }]}>
-      Scheduled Meetings
-    </Text>
-  </View>
+          <View style={styles.tabItem1}>
+            <Image
+              source={require('../assets/meeting-color.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tabActive, { color: colors.primary }]}>
+              Scheduled Meetings
+            </Text>
+          </View>
 
-  <TouchableOpacity
-    style={styles.tabItem1}
-    onPress={() => navigation.navigate('More')}
-  >
-    <Image
-      source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
-      style={styles.tabIcon}
-    />
-    <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
-  </TouchableOpacity>
-</View>
+          <TouchableOpacity
+            style={styles.tabItem1}
+            onPress={() => navigation.navigate('More')}
+          >
+            <Image
+              source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+              style={styles.tabIcon}
+            />
+            <Text style={[styles.tab, { color: colors.subText }]}>More</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -444,31 +449,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomTab: {
-  height: 60,
-  borderTopWidth: 1,
-  flexDirection: 'row',
-  justifyContent: 'space-around',
-  alignItems: 'center',
-},
+    height: 60,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
 
-tabItem1: {
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  tabItem1: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-tabIcon: {
-  width: 22,
-  height: 22,
-  marginBottom: 4,
-  resizeMode: 'contain',
-},
+  tabIcon: {
+    width: 22,
+    height: 22,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
 
-tab: {
-  fontSize: 12,
-},
+  tab: {
+    fontSize: 12,
+  },
 
-tabActive: {
-  fontSize: 12,
-  fontWeight: '700',
-},
+  tabActive: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });

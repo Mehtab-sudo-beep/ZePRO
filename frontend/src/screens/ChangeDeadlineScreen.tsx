@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { coordinatorApi } from '../api/coordinatorApi';
 import { AlertContext } from '../context/AlertContext';
+import { ThemeContext } from '../theme/ThemeContext';
 
 interface Deadlines {
   teamFormationDeadline: string;
@@ -25,6 +26,8 @@ interface Deadlines {
 const ChangeDeadlinesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { showAlert } = useContext(AlertContext);
+  const { colors } = useContext(ThemeContext);
+  const isDark = colors.background === '#111827';
 
   const [deadlines, setDeadlines] = useState<{
     teamFormationDeadline: Date | null;
@@ -168,31 +171,26 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
   if (fetching) {
     return (
-      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Image
-            source={require('../assets/angle.png')}
-            style={styles.backIcon}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Deadline Management</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Deadline Management</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
         {/* Team Formation & Projects */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Students phase</Text>
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.subText }]}>Students phase</Text>
 
           <DeadlineField
             label="Team Formation Deadline"
@@ -200,6 +198,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
             onPress={() => setShowPicker('teamFormationDeadline')}
             error={errors.teamFormationDeadline}
             description="Last date for students to form their project teams"
+            colors={colors}
           />
 
           <DeadlineField
@@ -208,12 +207,13 @@ const ChangeDeadlinesScreen: React.FC = () => {
             onPress={() => setShowPicker('projectRequestDeadline')}
             error={errors.projectRequestDeadline}
             description="Last date for teams to send faculty allocation requests"
+            colors={colors}
           />
         </View>
 
         {/* Faculty phase */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Faculty Phase</Text>
+        <View style={[styles.section, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.subText }]}>Faculty Phase</Text>
 
           <DeadlineField
             label="Meeting Scheduling Deadline"
@@ -221,6 +221,7 @@ const ChangeDeadlinesScreen: React.FC = () => {
             onPress={() => setShowPicker('meetingSchedulingDeadline')}
             error={errors.meetingSchedulingDeadline}
             description="Latest possible date to schedule a meeting with a student"
+            colors={colors}
           />
         </View>
 
@@ -271,6 +272,36 @@ const ChangeDeadlinesScreen: React.FC = () => {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Bottom Tab */}
+      <View style={[styles.bottomTab, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        <TouchableOpacity
+          style={styles.bottomTabItem}
+          onPress={() => navigation.navigate('FacultyCoordinatorDashboard')}
+        >
+          <Image
+            source={isDark ? require('../assets/home-white.png') : require('../assets/home.png')}
+            style={styles.bottomTabIcon}
+          />
+          <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>Home</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bottomTabItem}>
+          <Image source={require('../assets/dd-color.png')} style={styles.bottomTabIcon} />
+          <Text style={[styles.bottomTabLabelActive, { color: colors.primary }]}>Deadlines</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.bottomTabItem}
+          onPress={() => navigation.navigate('FacultyCoordinatorMore')}
+        >
+          <Image
+            source={isDark ? require('../assets/more-white.png') : require('../assets/more.png')}
+            style={styles.bottomTabIcon}
+          />
+          <Text style={[styles.bottomTabLabel, { color: colors.subText }]}>More</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -285,30 +316,36 @@ const DeadlineField = ({
   onPress,
   error,
   description,
+  colors,
 }: {
   label: string;
   value: string;
   onPress: () => void;
   error?: string;
   description?: string;
+  colors: any;
 }) => {
   return (
     <View style={fieldStyles.wrapper}>
-      <Text style={fieldStyles.label}>{label}</Text>
+      <Text style={[fieldStyles.label, { color: colors.text }]}>{label}</Text>
       <TouchableOpacity 
-        style={[fieldStyles.inputRow, error ? fieldStyles.inputRowError : null]}
+        style={[
+          fieldStyles.inputRow, 
+          { backgroundColor: colors.background, borderColor: colors.border },
+          error ? fieldStyles.inputRowError : null
+        ]}
         onPress={onPress}
       >
-        <Text style={[fieldStyles.input, value === 'Not set' ? { color: '#9CA3AF' } : null]}>
+        <Text style={[fieldStyles.input, { color: colors.text }, value === 'Not set' ? { color: '#9CA3AF' } : null]}>
           {value}
         </Text>
         <Image 
           source={require('../assets/deadlines/calendar.png')} 
-          style={{ width: 18, height: 18, tintColor: '#4F46E5' }} 
+          style={{ width: 18, height: 18, tintColor: colors.primary }} 
         />
       </TouchableOpacity>
       {description && !error && (
-        <Text style={fieldStyles.description}>{description}</Text>
+        <Text style={[fieldStyles.description, { color: colors.subText }]}>{description}</Text>
       )}
       {error ? <Text style={fieldStyles.errorText}>{error}</Text> : null}
     </View>
@@ -322,7 +359,6 @@ const DeadlineField = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -340,25 +376,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0c0b0b',
   },
   scrollContent: {
     padding: 16,
   },
   section: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
     elevation: 2,
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 12,
@@ -394,6 +424,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  bottomTab: {
+    height: 60,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  bottomTabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  bottomTabIcon: {
+    width: 22,
+    height: 22,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
+  bottomTabLabel: {
+    fontSize: 12,
+  },
+  bottomTabLabelActive: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
 
 const fieldStyles = StyleSheet.create({
@@ -403,16 +458,13 @@ const fieldStyles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 6,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     paddingHorizontal: 12,
   },
   inputRowError: {
@@ -423,11 +475,9 @@ const fieldStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 11,
     fontSize: 14,
-    color: '#111827',
   },
   description: {
     fontSize: 11,
-    color: '#9CA3AF',
     marginTop: 4,
   },
   errorText: {

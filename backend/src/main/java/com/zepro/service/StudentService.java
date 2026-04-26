@@ -123,10 +123,23 @@ public class StudentService {
     // CREATE TEAM
     // ------------------------------------------------
 
+    @Transactional
     public TeamResponse createTeam(CreateTeamRequest request) {
 
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        // ✅ DEFENSIVE CHECK: Is this student already a lead in the database?
+        // This prevents the "Duplicate entry" error if a previous create attempt partially failed.
+        var existingTeams = teamRepository.findByTeamLeadStudentId(request.getStudentId());
+        if (!existingTeams.isEmpty()) {
+            Team existingTeam = existingTeams.get(0);
+            student.setTeam(existingTeam);
+            student.setInTeam(true);
+            student.setTeamLead(true);
+            studentRepository.save(student);
+            throw new RuntimeException("Your previous team creation was partially successful. We have restored your association with team '" + existingTeam.getTeamName() + "'. Please refresh.");
+        }
 
         // ✅ CHECK TEAM FORMATION DEADLINE
         checkTeamFormationDeadline(student.getDepartment().getDepartmentId());
@@ -180,6 +193,7 @@ public class StudentService {
     // JOIN TEAM
     // ------------------------------------------------
 
+    @Transactional
     public String joinTeam(JoinTeamRequest request) {
 
         Student student = studentRepository.findById(request.getStudentId())
@@ -394,6 +408,7 @@ public class StudentService {
     // REQUEST PROJECT
     // ------------------------------------------------
 
+    @Transactional
     public String requestProject(ProjectRequestDTO request) {
 
         Student student = studentRepository.findById(request.getStudentId())
@@ -775,6 +790,7 @@ public class StudentService {
         return response;
     }
 
+    @Transactional
     public String sendJoinRequest(Long studentId, Long teamId) {
 
         Student student = studentRepository.findById(studentId)

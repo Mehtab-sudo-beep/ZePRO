@@ -531,7 +531,10 @@ const FacultyViewMeetingsScreen: React.FC = () => {
 
         <View style={[styles.header, { backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={[styles.backArrow, { color: colors.text }]}>‹</Text>
+            <Image
+              source={isDark ? require('../assets/angle-white.png') : require('../assets/angle.png')}
+              style={styles.backIcon}
+            />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>My Meetings</Text>
         </View>
@@ -655,8 +658,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     elevation: 4,
   },
-  backBtn: { marginRight: 8 },
-  backArrow: { fontSize: 32, lineHeight: 36 },
+  backBtn: { marginRight: 8, padding: 4 },
+  backIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
   headerTitle: { fontSize: 20, fontWeight: '600' },
   filterRow: {
     flexDirection: 'row',
